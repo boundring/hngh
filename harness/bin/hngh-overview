@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""hngh-overview — one-command portfolio snapshot.
+
+Folds the quota ledger, the state digest, the job registry and the hngh-sense
+posture blob into a single compact summary: where is the portfolio right now?
+Ledgers (append-only JSONL, last physical line wins):
+  quota:  $HNGH_QUOTAS_DIR/quotas.jsonl
+  digest: $HNGH_DIGESTS_DIR/digests.jsonl
+  jobs:   $HNGH_JOBS_DIR/jobs.jsonl
+  posture: bash ~/Projects/hngh/bin/hngh-sense (2 s cap, failures ignored)
+Reporting tool: always exits 0. It never resolves open gates; a job whose
+latest event is `gate` is reported as waiting on a human ruling.
+"""
+
+import json
+import os
+import subprocess
+import sys
+import time
+
+HNGH_BIN = os.path.expanduser("~/Projects/hngh/bin")
+
+
+def _path(env, default_dir, fname):
+    return os.path.join(
+        os.environ.get(env, os.path.expanduser(default_dir)), fname)
+
+
+QUOTA_LEDGER = _path("HNGH_QUOTAS_DIR", "~/.local/state/hngh/quotas", "quotas.jsonl")
+QUOTA_DIR = _path("HNGH_QUOTAS_DIR", "~/.local/state/hngh/quotas", "")
+DIGEST_LEDGER = _path("HNGH_DIGESTS_DIR", "~/.local/state/hngh/digests", "digests.jsonl")
+JOBS_LEDGER = _path("HNGH_JOBS_DIR", "~/.local/state/hngh/jobs", "jobs.jsonl")
+
+
+def load_jsonl(path, key):
+    """Fold an append-only ledger to {key: rec}; last physical line wins."""
+    if not os.path.exists(path):
+        return {}, 0
+    folded, malformed = {}, 0
+    try:
+        fh = open(path, encoding="utf-8", errors="replace")
+    except OSError as e:
+        print(f"warning: {path}: {e}", file=sys.stderr)
+        return {}, 0
+    with fh:
+        for raw in fh:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                rec = json.loads(raw)
+                k = rec[key]
+                assert isinstance(k, str) and k
+            except Exception:
+                malformed += 1
+                continue
+            folded[k] = rec
+    return folded, malformed
+
+
+def load_last(path, required):
+    """Latest record of a single-stream ledger (last physical line wins)."""
+    if not os.path.exists(path):
+        return None
+    rec = None
+    try:
+        fh = open(path, encoding="utf-8", errors="replace")
+    except OSError as e:
+        print(f"warning: {path}: {e}", file=sys.stderr)
+        return None
+    with fh:
+        for raw in fh:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                cand = json.loads(raw)
+                assert all(k in cand for k in required)
+            except Exception:
+                continue
+            rec = cand
+    return rec
+
+
+def tightest_quota():
+    folded, malformed = load_jsonl(QUOTA_LEDGER, "service")
+    best = None
+    for rec in folded.values():
+        # a paused service (dated marker file, MP-3-style honest-blocked state)
+        # is excluded from tightest-slot selection until its pause date passes
+        marker = os.path.join(QUOTA_DIR, f"{rec.get('service', '-')}-paused-until")
+        try:
+            with open(marker) as fh:
+                until = fh.read().strip()
+            if until and time.strftime("%Y%m%d") < until.replace("-", ""):
+                continue
+        except OSError:
+            pass
+        pct = rec.get("percent")
+        if not isinstance(pct, (int, float)):
+            used, total = rec.get("used"), rec.get("total")
+            if isinstance(used, (int, float)) and isinstance(total, (int, float)) and total > 0:
+                pct = 100.0 * used / total
+            else:
+                continue
+        if best is None or pct > best[0]:
+            best = (pct, rec)
+    if malformed:
+        print(f"warning: quota ledger: {malformed} malformed line(s) skipped",
+              file=sys.stderr)
+    return best[1] if best else None
+
+
+def today_jobs():
+    folded, malformed = load_jsonl(JOBS_LEDGER, "job")
+    if malformed:
+        print(f"warning: jobs ledger: {malformed} malformed line(s) skipped",
+              file=sys.stderr)
+    today = subprocess.run(["date", "-u", "+%Y-%m-%d"], capture_output=True,
+                           text=True).stdout.strip()
+    return [rec for rec in folded.values()
+            if isinstance(rec.get("at"), str) and rec["at"].startswith(today)]
+
+
+def posture_blob():
+    try:
+        out = subprocess.run(
+            ["bash", os.path.join(HNGH_BIN, "hngh-sense")],
+            capture_output=True, text=True, timeout=2)
+        blob = json.loads(out.stdout)
+        return blob if isinstance(blob, dict) else None
+    except Exception:
+        return None
+
+
+def collect():
+    data = {
+        "quota": tightest_quota(),
+        "digest": load_last(DIGEST_LEDGER, ("at",)),
+        "jobs": today_jobs(),
+        "posture": posture_blob(),
+    }
+    return data
+
+
+def human(data):
+    lines = [f"hngh overview @ {subprocess.run(['date', '-u', '+%Y-%m-%dT%H:%M:%SZ'], capture_output=True, text=True).stdout.strip()}"]
+
+    q = data["quota"]
+    if q:
+        pct = q.get("percent")
+        pct_s = f"{pct:g}%" if isinstance(pct, (int, float)) else "-"
+        line = f"QUOTA   tightest: {q.get('service', '-')}  {pct_s}"
+        if q.get("unit") == "credits":
+            left = None
+            used, total = q.get("used"), q.get("total")
+            if isinstance(used, (int, float)) and isinstance(total, (int, float)):
+                left = total - used
+            line += f"  ({left:,} credits left)" if left is not None else "  (credits left: -)"
+        lines.append(line)
+    else:
+        lines.append("QUOTA   (no ledger)")
+
+    d = data["digest"]
+    if d:
+        lines.append(f"DIGEST   sessions={d.get('sessions', '-')} "
+                     f"agents={d.get('agents', '-')} "
+                     f"active={d.get('active_agents', '-')}  ({d.get('at', '-')})")
+    else:
+        lines.append("DIGEST   (no ledger)")
+
+    jobs = data["jobs"]
+    if jobs:
+        waiting = [j for j in jobs if j.get("event") == "gate"]
+        outcomes = [j.get("outcome") or j.get("event") or "-" for j in jobs]
+        lines.append(f"JOBS    today: {len(jobs)} job(s) — " + ", ".join(o[:40] for o in outcomes))
+        for j in waiting:
+            lines.append(f"JOBS    waiting on human ruling: {j.get('job', '-')} (gate @ {j.get('at', '-')})")
+    else:
+        lines.append("JOBS    today: none")
+
+    p = data["posture"]
+    if p:
+        battery = p.get("battery") or "-"
+        locked = p.get("session_locked")
+        locked_s = "locked" if locked is True else ("unlocked" if locked is False else "-")
+        tern = p.get("tern_sessions")
+        tern_n = tern.get("sessions") if isinstance(tern, dict) else None
+        lines.append(f"POSTURE battery: {battery}  session: {locked_s}  "
+                     f"tern sessions: {tern_n if tern_n is not None else '-'}")
+    else:
+        lines.append("POSTURE (unavailable)")
+    return "\n".join(lines)
+
+
+def main(argv):
+    if "--json" in argv:
+        argv = [a for a in argv if a != "--json"]
+        json_mode = True
+    else:
+        json_mode = False
+    if argv:  # unknown flags: reported, never a failing exit
+        print(f"warning: unrecognized argument(s): {' '.join(argv)}", file=sys.stderr)
+    data = collect()
+    if json_mode:
+        print(json.dumps(data, indent=1))
+    else:
+        print(human(data))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except SystemExit:
+        raise
+    except BrokenPipeError:
+        sys.exit(0)
+    except Exception as e:  # reporting tool: degrade, never fail
+        print(f"warning: {e}", file=sys.stderr)
+        sys.exit(0)

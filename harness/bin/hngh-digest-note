@@ -1,0 +1,46 @@
+#!/bin/bash
+# hngh-digest-note — append one harness digest record to the hngh digest ledger.
+# Usage: hngh-digest-note --sessions INT --agents INT --active-agents INT [--summary TEXT]
+#   `at` is stamped server-side (date -u); never taken from the caller.
+# Exit: 0 stored | 1 malformed/schema | 2 usage
+set -u
+
+usage() { echo "usage: hngh-digest-note --sessions INT --agents INT --active-agents INT [--summary TEXT]" >&2; exit 2; }
+
+sessions=""; agents=""; active=""; summary=""
+while (( $# )); do
+	case $1 in
+		--sessions)      [[ $# -ge 2 ]] || usage; sessions=$2; shift 2 ;;
+		--agents)        [[ $# -ge 2 ]] || usage; agents=$2; shift 2 ;;
+		--active-agents) [[ $# -ge 2 ]] || usage; active=$2; shift 2 ;;
+		--summary)       [[ $# -ge 2 ]] || usage; summary=$2; shift 2 ;;
+		*) usage ;;
+	esac
+done
+
+[[ -n $sessions && -n $agents && -n $active ]] || usage
+[[ $sessions =~ ^-?[0-9]+$ && $agents =~ ^-?[0-9]+$ && $active =~ ^-?[0-9]+$ ]] || {
+	echo "hngh-digest-note: --sessions/--agents/--active-agents must be integers" >&2
+	exit 1
+}
+
+line=$(jq -cn \
+	--arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+	--argjson sessions "$sessions" \
+	--argjson agents "$agents" \
+	--argjson active_agents "$active" \
+	--arg summary "$summary" \
+	'{at:$at, sessions:$sessions, agents:$agents, active_agents:$active_agents,
+	  summary:(if $summary != "" then $summary else null end)}
+	| with_entries(select(.value != null))') || {
+	echo "hngh-digest-note: rejected (could not build record)" >&2
+	exit 1
+}
+echo "$line" | jq -e . >/dev/null || { echo "hngh-digest-note: rejected (invalid JSON)" >&2; exit 1; }
+
+dir=${HNGH_DIGESTS_DIR:-"$HOME/.local/state/hngh/digests"}
+mkdir -p "$dir"
+exec {fd}>>"$dir/digests.jsonl"
+flock -x "$fd"
+printf '%s\n' "$line" >&"$fd"
+printf '%s\n' "$line"

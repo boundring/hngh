@@ -1,0 +1,82 @@
+#!/bin/bash
+# hngh-sessions-selfcheck — assert the session ledger pair (fabric §5 option A).
+# Sandbox: HNGH_SESSIONS_DIR is overridden to a temp dir; the real ledger is untouched.
+# Contract mirrors hngh-dashboard-selfcheck: prints SELF-CHECK GREEN (exit 0) or
+# SELF-CHECK: <n> failure(s) (exit 1).
+set -u
+NOTE="$(dirname "$(readlink -f "$0")")/hngh-session-note"
+READ="$(dirname "$(readlink -f "$0")")/hngh-sessions"
+fails=0
+ck() { # ck <desc> <cmd...>
+	local desc=$1; shift
+	if "$@" >/dev/null 2>&1; then
+		echo "ok: $desc"
+	else
+		echo "FAIL: $desc"; fails=$((fails + 1))
+	fi
+}
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+export HNGH_SESSIONS_DIR="$tmp"
+
+# 1. notes store, store, store — two sessions, several events, one with lines+role+detail
+ck "note: minimal event stored" \
+	"$NOTE" orch-test-a phase_started
+ck "note: full record stored" \
+	"$NOTE" orch-test-b scout_delivered --role orchestrator --line cistern --detail "CisternDeep delivered"
+"$NOTE" orch-test-a decision_open --line hngh --detail "overlay merge semantics" >/dev/null
+"$NOTE" orch-test-a done >/dev/null
+
+# 2. writer rejects: bad usage (exit 2), bad charset (exit 1)
+"$NOTE" >/dev/null 2>&1; [[ $? == 2 ]] \
+	&& echo "ok: note: usage error exits 2" || { echo "FAIL: note: usage error exits 2"; fails=$((fails + 1)); }
+[[ -z "$("$NOTE" 'bad id' note 2>/dev/null)" ]] && [[ "$("$NOTE" 'bad id' note >/dev/null 2>&1; echo $?)" == 1 ]] \
+	&& echo "ok: note: bad charset exits 1" || { echo "FAIL: note: bad charset exits 1"; fails=$((fails + 1)); }
+
+# 3. reader folds to latest per session (orch-test-a must show 'done', not decision_open)
+fold=$("$READ" --json)
+ck "fold: two sessions known" test "$(printf '%s' "$fold" | jq 'length')" = 2
+ck "fold: latest event wins" test "$(printf '%s' "$fold" | jq -r '.[] | select(.session=="orch-test-a") | .event')" = "done"
+ck "fold: role preserved" test "$(printf '%s' "$fold" | jq -r '.[] | select(.session=="orch-test-b") | .role')" = "orchestrator"
+ck "fold: lines preserved" test "$(printf '%s' "$fold" | jq -r '.[] | select(.session=="orch-test-b") | .lines[0]')" = "cistern"
+
+# 4. --line filter and --stale filter
+ck "filter: --line cistern matches only orch-test-b" \
+	test "$("$READ" --json --line cistern | jq -r '.[0].session')" = "orch-test-b"
+ck "filter: --stale 1 excludes fresh records (written seconds ago)" \
+	test "$("$READ" --json --stale 1 | jq 'length')" = 0
+ck "filter: --stale 0 includes everything with any age" \
+	test "$("$READ" --json --stale 0 | jq 'length')" = 2
+
+# 5. fold is FILE ORDER (last physical line wins), never max-ts — immune to clock
+#    skew; the writer always stamps date -u, so backdated lines only enter via
+#    direct file writes (out of contract) and WIN as latest, with their ts.
+# 5b. backdated ts pair, written straight to the feed (writer has no --ts)
+printf '{"ts":"2026-10-20T00:00:00Z","session":"orch-test-a","event":"note","lines":[],"detail":"backdated"}\n' >>"$tmp/feed.jsonl"
+printf '{"ts":"2026-10-20T00:00:00Z","session":"orch-old","event":"aborted","lines":["legacy"],"detail":"genuinely old"}\n' >>"$tmp/feed.jsonl"
+ck "fold: file order wins — backdated line is latest despite old ts" \
+	test "$(printf '%s' "$("$READ" --json)" | jq -r '.[] | select(.session=="orch-test-a") | .event')" = "note"
+ck "fold: third session registered" \
+	test "$(printf '%s' "$("$READ" --json)" | jq 'length')" = 3
+ck "filter: --stale 60 finds the old-ts sessions (orch-old, orch-test-a)" \
+	test "$("$READ" --json --stale 60 | jq -r '[.[].session] | sort | join(" ")')" = "orch-old orch-test-a"
+
+# 6. malformed ledger line is skipped, not fatal
+printf 'not json at all\n' >>"$tmp/feed.jsonl"
+ck "robust: malformed line skipped" \
+	test "$("$READ" --json | jq 'length')" = 3
+"$READ" | grep -q "malformed" && echo "ok: robust: malformed counted" || { echo "FAIL: malformed counted"; fails=$((fails + 1)); }
+
+# 7. reader on empty/missing ledger is a clean report, exit 0
+export HNGH_SESSIONS_DIR="$tmp/empty"
+mkdir -p "$tmp/empty"
+out=$("$READ" 2>&1); rc=$?
+[[ $rc == 0 && -n "$out" ]] && echo "ok: reader: empty ledger exits 0 with report" || { echo "FAIL: empty ledger"; fails=$((fails + 1)); }
+
+if (( fails == 0 )); then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK: $fails failure(s)"
+exit 1

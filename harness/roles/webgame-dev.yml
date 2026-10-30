@@ -1,0 +1,49 @@
+# Role manifest — hngh-agent-spawn (three.js web game era, 2026-10-28)
+role: webgame-dev
+description: >
+  Browser-native three.js game slot (Cistern-web: HD-2D voxel diorama, vendored
+  three r160, tsc-only TypeScript, desktop+mobile, headless-smoke evidence).
+models:
+  task: minimax-code/MiniMax-M3.1-Flash-Preview
+  reviewer: minimax-code/MiniMax-M3.1-Flash-Preview
+  scout: minimax-code/MiniMax-M3.1-Flash-Preview
+  librarian: minimax-code/MiniMax-M3.1-Flash-Preview
+fallbacks:
+  minimax-code/MiniMax-M3.1-Flash-Preview: [opencode-go/glm-5.3-flash]
+lines: [webgame]
+consent_ceiling: Confirm
+add_dirs:
+  - /mnt/2tb/@home/bricker/Projects/etc/cistern
+  - /mnt/2tb/@home/bricker/Projects/etc/hngh/automation/dashboard/vendor
+primes:
+  briefs: [briefs/00-always.md, briefs/70-principles.md]
+  plans: [PLANS/2026-10-28-cistern-web-charter.md]
+recall: "three.js web game cistern hd2d diorama three r160 vendored importmap tsc only"
+constraints:
+  - >-
+    The Cistern repo is a READ-ONLY donor — never edit anything under
+    /mnt/2tb/@home/bricker/Projects/etc/cistern; the Godot Cistern lane is paused.
+  - >-
+    Vendored assets carry provenance rows — three (MIT), Cistern slabs and tiles
+    (CC0 or operator-authored); no library pixels, no new licences.
+  - >-
+    Determinism — integer-only game state, pinned seed, no cross-browser
+    byte-identity claim; assert on state, never pixel-goldens.
+  - >-
+    Stack is fixed — TypeScript compiled by tsc alone, three r160 vendored in-repo
+    with an importmap; no bundler, no framework, no heavy editor, no runtime
+    network fetch.
+  - >-
+    Desktop and mobile from day one — layout, camera and input must work at
+    375x667 and 1280x800.
+  - >-
+    Hosting is local-only — python3 -m http.server from the repo root; no public
+    hosting or deployment.
+  - >-
+    Agent test surface — window.game.dispatch(intent) and window.game.state()
+    must exist; the harness plays the game headlessly over the browser relay.
+  - >-
+    Git — explicit pathspec commits only, never -A, never push; the parent session
+    integrates.
+owns:
+  - /mnt/2tb/@home/bricker/Projects/etc/cistern-web/**

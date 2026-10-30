@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+"""hngh-digest-rollup — fold the hngh digest ledger by day.
+
+Ledger: $HNGH_DIGESTS_DIR/digests.jsonl (written by hngh-digest-note)
+One row per day: the day's first and last record (last physical line wins
+within a day — same append-only trust model as hngh-digest, never max-ts)
+and the deltas between them.
+Reporting tool: always exits 0.
+"""
+
+import argparse
+import json
+import os
+import sys
+
+LEDGER = os.path.join(
+    os.environ.get("HNGH_DIGESTS_DIR", os.path.expanduser("~/.local/state/hngh/digests")),
+    "digests.jsonl",
+)
+
+FIELDS = ("sessions", "agents", "active_agents")
+
+
+def parse_args(argv):
+    p = argparse.ArgumentParser(
+        prog="hngh-digest-rollup",
+        description="Daily fold of the hngh digest ledger (read-only).",
+    )
+    p.add_argument("--since", metavar="ISO", default=None,
+                   help="only days whose LAST record's `at` is at or after this UTC ISO-8601 stamp")
+    p.add_argument("--last", metavar="N", default=None,
+                   help="only the most recent N days (printed newest first)")
+    p.add_argument("--json", action="store_true", help="emit per-day rollup as JSON")
+    try:
+        return p.parse_args(argv)
+    except SystemExit:
+        raise SystemExit(0)  # reporting tool: bad flags reported, never a failing exit
+
+
+def valid(rec):
+    return (isinstance(rec, dict)
+            and isinstance(rec.get("at"), str) and rec["at"]
+            and isinstance(rec.get("sessions"), int))
+
+
+def load_days():
+    """Fold records per calendar day; last physical line wins, never max-ts."""
+    if not os.path.exists(LEDGER):
+        return {}, 0
+    days, malformed = {}, 0
+    with open(LEDGER, encoding="utf-8", errors="replace") as fh:
+        for raw in fh:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                rec = json.loads(raw)
+                assert valid(rec)
+            except Exception:
+                malformed += 1
+                continue
+            day = rec["at"][:10]
+            if day not in days:
+                days[day] = {"first": rec, "last": rec}
+            else:
+                days[day]["last"] = rec  # append-only ledger; file order decides
+    return days, malformed
+
+
+def movement(deltas):
+    parts = [f"{f} {deltas[f]:+d}" for f in FIELDS]
+    return "no change" if not any(deltas.values()) else ", ".join(parts)
+
+
+def main(argv):
+    args = parse_args(argv)
+    try:
+        last_n = int(args.last) if args.last is not None else None
+    except ValueError:
+        last_n = None
+    days, malformed = load_days()
+
+    # --since filters on the day's LAST record; --last keeps the newest N days.
+    kept = [d for d in days.values()
+            if args.since is None or d["last"]["at"] >= args.since]
+    kept.sort(key=lambda d: d["first"]["at"][:10])
+    if last_n is not None and last_n >= 0:
+        kept = kept[-last_n:][::-1] if last_n else []
+
+    rows = []
+    for d in kept:
+        f, l = d["first"], d["last"]
+        rows.append({
+            "day": f["at"][:10],
+            "first": {k: f[k] for k in ("at",) + FIELDS},
+            "last": {k: l[k] for k in ("at",) + FIELDS},
+            "delta": {k: l[k] - f[k] for k in FIELDS},
+            "movement": movement({k: l[k] - f[k] for k in FIELDS}),
+        })
+
+    if args.json:
+        print(json.dumps(rows, indent=1))
+    else:
+        print(f"hngh digest ledger: {len(days)} day(s) known")
+        if not rows:
+            print("no days match")
+        else:
+            hdr = (f"{'day':<11} {'first at':<17} {'sess':>5} {'agents':>7} {'active':>7}  "
+                   f"{'last at':<17} {'sess':>5} {'agents':>7} {'active':>7}  movement")
+            print(hdr)
+            print("-" * len(hdr))
+            for r in rows:
+                f, l, dl = r["first"], r["last"], r["delta"]
+                print(f"{r['day']:<11} {f['at']:<17} {f['sessions']:>5} {f['agents']:>7} {f['active_agents']:>7}  "
+                      f"{l['at']:<17} {l['sessions']:>5} {l['agents']:>7} {l['active_agents']:>7}  "
+                      f"s{dl['sessions']:+d} a{dl['agents']:+d} v{dl['active_agents']:+d} · {r['movement']}")
+    if malformed:
+        print(f"warning: {malformed} malformed line(s) skipped", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except BrokenPipeError:
+        sys.exit(0)

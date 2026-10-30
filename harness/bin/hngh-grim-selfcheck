@@ -1,0 +1,118 @@
+#!/bin/bash
+# hngh-grim-selfcheck — deterministic asserts for the capture producer + gate.
+# Sandboxed: fake grim/hyprctl on PATH, shots to a temp HNGH_SHOTS_DIR, the
+# gate test runs hngh-act against a temp HNGH_STATE_DIR with HNGH_GRIM pinned.
+# No real captures, no compositor contact. No sleeps.
+set -u
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GRIM="$HERE/hngh-grim"
+ACT="$HERE/hngh-act"
+SB="$(mktemp -d)"
+trap 'rm -rf "$SB"' EXIT
+
+fails=0
+ok() { if [[ $1 == 0 ]]; then echo "PASS $2"; else echo "FAIL $2"; fails=$((fails+1)); fi }
+
+# --- fake grim: records argv, writes a tiny valid PNG as its file argument ---
+# fake grim: writes a 1x1 PNG to its last arg; FAKE_GRIM_FAIL=1 simulates failure.
+cat > "$SB/grim" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >> "${FAKE_GRIM_LOG:?}"
+out="${*: -1}"
+base64 -d > "$out" <<'PNG'
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==
+PNG
+[[ -n ${FAKE_GRIM_FAIL:-} ]] && exit 1
+exit 0
+EOF
+# --- fake hyprctl: fixture monitors/clients, focused monitor "HDMI-A-1" -----
+cat > "$SB/hyprctl" <<'EOF'
+#!/bin/bash
+case "$*" in
+  *monitors*) echo '[{"name":"HDMI-A-1","focused":true},{"name":"DP-1","focused":false}]' ;;
+  *clients*)  echo '[{"class":"foot","title":"tern","address":"0x55aa","at":[10,20],"size":[800,600],"focused":true}]' ;;
+  *) echo '{}' ;;
+esac
+EOF
+chmod +x "$SB/grim" "$SB/hyprctl"
+
+export PATH="$SB:$PATH"
+export FAKE_GRIM_LOG="$SB/grim-calls.log"; : > "$FAKE_GRIM_LOG"
+export HNGH_SHOTS_DIR="$SB/shots"
+
+# 1. default capture: exit 0, dated dir, naming shot-<utc>-focused-cap.png,
+#    stdout is exactly "<path> <sha256>"
+out="$("$GRIM")"; rc=$?
+ok $rc "default capture exits 0"
+day="$(date -u +%Y-%m-%d)"
+png="$(cut -d' ' -f1 <<<"$out")"; sha="$(cut -d' ' -f2 <<<"$out")"
+[[ -f $png && $png == "$HNGH_SHOTS_DIR/$day"/shot-*"-focused-cap.png" ]]
+ok $? "output lands in dated shots dir with expected name"
+[[ $(wc -l <<<"$out") == 1 && -n $sha ]]
+ok $? "stdout is one line: <path> <sha256>"
+
+# 2. hash correctness
+[[ $sha == "$(sha256sum "$png" | cut -d' ' -f1)" ]]
+ok $? "stdout sha256 matches the PNG on disk"
+
+# 3. sidecar fields: geometry bundle (monitor + windows), sha, region, bytes
+jq -e --arg sha "$sha" --arg png "$png" \
+  '.sha256 == $sha and .path == $png and .monitor == "HDMI-A-1" and
+   (.bytes | type == "number" and . > 0) and
+   (.windows | length == 1) and .windows[0].class == "foot" and
+   .windows[0].address == "0x55aa" and (.monitors | length == 2)' \
+  "$png.json" >/dev/null
+ok $? "sidecar JSON has sha/monitor/bytes/monitors/windows bundle"
+last="$(tail -1 "$HNGH_SHOTS_DIR/index.jsonl")"
+jq -e --arg sha "$sha" '.sha256 == $sha and .asker == "cli" and
+  (.ts | type == "string") and (.path | type == "string")' <<<"$last" >/dev/null
+ok $? "index.jsonl line records ts/path/sha256/asker"
+[[ $(stat -c %a "$HNGH_SHOTS_DIR") == 700 && $(stat -c %a "$HNGH_SHOTS_DIR/$day") == 700 ]]
+ok $? "shots dir and day dir are chmod 700"
+
+# 4. region passthrough: WxH+X+Y -> grim -g "X,Y WxH"; filename says region
+before=$(wc -l < "$FAKE_GRIM_LOG")
+out2="$("$GRIM" --region 100x200+300+400 --output zone)"; rc=$?
+ok $rc "region capture exits 0"
+grep -q -- "-g 300,400 100x200" "$FAKE_GRIM_LOG"
+ok $? "region passed to grim as -g 'X,Y WxH'"
+png2="$(cut -d' ' -f1 <<<"$out2")"
+[[ $png2 == *"-region-zone.png" ]]
+ok $? "region capture named with the region token and slug"
+[[ $(jq -r .monitor "$png2.json") == "focused" && $(jq -r .region "$png2.json") == "300,400 100x200" ]]
+ok $? "region sidecar keeps monitor + normalized region"
+
+# 5. grim failure: producer exits 1 with clear stderr, no artifacts left
+n_pngs=$(ls "$HNGH_SHOTS_DIR/$day"/*.png 2>/dev/null | wc -l)
+n_idx=$(wc -l < "$HNGH_SHOTS_DIR/index.jsonl")
+err="$(FAKE_GRIM_FAIL=1 "$GRIM" --label boom 2>&1 >/dev/null)"; rc=$?
+[[ $rc == 1 && $err == *"grim"*"failed"* ]]
+ok $? "grim failure -> exit 1, clear stderr (got: $err)"
+[[ $(ls "$HNGH_SHOTS_DIR/$day"/*.png 2>/dev/null | wc -l) == "$n_pngs" && \
+   $(wc -l < "$HNGH_SHOTS_DIR/index.jsonl") == "$n_idx" ]]
+ok $? "failed capture left no PNG or index line behind"
+"$GRIM" --region nope 2>/dev/null; [[ $? == 3 ]]
+ok $? "malformed region is usage (exit 3)"
+
+# 6. gate verdict: screen.capture is Confirm/domain screen through hngh-act.
+#    Without --yes -> exit 2 refused; with --yes -> exit 0 and the producer
+#    ran (fake grim) into the sandboxed shots dir.
+gate() { HNGH_STATE_DIR="$SB/state" HNGH_PRESENCE_PROBE=false HNGH_GRIM="$GRIM" \
+  HNGH_SHOTS_DIR="$SB/gate-shots" "$ACT" "$@"; }
+gateout="$(gate screen.capture 2>&1)"; rc=$?
+[[ $rc == 2 && $gateout == *"refused"* ]]
+ok $? "gate: screen.capture without --yes refused (exit 2)"
+[[ ! -e "$SB/gate-shots" ]]
+ok $? "gate: refusal produced no capture"
+gateout="$(gate screen.capture --yes --output gated 2>&1)"; rc=$?
+[[ $rc == 0 ]]
+ok $? "gate: screen.capture --yes acted (exit 0)"
+ls "$SB/gate-shots/$(date -u +%Y-%m-%d)"/shot-*"-gated.png" >/dev/null 2>&1
+ok $? "gate: --yes run produced a PNG via hngh-grim"
+grep -q "action=screen.capture result=refused" "$SB/state/act.log" \
+  && grep -q "tier=Confirm action=screen.capture result=ok" "$SB/state/act.log"
+ok $? "gate: refusal + success both audited in act.log"
+
+echo
+if [[ $fails == 0 ]]; then echo "SELF-CHECK GREEN"; exit 0
+else echo "SELF-CHECK: $fails failure(s)"; exit 1; fi

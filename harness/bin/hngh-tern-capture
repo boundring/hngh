@@ -1,0 +1,64 @@
+#!/bin/bash
+# hngh-tern-capture — read a Tern pane's text (the capture side of the
+# read-only observation lane).
+#
+# Uses the Tern daemon's own CLI: `tern capture BLOCK --json`. The block is
+# resolved by the CLI itself (an id, `@focused`, a title or a program name).
+# Nothing is written, nothing is sent, and the read is capped by default so a
+# pane dump cannot flood a caller's context.
+#
+# Usage: hngh-tern-capture [BLOCK] [--lines N] [--scrollback] [--json]
+#   BLOCK        block to read (default: @focused)
+#   --lines N    keep the last N lines (default 60; 0 = everything)
+#   --scrollback include the scrollback
+#   --json       print the daemon's JSON instead of the text
+# Exit: 0 always (a missing block is reported, not an error)
+set -u
+
+block=@focused
+lines=60
+scrollback=0
+as_json=0
+
+usage() {
+	echo "usage: hngh-tern-capture [BLOCK] [--lines N] [--scrollback] [--json]" >&2
+	exit 0
+}
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--lines) lines=${2:?}; shift 2 ;;
+		--scrollback) scrollback=1; shift ;;
+		--json) as_json=1; shift ;;
+		-h | --help) usage ;;
+		-*) usage ;;
+		*) block=$1; shift ;;
+	esac
+done
+[[ $lines =~ ^[0-9]+$ ]] || lines=60
+
+args=(capture "$block" --json)
+[ "$scrollback" = "1" ] && args+=(--scrollback)
+
+out=$(tern "${args[@]}" 2>/dev/null || true)
+if [ -z "$out" ]; then
+	echo "hngh-tern-capture: no block matched '$block'" >&2
+	exit 0
+fi
+
+if [ "$as_json" = "1" ]; then
+	printf '%s\n' "$out"
+	exit 0
+fi
+
+text=$(printf '%s' "$out" | jq -r '.text // ""' 2>/dev/null || true)
+if [ -z "$text" ]; then
+	echo "hngh-tern-capture: '$block' has no readable text" >&2
+	exit 0
+fi
+if [ "$lines" != "0" ]; then
+	printf '%s\n' "$text" | tail -n "$lines"
+else
+	printf '%s\n' "$text"
+fi
+exit 0

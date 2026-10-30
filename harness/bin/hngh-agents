@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""hngh-agents — read-only enumeration of live/recent omp agent transcripts.
+
+Answers "who is working right now, and what are they doing": scans the omp
+sessions tree (parents + per-parent subagent jsonls) and managed-slot session
+dirs, classifies each transcript, and reports activity by file mtime.
+
+Roots (allowlist, env-overridable): HNGH_AGENTS_ROOTS, default
+  ~/.omp/agent/sessions : ~/Work/sessions
+Parent = <ts>_<uuid>.jsonl; subagents live in its same-named sidecar dir.
+
+Reporting tool: always exits 0.
+"""
+
+import argparse
+import json
+import os
+import re
+import sys
+import time
+
+PARENT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\S+_[0-9a-f]{8}-[0-9a-f-]{27,}\.jsonl$")
+ACTIVE_MINS = 5.0
+SNIPPET = 70
+
+
+def parse_args(argv):
+    p = argparse.ArgumentParser(
+        prog="hngh-agents",
+        description="Who is working right now: enumerate omp parent/subagent transcripts (read-only).",
+    )
+    p.add_argument("--window", type=float, default=1440, metavar="MINS",
+                   help="only files modified within this many minutes (default 1440)")
+    p.add_argument("--active", type=float, default=None, metavar="MINS",
+                   help="filter to files modified within this many minutes (activity view)")
+    p.add_argument("--json", action="store_true", help="emit records as JSON")
+    p.add_argument("--all", action="store_true",
+                   help="include internal subagents (__-prefixed harness plumbing)")
+    p.add_argument("--follow", nargs="?", const=10, type=float, metavar="SECS", default=None,
+                   help="redraw the table every SECS seconds (default 10) — watch, not poll")
+    p.add_argument("tail", nargs="*", default=[], metavar="ARGS",
+                   help="tail <id-substr> [N]: last N message records of the newest matching transcript")
+    try:
+        return p.parse_args(argv)
+    except SystemExit:
+        raise SystemExit(0)  # reporting tool: bad flags reported, never a failing exit
+
+
+def roots():
+    default = f"{os.path.expanduser('~/.omp/agent/sessions')}:{os.path.expanduser('~/Work/sessions')}"
+    return [r for r in os.environ.get("HNGH_AGENTS_ROOTS", default).split(":") if r]
+
+
+def snippet_of(rec):
+    m = rec.get("message") or {}
+    role = m.get("role") or rec.get("type") or "?"
+    c = m.get("content")
+    if isinstance(c, list):
+        c = " ".join(b.get("text", "") for b in c if isinstance(b, dict))
+    if not isinstance(c, str):
+        c = ""
+    return role, " ".join(c.split())[:SNIPPET]
+
+
+def scan(window_mins, active_mins, include_internal=False):
+    now = time.time()
+    out = []
+    for root in roots():
+        if not os.path.isdir(root):
+            continue
+        for dirpath, _dirs, files in os.walk(root):
+            for fn in files:
+                if not fn.endswith(".jsonl"):
+                    continue
+                if fn.startswith("__") and not include_internal:
+                    continue
+                path = os.path.join(dirpath, fn)
+                try:
+                    st = os.stat(path)
+                except OSError:
+                    continue
+                age = (now - st.st_mtime) / 60.0
+                if age > window_mins:
+                    continue
+                if PARENT_RE.match(fn):
+                    kind, label = "parent", fn[:-6]
+                    title = _read_title(path)
+                    if title:
+                        label = f"{label[-12:]} {title[:40]}"
+                    slug = os.path.basename(dirpath.rstrip("/"))
+                    if slug == "sessions":  # slot parent <slot>/sessions/<stem>.jsonl
+                        slug = os.path.basename(os.path.dirname(dirpath.rstrip("/")))
+                else:
+                    kind, label = "sub", fn[:-6]
+                    slug = os.path.basename(os.path.dirname(dirpath.rstrip("/"))) or slug
+                    if slug == "sessions":  # slot sidecar sub <slot>/sessions/<stem>/<Label>.jsonl — up two
+                        slug = os.path.basename(os.path.dirname(os.path.dirname(dirpath.rstrip("/"))))
+                state = "ACTIVE" if age <= active_mins else ("warm" if age <= 60 else "idle")
+                out.append({"kind": kind, "id": label, "project": slug,
+                            "age_min": round(age, 1), "state": state,
+                            "kb": round(st.st_size / 1024), "path": path})
+    out.sort(key=lambda r: r["age_min"])
+    return out
+
+
+def _read_title(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for _ in range(3):
+                line = fh.readline()
+                if not line:
+                    break
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                t = rec.get("title")
+                if isinstance(t, str) and t.strip():
+                    return t.strip()
+    except OSError:
+        pass
+    return ""
+
+
+def tail(path, n):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            lines = fh.readlines()
+    except OSError as exc:
+        print(f"hngh-agents: cannot read {path}: {exc}")
+        return
+    shown = 0
+    for raw in reversed(lines):
+        if shown >= n:
+            break
+        try:
+            rec = json.loads(raw)
+        except ValueError:
+            continue
+        role, text = snippet_of(rec)
+        ts = (rec.get("timestamp") or "?")[11:19]
+        print(f"{ts} {role:<10} {text or '-'}")
+        shown += 1
+    if not shown:
+        print("no message records in transcript")
+
+
+def main(argv):
+    args = parse_args(argv)
+    if args.tail:
+        if args.tail[0] != "tail" or len(args.tail) < 2 or not args.tail[1]:
+            print("usage: hngh-agents tail <id-substr> [N]  (or hngh-agents [--window M][--active M][--json])")
+            return 0
+        sub = args.tail[1]
+        n = int(args.tail[2]) if len(args.tail) > 2 and args.tail[2].isdigit() else 10
+        rows = scan(args.window, ACTIVE_MINS)
+        matches = [r for r in rows if sub.lower() in r["id"].lower()]
+        if not matches:
+            print(f"no transcript matches {sub!r} in window")
+            return 0
+        best = matches[0]
+        print(f"# {best['kind']} {best['id']}  ({best['path']}, {best['state']}, {best['age_min']}m old)")
+        tail(best["path"], n)
+        return 0
+
+    while True:
+        rows = scan(args.active if args.active is not None else args.window, ACTIVE_MINS,
+                    include_internal=args.all)
+        if args.json:
+            print(json.dumps(rows, indent=1))
+            return 0
+        print(f"omp transcripts in window: {len(rows)}"
+              f"  (ACTIVE = modified <= {ACTIVE_MINS:g}m)")
+        if not rows:
+            print("nothing — no agent work observed")
+        else:
+            hdr = f"{'state':<7} {'kind':<7} {'age':>7} {'kb':>6}  {'project':<24} id"
+            print(hdr)
+            print("-" * len(hdr))
+            for r in rows:
+                print(f"{r['state']:<7} {r['kind']:<7} {fmt_age(r['age_min']):>7} {r['kb']:>6}  "
+                      f"{r['project'][:24]:<24} {r['id']}")
+        if args.follow is None:
+            return 0
+        print(f"\n(follow: refresh {args.follow:g}s — ctrl-c to stop)")
+        time.sleep(args.follow)
+        print("\033[H\033[2J", end="")
+
+
+def fmt_age(mins):
+    if mins < 90:
+        return f"{int(mins)}m"
+    if mins < 48 * 60:
+        return f"{mins / 60:.1f}h"
+    return f"{mins / 1440:.1f}d"
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except BrokenPipeError:
+        try:
+            sys.stdout.close()
+        except Exception:
+            pass
+        sys.exit(0)

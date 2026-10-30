@@ -1,0 +1,133 @@
+#!/bin/bash
+# hngh-orient-selfcheck — sandboxed contract check for hngh-orient.
+# Sandbox: HNGH_HANDOFF_DIR / HNGH_WORK_DIR -> mktemp -d; the four reader
+# binaries are stubbed via a stub dir placed FIRST on PATH (per-invocation env,
+# never exported).
+# Contract: `ok:` per assertion, ends SELF-CHECK GREEN (exit 0)
+# or SELF-CHECK: <n> failure(s) (exit 1).
+
+set -u
+
+ORIENT="$(dirname "$0")/hngh-orient"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+mkdir -p "$sandbox/handoffs" "$sandbox/briefs" "$sandbox/stub" "$sandbox/ws"
+
+fails=0
+ok() { printf 'ok: %s\n' "$1"; }
+fail() { printf 'FAIL: %s\n' "$1"; fails=$((fails + 1)); }
+
+# stub readers: configurable via files in $sandbox/stub
+for name in hngh-overview hngh-job hngh-sessions hngh-digest-rollup; do
+  cat > "$sandbox/stub/$name" <<EOF
+#!/bin/bash
+[ -f "$sandbox/stub/$name.out" ] && cat "$sandbox/stub/$name.out"
+exit 0
+EOF
+  chmod +x "$sandbox/stub/$name"
+done
+
+run() { env HNGH_HANDOFF_DIR="$sandbox/handoffs" HNGH_WORK_DIR="$sandbox/ws" \
+             PATH="$sandbox/stub:$PATH" "$ORIENT" "$@"; }
+
+# fixture briefs + a real always-read path
+mkdir -p "$sandbox/ws/briefs" "$sandbox/ws/session-handoffs"
+: > "$sandbox/ws/briefs/00-always.md"
+: > "$sandbox/ws/briefs/90-session-types.md"
+: > "$sandbox/ws/briefs/40-secrets.md"
+: > "$sandbox/ws/briefs/10-agents.md"
+
+# 1. newest handoff wins; _TEMPLATE.md and *.bak-* ignored
+printf 'Status: old\n' > "$sandbox/handoffs/2026-10-01-old.md"
+printf 'Status: old too\n' > "$sandbox/handoffs/2026-10-02-mid.md.bak-20261002T000000Z"
+printf 'Status: template\n' > "$sandbox/ws/session-handoffs/_TEMPLATE.md"
+printf 'Status: newest one\n> quote line\nNext concrete: do the thing\n' \
+  > "$sandbox/handoffs/2026-10-28-new.md"
+out=$(run 2>/dev/null)
+if grep -q "2026-10-28-new.md" <<<"$out" \
+   && ! grep -q "2026-10-01-old\|_TEMPLATE\|\.bak-" <<<"$out" \
+   && grep -q "^> quote line$" <<<"$out" && grep -q "Next concrete: do the thing" <<<"$out"; then
+  ok "handoff: newest picked, template/bak excluded, status lines shown"
+else
+  fail "handoff: got: $(grep -A2 'LATEST HANDOFF' <<<"$out" | head -3 | tr '\n' ' | ')"
+fi
+
+# 2. READ FIRST: always + type map
+out=$(run --type credentials 2>/dev/null)
+if grep -q "$sandbox/ws/briefs/00-always.md" <<<"$out" \
+   && grep -q "$sandbox/ws/briefs/40-secrets.md" <<<"$out" \
+   && grep -q "$sandbox/ws/briefs/10-agents.md" <<<"$out"; then
+  ok "read-first: credentials set has 00-always + 40-secrets + 10-agents"
+else
+  fail "read-first credentials: $out"
+fi
+out=$(run --type orientation 2>/dev/null)
+if grep -q "$sandbox/ws/README.md" <<<"$out" && ! grep -q "40-secrets" <<<"$out"; then
+  ok "read-first: orientation set has README, no 40-secrets"
+else
+  fail "read-first orientation: $out"
+fi
+
+# 3. unknown --type falls back to orientation
+out=$(run --type bogus 2>"$sandbox/err3")
+if [ $? -eq 0 ] && grep -q "$sandbox/ws/README.md" <<<"$out" \
+   && ! grep -q "40-secrets" <<<"$out" \
+   && grep -qi "falling back" "$sandbox/err3"; then
+  ok "unknown type: falls back to orientation with stderr note"
+else
+  fail "unknown type: $out $(cat "$sandbox/err3")"
+fi
+
+# 4. OPEN GATES: gate record listed; none -> "no open gates"
+cat > "$sandbox/stub/hngh-job.out" <<'EOF'
+[{"job":"fix-relay","event":"gate","at":"2026-10-28T10:00:00Z"},
+ {"job":"ship","event":"outcome","outcome":"ok","at":"2026-10-28T11:00:00Z"}]
+EOF
+out=$(run 2>/dev/null)
+if grep -q "fix-relay (gate @ 2026-10-28T10:00:00Z)" <<<"$out" && ! grep -q "ship" <<<"$out"; then
+  ok "gates: gate record listed, non-gate skipped"
+else
+  fail "gates: $out"
+fi
+: > "$sandbox/stub/hngh-job.out"
+out=$(run 2>/dev/null)
+if grep -q "no open gates" <<<"$out"; then
+  ok "gates: none -> 'no open gates'"
+else
+  fail "gates empty: $out"
+fi
+
+# 5. missing/empty sources degrade to (unavailable), exit 0 still
+rm -f "$sandbox/stub"/hngh-{overview,job,sessions,digest-rollup}.out
+rm -rf "$sandbox/handoffs"
+out=$(run 2>/dev/null); rc=$?
+if [ $rc -eq 0 ] && grep -q "^OVERVIEW$" <<<"$out" \
+   && grep -q "(no handoff found)" <<<"$out" \
+   && grep -q "(unavailable)" <<<"$out" && grep -q "^none$" <<<"$out"; then
+  ok "missing sources: degraded sections, exit 0"
+else
+  fail "missing sources (rc=$rc): $out"
+fi
+
+# 6. --json shape: exactly the eight keys; text <= 60 lines
+out=$(run --json 2>/dev/null)
+if jq -e 'type == "object" and (keys | sort) == (["cwd","gates","handoff","movement","overview","read_first","sessions","type"] | sort)' \
+      >/dev/null 2>&1 <<<"$out"; then
+  ok "--json: one object with exactly the eight keys"
+else
+  fail "--json shape: $out"
+fi
+nlines=$(run 2>/dev/null | wc -l)
+if [ "$nlines" -le 60 ]; then
+  ok "text output: $nlines lines (<= 60)"
+else
+  fail "text output: $nlines lines > 60"
+fi
+
+if [ $fails -eq 0 ]; then
+  echo "SELF-CHECK GREEN"
+  exit 0
+else
+  echo "SELF-CHECK: $fails failure(s)"
+  exit 1
+fi

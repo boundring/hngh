@@ -1,0 +1,59 @@
+#!/bin/bash
+# hngh-session-note — append one milestone to the hngh session ledger (fabric §5, option A).
+# The ledger is the coordination/tracking state for orchestration sessions and slots;
+# written at milestones, so it never goes stale the way an exit-only manifest can.
+# Usage: hngh-session-note <session-id> <event> [--role ROLE] [--line PROJECT]... [--detail TEXT]
+#   <session-id>: non-empty [A-Za-z0-9._-]+ — stable id for this session (slug or omp session prefix)
+#   <event>:      non-empty [A-Za-z0-9._:-]+ — suggested grammar:
+#                 spawned|started|phase_started|phase_done|scout_spawned|scout_delivered|
+#                 decision_open|decision_ruled|deliverable|blocked|awaiting_gate|done|aborted|note
+#   --line:       repeatable; project/research lines this session touches (discovery key)
+# Exit: 0 stored | 1 schema violation | 2 usage
+set -u
+
+usage() { echo "usage: hngh-session-note <session-id> <event> [--role ROLE] [--line PROJECT]... [--detail TEXT]" >&2; exit 2; }
+
+[[ $# -ge 2 ]] || usage
+session=$1
+event=$2
+shift 2
+
+[[ $session =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "hngh-session-note: bad session id: $session" >&2; exit 1; }
+[[ $event =~ ^[A-Za-z0-9][A-Za-z0-9._:-]*$ ]] || { echo "hngh-session-note: bad event: $event" >&2; exit 1; }
+
+role=""
+detail=""
+lines=()
+while (( $# )); do
+	case $1 in
+		--role)   [[ $# -ge 2 ]] || usage; role=$2; [[ -n $role ]] || usage; shift 2 ;;
+		--line)   [[ $# -ge 2 ]] || usage; [[ -n $2 ]] || usage; lines+=("$2"); shift 2 ;;
+		--detail) [[ $# -ge 2 ]] || usage; detail=$2; shift 2 ;;
+		*) usage ;;
+	esac
+done
+
+line_args=()
+(( ${#lines[@]} )) && line_args+=(--argjson lines "$(printf '%s\n' "${lines[@]}" | jq -R . | jq -s .)")
+(( ${#lines[@]} == 0 )) && line_args+=(--argjson lines '[]')
+
+line=$(jq -cn \
+	--arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+	--arg session "$session" \
+	--arg event "$event" \
+	--arg role "$role" \
+	--arg detail "$detail" \
+	"${line_args[@]}" \
+	'{ts:$ts, session:$session, event:$event, role:(if $role == "" then null else $role end),
+	  lines:$lines, detail:(if $detail == "" then null else $detail end)}
+	| with_entries(select(.value != null))') || {
+	echo "hngh-session-note: rejected (could not build record)" >&2
+	exit 1
+}
+
+dir=${HNGH_SESSIONS_DIR:-"$HOME/.local/state/hngh/sessions"}
+mkdir -p "$dir"
+exec {fd}>>"$dir/feed.jsonl"
+flock -x "$fd"
+printf '%s\n' "$line" >&"$fd"
+printf '%s\n' "$line"

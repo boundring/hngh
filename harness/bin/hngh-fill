@@ -1,0 +1,516 @@
+#!/bin/bash
+# hngh-fill — the local-fill runner (skeleton→fill pipeline, PLANS/2026-10-29-skeleton-fill-pipeline.md §"The fill contract").
+#
+# Queue root: ${HNGH_FILL_DIR:-~/.local/state/hngh/fill}
+#   queued/<id>/SPEC.md      remote-authored spec
+#   queued/<id>/tests/       remote-authored definition of done
+#   queued/<id>/item.json    {id, test_cmd, workdir_rel}
+#   queued/<id>/workdir/     what the local model completes (workdir_rel is relative to the item dir)
+#   filled/<id>/             green, result.json written
+#   escalate/<id>/           still red after N attempts (remote review queue)
+#   log.jsonl                one line per transition {at,id,from,to,attempts,note}
+#
+# The model is the local unsloth coder (text-only, THINKING: max_tokens must be >= 3000; LFM2.5-24B-A2B measured to need ~8k+ or content comes back empty).
+# The key comes from ${HNGH_ENV_DIR:-~/.config/environment.d}/70-unsloth.conf and is NEVER printed.
+set -u
+
+ROOT=${HNGH_FILL_DIR:-$HOME/.local/state/hngh/fill}
+URL=${HNGH_FILL_URL:-http://127.0.0.1:8888/v1/chat/completions}
+ENV_DIR=${HNGH_ENV_DIR:-$HOME/.config/environment.d}
+DEFAULT_MODEL=yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF
+MAX_TOKENS=${HNGH_FILL_MAX_TOKENS:-12288}
+TIMEOUT=${HNGH_FILL_TIMEOUT:-600}
+PRELOAD_CTX=${HNGH_FILL_CTX:-32768}
+STUDIO=${URL%/v1/chat/completions}
+
+usage() {
+	cat <<'EOF'
+hngh-fill — local-fill runner (spec + tests in, patched workdir out).
+
+  drain [--model M] [--attempts N]
+      For each item in queued/ (name order): prompt the local coder with SPEC.md
+      and the test files, apply the returned unified diff in workdir/, run the
+      item's test_cmd there. Green -> filled/, still red after N attempts ->
+      escalate/. A dead local server moves nothing and aborts the drain.
+  status
+      One line per item across queued/, filled/, escalate/.
+  reset <id>
+      Move an escalated item back to queued/ (for remotely-revised specs).
+EOF
+}
+
+die() { echo "hngh-fill: $*" >&2; exit 1; }
+now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+model_gguf_path() { # model slug -> largest local GGUF path (HF cache layout)
+	local slug_q d
+	slug_q=$(printf '%s' "$1" | sed 's|/|--|g')
+	d="$HOME/.cache/huggingface/hub/models--$slug_q"
+	[ -d "$d" ] || return 0
+	find -L "$d" -name '*.gguf' -printf '%s\t%p\n' 2>/dev/null | sort -nr | head -1 | cut -f2-
+}
+
+cmd=${1:-}
+[ -n "$cmd" ] || { usage >&2; exit 1; }
+shift
+
+model=$DEFAULT_MODEL
+attempts=2
+positional=""
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--model)   model=${2:?}; shift 2 ;;
+		--attempts) attempts=${2:?}; shift 2 ;;
+		--) shift; break ;;
+		-*) usage >&2; exit 1 ;;
+		*) if [ -z "$positional" ]; then positional=$1; else die "unexpected argument: $1"; fi; shift ;;
+	esac
+done
+[[ "$attempts" =~ ^[0-9]+$ ]] && [ "$attempts" -ge 1 ] || die "--attempts must be a positive integer"
+
+mkdir -p "$ROOT/queued" "$ROOT/filled" "$ROOT/escalate" || die "cannot create queue dirs under $ROOT"
+
+# ---- helpers ----------------------------------------------------------------
+
+log_transition() { # log_transition <id> <from> <to> <attempts> <note>
+	local line
+	line=$(AT=$(now_iso) ID=$1 FROM=$2 TO=$3 ATT=$4 NOTE=$5 python3 -c '
+import json, os
+print(json.dumps({"at": os.environ["AT"], "id": os.environ["ID"], "from": os.environ["FROM"],
+                  "to": os.environ["TO"], "attempts": int(os.environ["ATT"]),
+                  "note": os.environ["NOTE"]}))' 2>/dev/null) || return 0
+	[ -n "$line" ] || return 0
+	printf '%s\n' "$line" >> "$ROOT/log.jsonl" 2>/dev/null || true
+}
+
+write_result() { # write_result <itemdir> <id> <model> <attempts> <status> <note>
+	ITEM=$1 ID=$2 MODEL=$3 ATT=$4 STATUS=$5 NOTE=$6 AT=$(now_iso) python3 -c '
+import json, os
+json.dump({"id": os.environ["ID"], "model": os.environ["MODEL"],
+           "attempts": int(os.environ["ATT"]), "status": os.environ["STATUS"],
+           "at": os.environ["AT"], "note": os.environ["NOTE"]},
+          open(os.path.join(os.environ["ITEM"], "result.json"), "w"), indent=2)
+open(os.path.join(os.environ["ITEM"], "result.json"), "a").write("\n")'
+}
+
+jget() { # jget <file> <key>
+	python3 -c '
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+v = d
+for k in sys.argv[2].split("."):
+    if isinstance(v, dict) and k in v:
+        v = v[k]
+    else:
+        sys.exit(0)
+print(v)' "$1" "$2"
+}
+
+# ---- drain ------------------------------------------------------------------
+
+do_drain() {
+	local env_file="$ENV_DIR/70-unsloth.conf"
+	local ukey=""
+	if [ -f "$env_file" ]; then
+		ukey=$(set -a; . "$env_file"; eval 'printf %s "${UNSLOTH_API_KEY:-}"')
+	fi
+	if [ -z "$ukey" ]; then
+		echo "hngh-fill: no UNSLOTH_API_KEY in $env_file — nothing drained" >&2
+		exit 1
+	fi
+
+	# flock-serialize drains so two runs never fight over the same item.
+	exec 9>>"$ROOT/.drain.lock" || die "cannot open lock file"
+	flock -x 9 || die "flock failed"
+
+	local items
+	items=$(ls -1 "$ROOT/queued" 2>/dev/null | sort)
+	[ -n "$items" ] || { echo "hngh-fill: queue empty"; exit 0; }
+
+	# Preflight: if the local server is already down, abort BEFORE moving anything.
+	local pre
+	pre=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' "$URL" 2>/dev/null)
+	if [ -z "$pre" ] || [ "$pre" = "000" ]; then
+		# 000 conflates three states; say which one we actually saw.
+		local probe
+		probe=$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
+			"${URL%/chat/completions}/models" 2>/dev/null)
+		if [ -z "$probe" ] || [ "$probe" = "000" ]; then
+			echo "hngh-fill: local server down ($URL) — nothing moved" >&2
+		else
+			echo "hngh-fill: local server reachable but the chat endpoint did not answer (models=$probe) — the model slot is busy or wedged; nothing moved" >&2
+		fi
+		exit 1
+	fi
+
+	# VRAM budget guard (2026-10-29 crash): loading a model whose weights + KV
+	# cache approach the card's free VRAM OOM-kills the desktop. Rule: GGUF file
+	# > 12 GB ⇒ weights+mmproj+KV demand exceeds the operator's 12–14 GB ceiling
+	# once context is served. Refuse unless the caller overrides.
+	if [ "${HNGH_FILL_ALLOW_BIG:-0}" != 1 ]; then
+		slug_q=$(printf '%s' "$model" | sed 's|/|--|g')
+		# -L twice: snapshot files are symlinks into the blob store; both find
+		# and du must dereference or du measures the 79-byte symlink
+		gguf_bytes=$(find -L "$HOME/.cache/huggingface/hub/models--$slug_q" -name '*.gguf' -exec du -bL {} + 2>/dev/null | sort -nr | head -1 | cut -f1)
+		if [ -n "$gguf_bytes" ] && [ "$gguf_bytes" -gt 12000000000 ]; then
+			printf 'hngh-fill: refusing %s — GGUF is %d GB; total demand (weights+mmproj+KV) exceeds the 12–14 GB VRAM budget and OOM-crashed the desktop on 2026-10-29. Bound its context in the unsloth studio first, or override with HNGH_FILL_ALLOW_BIG=1.\n' "$model" "$((gguf_bytes / 1000000000))" >&2
+			exit 1
+		fi
+	fi
+
+	local id item workdir test_cmd spec tests_rel attempts_used attempt
+	for id in $items; do
+		item="$ROOT/queued/$id"
+		[ -d "$item" ] || continue
+		spec="$item/SPEC.md"
+		[ -f "$spec" ] || { echo "hngh-fill: $id has no SPEC.md — skipped" >&2; continue; }
+		test_cmd=$(jget "$item/item.json" test_cmd)
+		[ -n "$test_cmd" ] || { echo "hngh-fill: $id has no item.json test_cmd — skipped" >&2; continue; }
+		workdir_rel=$(jget "$item/item.json" workdir_rel)
+		[ -n "$workdir_rel" ] || workdir_rel=workdir
+		workdir="$item/$workdir_rel"
+		mkdir -p "$workdir" || die "cannot create $workdir"
+		# Anti-gutting guard: keep a pre-fill snapshot. A green whose filled
+		# file shrank below half the original is a full-file rewrite, not a
+		# patch (measured 2026-10-30: LFM2.5/QAT replaced a 491-line engine
+		# with toys and the tests still went green).
+		if [ -n "$(ls -A "$workdir" 2>/dev/null)" ]; then
+			# snapshot lives OUTSIDE the item: for path-2 items the workdir IS
+			# the item dir, and copying a dir into its own subdir fails.
+			rm -rf "$ROOT/.prefill/$id"
+			mkdir -p "$ROOT/.prefill/$id"
+			cp -a "$workdir"/. "$ROOT/.prefill/$id"/
+		fi
+
+		attempts_used=0
+		local failure_out=""
+		local escalated=1
+		while [ "$attempts_used" -lt "$attempts" ]; do
+			attempts_used=$((attempts_used + 1))
+
+			# Bounded pre-load (2026-10-29 GPU-hang incident): the studio's
+			# auto context derivation ignores the desktop's VRAM — it fitted
+			# 240896 ctx => 13.85 GB GPU for a 12B model, which hung the GPU
+			# (REG_WAIT timeout -> amdgpu reset) and killed the compositor.
+			# Ask for an explicit context instead: 32768 ctx => 9.85 GB GPU
+			# (measured via /api/inference/estimate-memory). Best-effort: on
+			# failure the chat request proceeds and the studio derives its own.
+			if [ -n "$PRELOAD_CTX" ] && [ "$PRELOAD_CTX" != "0" ]; then
+				local mp
+				mp=$(model_gguf_path "$model")
+				if [ -n "$mp" ]; then
+					curl -sS --max-time 120 -o /dev/null \
+						-H "Authorization: Bearer $ukey" -H 'Content-Type: application/json' \
+						-X POST "$STUDIO/api/inference/load" \
+						-d "{\"engine\":\"auto\",\"model_path\":\"$mp\",\"max_seq_length\":$PRELOAD_CTX,\"max_seq_length_auto_derived\":false,\"force_reload\":false,\"load_in_4bit\":false}" \
+						2>/dev/null || true
+				fi
+			fi
+
+			local payload body status content diff applied
+			payload=$(mktemp)
+			SPEC_FILE="$spec" TESTS_DIR="$item/tests" FAILURE_OUT="$failure_out" \
+			WORKDIR="$workdir" MODEL="$model" MAX_TOKENS="$MAX_TOKENS" python3 - > "$payload" <<'PY'
+import json, os
+spec = open(os.environ["SPEC_FILE"], encoding="utf-8", errors="replace").read()
+tests = []
+td = os.environ.get("TESTS_DIR", "")
+if os.path.isdir(td):
+    for root, dirs, files in os.walk(td):
+        dirs.sort()
+        for f in sorted(files):
+            p = os.path.join(root, f)
+            try:
+                tests.append("--- %s ---\n%s" % (os.path.relpath(p, td), open(p, encoding="utf-8", errors="replace").read()))
+            except OSError:
+                pass
+fail = os.environ.get("FAILURE_OUT", "")
+user = spec + "\n\n" + "\n\n".join(tests)
+wd = os.environ.get("WORKDIR", "")
+files = []
+if os.path.isdir(wd):
+    for f in sorted(os.listdir(wd)):
+        p = os.path.join(wd, f)
+        if f in ("SPEC.md", "item.json", "result.json") or f.startswith(".") or not os.path.isfile(p):
+            continue
+        try:
+            files.append("--- %s (current content) ---\n%s" % (f, open(p, encoding="utf-8", errors="replace").read()))
+        except OSError:
+            pass
+if files:
+    user += ("\n\n=== CURRENT CONTENT OF THE WORKDIR FILE(S) YOU ARE PATCHING ===\n"
+             "Patch against this content; preserve every part the SPEC does not change.\n"
+             + "\n\n".join(files))
+if fail:
+    user += "\n\n=== PREVIOUS ATTEMPT FAILED — failing test output ===\n" + fail
+print(json.dumps({"model": os.environ["MODEL"], "max_tokens": int(os.environ["MAX_TOKENS"]),
+                  "messages": [
+                      {"role": "system", "content": "You are a senior engineer. Output ONLY a unified diff patch that makes the given tests pass; patch the file paths the SPEC and tests name. The current content of those files is provided in the message — base the patch on it and keep every existing function, class, and CLI argument the SPEC does not change. If a unified diff is error-prone, output the complete new content of one file as a fenced block whose info string is the file path; it must preserve the existing file, not replace it with a smaller rewrite. No prose."},
+                      {"role": "user", "content": user}]}))
+PY
+
+			body=$(mktemp)
+			status=$(curl -sS --max-time "$TIMEOUT" -o "$body" -w '%{http_code}' \
+				-H "Authorization: Bearer $ukey" -H 'Content-Type: application/json' \
+				--data-binary "@$payload" "$URL" 2>/dev/null)
+			rm -f "$payload"
+
+			if [ -z "$status" ] || [ "$status" = "000" ]; then
+				rm -f "$body"
+				echo "hngh-fill: local server down ($URL) — nothing moved" >&2
+				exit 1
+			fi
+			if [ "$status" != "200" ]; then
+				rm -f "$body"
+				echo "hngh-fill: $id attempt $attempts_used: http $status" >&2
+				failure_out="http $status"
+				continue
+			fi
+
+			content=$(python3 -c '
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+try:
+    print(d["choices"][0]["message"]["content"] or "")
+except Exception:
+    sys.exit(0)' "$body")
+			rm -f "$body"
+
+			diff=$(printf '%s\n' "$content" | python3 -c '
+import sys, re
+import difflib, os
+def unified(old, new, path):
+    return "".join(difflib.unified_diff(
+        old.splitlines(keepends=True), new.splitlines(keepends=True),
+        fromfile="a/" + path, tofile="b/" + path))
+def emit_fullfile():
+    for i, l in enumerate(lines):
+        m = re.match(r"^(?:```|~~~)\s*([\w./-]+\.[A-Za-z0-9]+)\s*$", l) or \
+            re.match(r"^FILE:\s*([\w./-]+\.[A-Za-z0-9]+)\s*$", l)
+        if not m:
+            continue
+        path = m.group(1).lstrip("./")
+        body = []
+        for l2 in lines[i + 1:]:
+            if l2.startswith("```") or l2.startswith("~~~"):
+                break
+            body.append(l2)
+        if len(body) < 2:
+            continue
+        target = os.path.join(workdir, path)
+        old = open(target).read() if os.path.isfile(target) else ""
+        sys.stdout.write(unified(old, "\n".join(body) + "\n", path))
+        sys.exit(0)
+    # language-labeled fence (e.g. ```python): models label fences with the
+    # language, not the path. If the workdir holds exactly one file, the fence
+    # can only mean that file — map it and synthesize the diff.
+    cand = [f for f in os.listdir(workdir)
+            if os.path.isfile(os.path.join(workdir, f))]
+    if len(cand) == 1:
+        path = cand[0]
+        for i, l in enumerate(lines):
+            m = re.match(r"^(?:```|~~~)\s*[A-Za-z][\w+-]*\s*$", l)
+            if not m:
+                continue
+            body = []
+            for l2 in lines[i + 1:]:
+                if l2.startswith("```") or l2.startswith("~~~"):
+                    break
+                body.append(l2)
+            if len(body) >= 2:
+                target = os.path.join(workdir, path)
+                old = open(target).read() if os.path.isfile(target) else ""
+                sys.stdout.write(unified(old, "\n".join(body) + "\n", path))
+                sys.exit(0)
+text = sys.stdin.read()
+workdir = sys.argv[1]
+lines = text.splitlines()
+start = None
+for i, l in enumerate(lines):
+    if l.startswith("diff --git ") or l.startswith("--- "):
+        start = i
+        break
+if start is None:
+    emit_fullfile()
+    sys.exit(0)
+out = []
+for l in lines[start:]:
+    if l.startswith("```"):
+        break
+    out.append(l)
+sys.stdout.write("\n".join(out).rstrip() + "\n")' "$workdir")
+			if [ -z "$diff" ]; then
+				echo "hngh-fill: $id attempt $attempts_used: no unified diff in reply" >&2
+				# keep the raw reply: it is the evidence for why the item failed
+				# and it is training-shaped data for the next model iteration
+				printf '%s\n' "$content" > "$item/reply-attempt-$attempts_used.txt" 2>/dev/null
+				failure_out="no unified diff in model reply"
+				continue
+			fi
+
+			applied=$(apply_diff "$workdir" "$diff") || true
+			if [ "$applied" != "ok" ]; then
+				echo "hngh-fill: $id attempt $attempts_used: patch did not apply ($applied)" >&2
+				printf '%s\n' "$content" > "$item/reply-attempt-$attempts_used.txt" 2>/dev/null
+				# GNU patch may have applied SOME hunks (rc=1, rejects saved) —
+				# reset to the pre-fill snapshot so the next attempt starts clean.
+				# find-based clear: for path-2 items workdir IS the item dir,
+				# so `rm -rf "$workdir"` would refuse '.'.
+				if [ -d "$ROOT/.prefill/$id" ]; then
+					find "$workdir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+					cp -a "$ROOT/.prefill/$id"/. "$workdir"/
+				fi
+				failure_out="patch did not apply: $applied"
+				continue
+			fi
+
+			local test_out
+			test_out=$(cd "$workdir" && HNGH_FILL_ITEM_DIR="$item" HNGH_FILL_TESTS_DIR="$item/tests" \
+				bash -c "$test_cmd" 2>&1)
+			if [ $? -eq 0 ]; then
+				gutted=$(WORKDIR="$workdir" PREFILL="$ROOT/.prefill/$id" python3 -c '
+import os, sys
+pf = os.environ.get("PREFILL", ""); wd = os.environ.get("WORKDIR", "")
+if not os.path.isdir(pf): sys.exit(0)
+for f in os.listdir(pf):
+    a = os.path.join(pf, f); b = os.path.join(wd, f)
+    if os.path.isfile(a) and os.path.isfile(b):
+        sa, sb = os.path.getsize(a), os.path.getsize(b)
+        if sa > 0 and sb < sa * 0.5:
+            print("%s shrank to %d%% of the original" % (f, sb * 100 // sa)); sys.exit(1)
+')
+				if [ -n "$gutted" ]; then
+					echo "hngh-fill: $id attempt $attempts_used: green REJECTED — full-file rewrite ($gutted)" >&2
+					printf '%s\n' "$content" > "$item/reply-attempt-$attempts_used.txt" 2>/dev/null
+					find "$workdir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+					cp -a "$ROOT/.prefill/$id"/. "$workdir"/
+					failure_out="green rejected: $gutted. Patch the provided content; keep the existing engine."
+					continue
+				fi
+				echo "hngh-fill: $id green after $attempts_used attempt(s)" >&2
+				mv "$item" "$ROOT/filled/$id" || die "cannot move $id to filled/"
+				write_result "$ROOT/filled/$id" "$id" "$model" "$attempts_used" "filled" "tests green"
+				rm -rf "$ROOT/.prefill/$id"
+				# audit trail: a green claim must carry the test output that proved it
+				printf '%s\n' "$test_out" > "$ROOT/filled/$id/test_out.log"
+				log_transition "$id" "queued" "filled" "$attempts_used" "tests green"
+				escalated=0
+				break
+			fi
+			echo "hngh-fill: $id attempt $attempts_used: tests still red" >&2
+			if [ -d "$ROOT/.prefill/$id" ]; then
+				find "$workdir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+				cp -a "$ROOT/.prefill/$id"/. "$workdir"/
+			fi
+			failure_out=$test_out
+		done
+
+		if [ "$escalated" = 1 ]; then
+			mv "$item" "$ROOT/escalate/$id" || die "cannot move $id to escalate/"
+			write_result "$ROOT/escalate/$id" "$id" "$model" "$attempts_used" "escalated" "still red after $attempts_used attempt(s)"
+			log_transition "$id" "queued" "escalate" "$attempts_used" "still red after $attempts_used attempt(s)"
+		fi
+	done
+	flock -u 9
+	exec 9>&-
+	echo "hngh-fill: drain complete"
+	exit 0
+}
+
+# apply_diff <workdir> <diff-text>: try patch then git apply; prints "ok" or a reason.
+apply_diff() {
+	local wd=$1 diff=$2 f rc out
+	f=$(mktemp)
+	printf '%s\n' "$diff" > "$f"
+	# Recount @@ headers in place: small coders emit correct hunks with wrong
+	# counts, which both patch and git apply reject as corrupt/malformed.
+	# GNU patch then finds the true position from context (offset search).
+	python3 - "$f" <<'PY'
+import re, sys
+p = sys.argv[1]
+lines = open(p).read().splitlines()
+out, i = [], 0
+while i < len(lines):
+    l = lines[i]
+    m = re.match(r'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', l)
+    if m:
+        j, old, new = i + 1, 0, 0
+        while j < len(lines) and not lines[j].startswith('@@') \
+                and not (lines[j].startswith('--- ') and j + 1 < len(lines) and lines[j+1].startswith('+++ ')) \
+                and not lines[j].startswith('diff --git'):
+            t = lines[j]
+            if t.startswith('\\'):
+                pass
+            elif t.startswith('+'):
+                new += 1
+            elif t.startswith('-'):
+                old += 1
+            else:
+                old += 1; new += 1
+            j += 1
+        out.append('@@ -%s,%d +%s,%d @@' % (m.group(1), old, m.group(3), new))
+        out.extend(lines[i+1:j])
+        i = j
+    else:
+        out.append(l); i += 1
+open(p, 'w').write('\n'.join(out) + '\n')
+PY
+	out=$(cd "$wd" && patch -p0 --batch --forward -u < "$f" 2>&1); rc=$?
+	if [ $rc = 0 ]; then rm -f "$f"; echo ok; return 0; fi
+	out=$(cd "$wd" && patch -p1 --batch --forward -u < "$f" 2>&1); rc=$?
+	if [ $rc = 0 ]; then rm -f "$f"; echo ok; return 0; fi
+	# --recount: small coders write correct hunks with wrong @@ line counts
+	# (measured 2026-10-30, Nemotron E4B) — recount instead of rejecting.
+	out=$(cd "$wd" && git apply --recount -p1 --unsafe-paths "$f" 2>&1); rc=$?
+	if [ $rc = 0 ]; then rm -f "$f"; echo ok; return 0; fi
+	out=$(cd "$wd" && git apply --recount -p0 --unsafe-paths "$f" 2>&1); rc=$?
+	if [ $rc = 0 ]; then rm -f "$f"; echo ok; return 0; fi
+	rm -f "$f"
+	printf '%s' "$(printf '%s' "$out" | tr '\n' ' ' | cut -c1-160)"
+	return 1
+}
+
+# ---- status -----------------------------------------------------------------
+
+do_status() {
+	local id d state extra
+	for state in queued filled escalate; do
+		for d in "$ROOT/$state"/*; do
+			[ -d "$d" ] || continue
+			id=$(basename "$d")
+			extra=""
+			if [ -f "$d/result.json" ]; then
+				extra="attempts=$(jget "$d/result.json" attempts) model=$(jget "$d/result.json" model)"
+			fi
+			printf '%s %s %s\n' "$id" "$state" "$extra"
+		done
+	done
+	exit 0
+}
+
+# ---- reset ------------------------------------------------------------------
+
+do_reset() {
+	local id=${positional:-}
+	[ -n "$id" ] || die "reset needs an item id"
+	[ -d "$ROOT/escalate/$id" ] || die "no escalated item '$id'"
+	mv "$ROOT/escalate/$id" "$ROOT/queued/$id" || die "cannot move $id back to queued/"
+	rm -f "$ROOT/queued/$id/result.json"
+	log_transition "$id" "escalate" "queued" "0" "reset for revised spec"
+	echo "hngh-fill: $id requeued"
+	exit 0
+}
+
+case "$cmd" in
+drain)  do_drain ;;
+status) do_status ;;
+reset)  do_reset ;;
+-h|--help|help) usage; exit 0 ;;
+*) usage >&2; die "unknown subcommand: $cmd" ;;
+esac

@@ -1,0 +1,18 @@
+# systemone-research matrix spec
+# models: unsloth model ids as served on :8888 (/v1/models)
+# prompts: named strict-format prompts; expect = regex the reply must match
+# context_hint: passed to /api/inference/load as max_seq_length (probed first;
+#               recorded as default-ctx if the API rejects it)
+models:
+  - startlux-models/StartLux-Decision-v1.1-2B-Instant-GGUF:Q8_0
+  - mradermacher/KnowLine-4B-Gen5.5-GGUF:Q4_K_M
+prompts:
+  - name: triage-strict
+    text: |
+      Classify the operator request below. Reply with EXACTLY one line in this
+      format and nothing else:
+      DECISION: <PROCEED|BLOCK|DEFER> | <one short reason>
+      Request: "balance the 2TB pool before tonight's commit window"
+    expect: '^DECISION:\s*(PROCEED|BLOCK|DEFER)\s*\|'
+runs_per_cell: 1
+context_hint: 8192

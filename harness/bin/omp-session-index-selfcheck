@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""Selfcheck for omp-session-index: synthetic mini-tree, asserts §4 fill rules
+plus the cost_total / parent_session / exit_state deltas and incremental skip."""
+import importlib.util
+from importlib.machinery import SourceFileLoader
+import json
+import os
+import sqlite3
+import sys
+import tempfile
+
+TOOL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "omp-session-index")
+spec = importlib.util.spec_from_file_location("osi", TOOL)
+spec = importlib.util.spec_from_loader(
+    "osi", SourceFileLoader("osi", TOOL))
+osi = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(osi)
+
+
+def rec(o):
+    return json.dumps(o) + "\n"
+
+
+def main():
+    tmp = tempfile.mkdtemp(prefix="omp-session-index-selfcheck-")
+    dbpath = os.path.join(tmp, "sessions.db")
+    root_main = os.path.join(tmp, "agent", "sessions", "-")
+    root_slot = os.path.join(tmp, "Work", "2026-10-26-probe", "sessions",
+                             "2026-10-26T00-00-00Z_x", "sessions")
+    os.makedirs(root_main)
+    os.makedirs(os.path.join(root_slot, "2026-10-26T00-01-00Z_y"))
+
+    # 1. parent transcript: header + title + messages + cost + session_exit
+    with open(os.path.join(root_main, "p.jsonl"), "w") as fh:
+        fh.write(rec({"type": "session", "version": 3, "id": "sid-1",
+                      "timestamp": "2026-10-26T10:00:00.000Z",
+                      "cwd": "/home/bricker/proj"}))
+        fh.write(rec({"type": "title", "v": 1, "title": "Probe",
+                      "updatedAt": "2026-10-26T10:05:00.000Z"}))
+        fh.write(rec({"type": "message", "id": "m1", "parentId": None,
+                      "timestamp": "2026-10-26T10:00:01.000Z",
+                      "runtime": {"version": "18.12.3"},
+                      "message": {"role": "user", "content": []}}))
+        fh.write(rec({"type": "message", "id": "m2", "parentId": "m1",
+                      "timestamp": "2026-10-26T10:00:02.000Z",
+                      "runtime": {"version": "18.12.3"},
+                      "message": {"role": "assistant", "model": "glm-5.3-flash",
+                                  "usage": {"input": 100, "output": 20,
+                                            "cacheRead": 30, "cacheWrite": 0,
+                                            "totalTokens": 150,
+                                            "cost": {"input": 1, "output": 2,
+                                                     "cacheRead": 0, "cacheWrite": 0,
+                                                     "total": 3.0}}}}))
+        fh.write(rec({"type": "model_usage", "model": "jev-latest",
+                      "purpose": "unexpected-stop",
+                      "usage": {"input": 10, "output": 0, "cacheRead": 0,
+                                "cacheWrite": 0, "totalTokens": 10,
+                                "cost": {"total": 0.5}}}))
+        fh.write(rec({"type": "custom", "customType": "session_exit",
+                      "data": {"reason": "dispose", "kind": "normal"},
+                      "id": "x1", "parentId": "m2",
+                      "timestamp": "2026-10-26T10:06:00.000Z"}))
+
+    # 2. sidecar subagent: parentSession + title_change + no usage
+    with open(os.path.join(root_slot, "2026-10-26T00-01-00Z_y", "Scout.jsonl"), "w") as fh:
+        fh.write(rec({"type": "session", "version": 3, "id": "sid-2",
+                      "timestamp": "2026-10-26T11:00:00.000Z",
+                      "cwd": tmp,
+                      "parentSession": os.path.join(root_main, "p.jsonl")}))
+        fh.write(rec({"type": "message", "id": "s1", "parentId": None,
+                      "timestamp": "2026-10-26T11:00:01.000Z",
+                      "runtime": {"version": "18.12.6"},
+                      "message": {"role": "user", "content": []}}))
+
+    osi.DB = dbpath
+    osi.ROOTS = [root_main, root_slot]
+
+    osi.main()
+    db = sqlite3.connect(dbpath)
+    rows = {r[1]: r for r in db.execute(f"SELECT {osi.ROW_COLS} FROM agent_session")}
+    assert set(rows) == {"sid-1", "sid-2"}, rows.keys()
+
+    p = rows["sid-1"]
+    # 0:path 1:session_id 2:cwd 3:title 4:agent_version 5:started_at 6:last 7:count
+    # 8:in 9:out 10:cread 11:cwrite 12:total 13:models 14:cost_total 15:parent 16:exit
+    assert p[3] == "Probe", p[3]
+    assert p[4] == "18.12.3" and p[5] == "2026-10-26T10:00:00.000Z"
+    assert p[6] == "2026-10-26T10:06:00.000Z", p[6]  # session_exit timestamp wins
+    assert p[7] == 2 and p[8] == 110 and p[9] == 20 and p[10] == 30
+    assert p[11] == 0 and p[12] == 160, p[12]
+    assert json.loads(p[13]) == ["glm-5.3-flash", "jev-latest"], p[13]
+    assert abs(p[14] - 3.5) < 1e-9, p[14]
+    assert p[15] is None and p[16] == "dispose", (p[15], p[16])
+
+    s = rows["sid-2"]
+    assert s[15] == os.path.join(root_main, "p.jsonl"), s[15]
+    assert s[7] == 1 and s[12] == 0 and s[14] == 0.0
+    assert s[4] == "18.12.6"
+
+    # incremental: unchanged files → 0 indexed, rows intact
+    import io, contextlib
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        osi.main()
+    assert "rows-indexed 0" in buf.getvalue(), buf.getvalue()
+    assert db.execute("SELECT COUNT(*) FROM agent_session").fetchone()[0] == 2
+
+    # changed mtime → re-indexed
+    os.utime(os.path.join(root_main, "p.jsonl"), (0, 0))
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        osi.main()
+    assert "rows-indexed 1" in buf.getvalue(), buf.getvalue()
+
+    print("selfcheck OK")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

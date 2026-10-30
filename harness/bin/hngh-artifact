@@ -1,0 +1,168 @@
+#!/bin/bash
+# hngh-artifact — writer for the MP-3 content-addressed artifact store (DECISIONS.md:45-51).
+# Store root: ${HNGH_ARTIFACTS_DIR:-/mnt/2tb/@home/bricker/artifacts}
+# Layout: <root>/<domain>/<sha256_16>.<ext> + per-domain index.jsonl.
+# Repos never track pixels — they track manifests referencing sha16 hashes.
+# ingest is a WRITER: nonzero exit on failure. address/list/verify are readers: exit 0.
+set -u
+
+usage() {
+	cat <<'EOF'
+hngh-artifact — MP-3 content-addressed artifact store writer.
+
+  ingest <file> --domain D [--licence TEXT] [--origin PATH]
+      sha256 the file, copy into <root>/<domain>/<sha16>.<ext>, append one
+      JSON line to <root>/<domain>/index.jsonl (flock-serialized). Byte-identical
+      re-ingest reports 'already stored' and appends nothing. Prints '<sha16> <stored-path>'.
+  address <file> [--domain D]
+      Print the sha256_16 the file would get, WITHOUT copying anything.
+  list [--domain D]
+      One line per index entry (all domains, or just D).
+  verify [--domain D]
+      Recompute sha256 of every stored file vs its index record; report
+      mismatches; exit 0 with a summary line.
+
+Domain must match [a-z0-9-]+. Missing/empty files are refused on ingest.
+EOF
+}
+
+die() { echo "hngh-artifact: $*" >&2; exit 1; }
+
+ROOT=${HNGH_ARTIFACTS_DIR:-/mnt/2tb/@home/bricker/artifacts}
+
+cmd=${1:-}
+[ -n "$cmd" ] || { usage >&2; exit 1; }
+shift
+
+# --domain D (required by ingest; optional filter for list/verify)
+domain=""
+licence="unspecified"
+origin=""
+positional=""
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--domain)  domain=${2-}; shift 2 ;;
+		--licence) licence=${2-}; shift 2 ;;
+		--origin)  origin=${2-}; shift 2 ;;
+		--) shift; break ;;
+		-*) usage >&2; exit 1 ;;
+		*) if [ -z "$positional" ]; then positional=$1; else die "unexpected argument: $1"; fi; shift ;;
+	esac
+done
+
+valid_domain() { [ -n "$1" ] && printf '%s' "$1" | grep -Eqx '[a-z0-9-]+'; }
+
+sha_of() { sha256sum "$1" | cut -d' ' -f1; }
+now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+case "$cmd" in
+ingest)
+	file=${positional-}
+	[ -n "$file" ] || { usage >&2; exit 1; }
+	valid_domain "$domain" || die "invalid or missing --domain ('$domain'); must match [a-z0-9-]+"
+	[ -f "$file" ] || die "no such file: $file"
+	[ -s "$file" ] || die "refusing empty file: $file"
+
+	sha=$(sha_of "$file") || die "sha256 failed for $file"
+	sha16=${sha%"${sha#????????????????}"}
+	base=$(basename "$file")
+	case "$base" in
+		*.*) ext=$(printf '%s' "${base##*.}" | tr '[:upper:]' '[:lower:]') ;;
+		*)   ext=bin ;;
+	esac
+
+	dirname_path="$ROOT/$domain"
+	stored="$dirname_path/$sha16.$ext"
+	mkdir -p "$dirname_path" || die "cannot create $dirname_path"
+	chmod 755 "$dirname_path" 2>/dev/null
+
+	bytes=$(wc -c < "$file")
+	[ -n "$origin" ] || origin=$(readlink -f "$file")
+	stored_abs=$(readlink -f "$stored" 2>/dev/null || printf '%s' "$stored")
+
+	# flock-serialized check-and-append on the per-domain ledger.
+	exec 9>>"$dirname_path/index.lock" || die "cannot open lock file"
+	flock -x 9 || die "flock failed"
+	if [ -f "$stored" ]; then
+		flock -u 9; exec 9>&-
+		echo "$sha16 $stored_abs (already stored)"
+		exit 0
+	fi
+	# Copy via tmp + mv so a failed write never leaves a half file under a valid hash name.
+	tmp="$dirname_path/.tmp.$$.$sha16"
+	cp -- "$file" "$tmp" || { rm -f "$tmp"; die "copy failed"; }
+	chmod 644 "$tmp" 2>/dev/null
+	# Byte-identity guard: verify the copy hashes back to the same sha before it earns its name.
+	copy_sha=$(sha_of "$tmp") || { rm -f "$tmp"; die "post-copy hash failed"; }
+	[ "$copy_sha" = "$sha" ] || { rm -f "$tmp"; die "post-copy hash mismatch (source changed during ingest?)"; }
+	mv -f -- "$tmp" "$stored" || { rm -f "$tmp"; die "mv into place failed"; }
+	# At this instant only this lock holder knows <sha16>.<ext> is fresh — append before unlocking.
+	printf '{"at":"%s","sha256":"%s","sha16":"%s","bytes":%s,"ext":"%s","domain":"%s","licence":"%s","origin":"%s","path":"%s"}\n' \
+		"$(now_iso)" "$sha" "$sha16" "$bytes" "$ext" "$domain" "$licence" "$origin" "$stored_abs" \
+		>> "$dirname_path/index.jsonl" || { rm -f "$stored"; die "index append failed"; }
+	flock -u 9; exec 9>&-
+	echo "$sha16 $stored_abs"
+	;;
+
+address)
+	file=${positional-}
+	[ -n "$file" ] || { usage >&2; exit 1; }
+	[ -f "$file" ] || die "no such file: $file"
+	sha=$(sha_of "$file") || die "sha256 failed for $file"
+	echo "${sha%"${sha#????????????????}"}"
+	;;
+
+list|verify)
+	if [ -n "$domain" ]; then
+		valid_domain "$domain" || die "invalid --domain ('$domain'); must match [a-z0-9-]+"
+	fi
+	if [ "$cmd" = list ]; then
+		for d in ${domain:+"$domain"} $( [ -n "$domain" ] || ls "$ROOT" 2>/dev/null ); do
+			idx="$ROOT/$d/index.jsonl"
+			[ -f "$idx" ] || continue
+			while IFS= read -r line; do
+				[ -n "$line" ] || continue
+				at=$(printf '%s' "$line" | grep -o '"at":"[^"]*"' | cut -d'"' -f4)
+				sha16=$(printf '%s' "$line" | grep -o '"sha16":"[^"]*"' | cut -d'"' -f4)
+				bytes=$(printf '%s' "$line" | grep -o '"bytes":[0-9]*' | cut -d: -f2)
+				ext=$(printf '%s' "$line" | grep -o '"ext":"[^"]*"' | cut -d'"' -f4)
+				path=$(printf '%s' "$line" | grep -o '"path":"[^"]*"' | cut -d'"' -f4)
+				echo "$sha16 $d $bytes $ext $path $at"
+			done < "$idx"
+		done
+		exit 0
+	fi
+	# verify
+	checked=0; missing=0; mismatch=0
+	for d in ${domain:+"$domain"} $( [ -n "$domain" ] || ls "$ROOT" 2>/dev/null ); do
+		idx="$ROOT/$d/index.jsonl"
+		[ -f "$idx" ] || continue
+		while IFS= read -r line; do
+			[ -n "$line" ] || continue
+			rec_sha=$(printf '%s' "$line" | grep -o '"sha256":"[^"]*"' | cut -d'"' -f4)
+			path=$(printf '%s' "$line" | grep -o '"path":"[^"]*"' | cut -d'"' -f4)
+			[ -n "$rec_sha" ] && [ -n "$path" ] || { mismatch=$((mismatch+1)); echo "MALFORMED index line: $line"; continue; }
+			if [ ! -f "$path" ]; then
+				missing=$((missing+1)); echo "MISSING: $path"; continue
+			fi
+			actual=$(sha_of "$path") || { mismatch=$((mismatch+1)); echo "UNREADABLE: $path" >&2; continue; }
+			if [ "$actual" != "$rec_sha" ]; then
+				mismatch=$((mismatch+1)); echo "MISMATCH: $path (index $rec_sha != actual $actual)"
+			fi
+			checked=$((checked+1))
+		done < "$idx"
+	done
+	echo "verify: $checked file(s) checked, $missing missing, $mismatch mismatched/malformed"
+	exit 0
+	;;
+
+-h|--help|help)
+	usage
+	exit 0
+	;;
+
+*)
+	usage >&2
+	die "unknown subcommand: $cmd"
+	;;
+esac

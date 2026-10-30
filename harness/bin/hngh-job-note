@@ -1,0 +1,53 @@
+#!/bin/bash
+# hngh-job-note — append one job event to the hngh job registry.
+# Usage: hngh-job-note --job ID --event started|gate|outcome
+#                      [--outcome TEXT] [--tier TIER] [--source TEXT]
+#   `at` is stamped server-side (date -u); never taken from the caller.
+#   `tier` records the authority tier the job may act under — it never
+#   authorizes anything by itself.
+# Exit: 0 stored | 1 malformed/schema | 2 usage
+set -u
+
+usage() { echo "usage: hngh-job-note --job ID --event started|gate|outcome [--outcome TEXT] [--tier TIER] [--source TEXT]" >&2; exit 2; }
+
+job=""; event=""; outcome=""; tier=""; source=""
+while (( $# )); do
+	case $1 in
+		--job)     [[ $# -ge 2 ]] || usage; job=$2; shift 2 ;;
+		--event)   [[ $# -ge 2 ]] || usage; event=$2; shift 2 ;;
+		--outcome) [[ $# -ge 2 ]] || usage; outcome=$2; shift 2 ;;
+		--tier)    [[ $# -ge 2 ]] || usage; tier=$2; shift 2 ;;
+		--source)  [[ $# -ge 2 ]] || usage; source=$2; shift 2 ;;
+		*) usage ;;
+	esac
+done
+
+[[ -n $job && -n $event ]] || usage
+[[ $event == started || $event == gate || $event == outcome ]] || {
+	echo "hngh-job-note: --event must be started, gate or outcome" >&2
+	exit 1
+}
+
+line=$(jq -cn \
+	--arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+	--arg job "$job" \
+	--arg event "$event" \
+	--arg outcome "$outcome" \
+	--arg tier "$tier" \
+	--arg source "$source" \
+	'{at:$at, job:$job, event:$event,
+	  outcome:(if $outcome != "" then $outcome else null end),
+	  tier:(if $tier != "" then $tier else null end),
+	  source:(if $source != "" then $source else null end)}
+	| with_entries(select(.value != null))') || {
+	echo "hngh-job-note: rejected (could not build record)" >&2
+	exit 1
+}
+echo "$line" | jq -e . >/dev/null || { echo "hngh-job-note: rejected (invalid JSON)" >&2; exit 1; }
+
+dir=${HNGH_JOBS_DIR:-"$HOME/.local/state/hngh/jobs"}
+mkdir -p "$dir"
+exec {fd}>>"$dir/jobs.jsonl"
+flock -x "$fd"
+printf '%s\n' "$line" >&"$fd"
+printf '%s\n' "$line"

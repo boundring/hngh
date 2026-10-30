@@ -1,0 +1,540 @@
+#!/usr/bin/env python3
+"""hngh-tui — operator cockpit: posture strip, agents, file changes, live stream, ledger Gantt, project strip.
+
+Env overrides (all optional, for selfcheck sandboxing):
+  HNGH_TUI_FEED      ledger feed.jsonl   (default ~/.local/state/hngh/sessions/feed.jsonl)
+  HNGH_TUI_AGENTS    path to agents JSON (default: run ~/.local/bin/hngh-agents --json)
+  HNGH_TUI_SYSFS     sysfs dir with mem_info_vram_{used,total} (default card1 device)
+  HNGH_TUI_WORK_GLOB work-slot transcripts (default ~/Work/sessions/*/sessions/*.jsonl)
+  HNGH_TUI_OMP_DIR   this-session transcripts (default ~/.omp/agent/sessions)
+  HNGH_TUI_DASH_DIR  dashboard feeds       (default ~/.local/state/hngh/dashboard)
+  HNGH_TUI_REPOS     colon-separated git repos for FILE CHANGES
+  HNGH_TUI_BG        force dark|light (default: OSC-11 probe, dark fallback)
+Keys: q quit · [ ] cycle STREAM target (newest work slot <-> newest omp session).
+"""
+import os, sys, glob, json, time, shutil, select, subprocess
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+HOME = Path.home()
+VENV_PY = HOME / ".venvs/hngh-tui/bin/python3"
+
+def _reexec():
+    try:
+        if VENV_PY.exists() and os.path.realpath(sys.executable) != os.path.realpath(VENV_PY):
+            os.execv(str(VENV_PY), [str(VENV_PY), __file__, *sys.argv[1:]])
+    except Exception:
+        pass
+_reexec()
+
+try:
+    from rich.console import Console, Group
+    from rich.live import Live
+    from rich.panel import Panel
+    from rich.table import Table
+    from rich.text import Text
+    from rich.syntax import Syntax
+except ImportError:
+    sys.stderr.write("hngh-tui: rich missing; run: uv pip install --python ~/.venvs/hngh-tui/bin/python3 rich\n")
+    sys.exit(2)
+
+def _p(env, default):
+    v = os.environ.get(env)
+    return Path(v).expanduser() if v else Path(default).expanduser()
+
+FEED = _p("HNGH_TUI_FEED", "~/.local/state/hngh/sessions/feed.jsonl")
+AGENTS_SRC = os.environ.get("HNGH_TUI_AGENTS", "")
+SYSFS = Path(os.environ.get("HNGH_TUI_SYSFS", "/sys/class/drm/card1/device"))
+WORK_GLOB = os.environ.get("HNGH_TUI_WORK_GLOB", "~/Work/sessions/*/sessions/*.jsonl")
+OMP_DIR = _p("HNGH_TUI_OMP_DIR", "~/.omp/agent/sessions")
+DASH_DIR = _p("HNGH_TUI_DASH_DIR", "~/.local/state/hngh/dashboard")
+REPOS = [Path(p).expanduser() for p in os.environ.get("HNGH_TUI_REPOS", ":".join([
+    "/mnt/2tb/@home/bricker/Projects/etc/cistern",
+    "/mnt/2tb/@home/bricker/Projects/etc/cistern-related/cistern-redesign/manga-pipeline",
+    "/mnt/2tb/@home/bricker/Projects/etc/manga-studio",
+    "/home/bricker/Projects/pantheon-engine",
+    "/home/bricker/Projects/hngh",
+])).split(":") if p]
+
+PALETTES = {
+    "dark": dict(user="cyan", asst="green", tool="yellow", dim="grey58", think="grey42",
+                 ok="green", warn="yellow", crit="bold red", head="bold magenta",
+                 bar="dodger_blue1", accent="white"),
+    "light": dict(user="blue", asst="green", tool="dark_orange", dim="grey42", think="grey42",
+                  ok="green", warn="orange3", crit="bold red", head="bold purple",
+                  bar="royal_blue1", accent="black"),
+}
+ROLE_STYLE = {"orchestrator": "magenta", "dev": "green", "cistern-dev": "green",
+              "writer": "yellow", "watcher": "yellow", "reader": "cyan"}
+MODES = [("work", "work slot"), ("omp", "this-session")]
+STATE = {"mode": 0, "bg": "dark"}
+
+def parse_ts(s):
+    try:
+        return datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+def run(cmd, timeout=2):
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        return r.stdout
+    except Exception:
+        return None
+
+def read_jsonl(path):
+    good, bad = [], 0
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    good.append(json.loads(line))
+                except Exception:
+                    bad += 1
+    except OSError:
+        return [], 0
+    return good, bad
+
+def read_agents():
+    if AGENTS_SRC:
+        try:
+            data = json.loads(Path(AGENTS_SRC).read_text(encoding="utf-8", errors="replace"))
+        except Exception:
+            return []
+    else:
+        out = run([str(HOME / ".local/bin/hngh-agents"), "--json"], 3)
+        if not out:
+            return []
+        try:
+            data = json.loads(out)
+        except Exception:
+            return []
+    if isinstance(data, dict):
+        data = data.get("agents", [])
+    return [a for a in data if isinstance(a, dict)]
+
+def _disk_pct(path):
+    try:
+        u = shutil.disk_usage(path)
+        tot = u.used + u.free
+        return round(100 * u.used / tot) if tot else None
+    except Exception:
+        return None
+
+def read_posture():
+    d = {"vram": None, "mem": None, "load": None}
+    try:
+        u = int((SYSFS / "mem_info_vram_used").read_text().strip())
+        t = int((SYSFS / "mem_info_vram_total").read_text().strip())
+        d["vram"] = (u, t)
+    except Exception:
+        pass
+    try:
+        mi = {}
+        for ln in Path("/proc/meminfo").read_text().splitlines():
+            k, _, v = ln.partition(":")
+            mi[k] = int(v.strip().split()[0])
+        d["mem"] = ((mi["MemTotal"] - mi["MemAvailable"]) * 1024, mi["MemTotal"] * 1024)
+    except Exception:
+        pass
+    d["disk2tb"] = _disk_pct("/mnt/2tb")
+    d["diskroot"] = _disk_pct("/")
+    try:
+        d["load"] = os.getloadavg()[0]
+    except Exception:
+        pass
+    out = run(["pgrep", "-cf", "bin/bili start"], 2)
+    try:
+        d["bili"] = int((out or "0").strip() or 0)
+    except ValueError:
+        d["bili"] = 0
+    return d
+
+_git_cache = {"t": 0.0, "rows": None}
+
+def read_git_changes(now_mono):
+    if _git_cache["rows"] is not None and now_mono - _git_cache["t"] < 5.0:
+        return _git_cache["rows"]
+    rows, seen = [], set()
+    for r in REPOS:
+        name = r.name
+        i = 2
+        while name in seen:
+            name, i = f"{r.name}~{i}", i + 1
+        seen.add(name)
+        st = run(["git", "-C", str(r), "status", "--porcelain"], 2)
+        if st is None:
+            rows.append((name, "-", "-"))
+            continue
+        dirty = len([l for l in st.splitlines() if l.strip()])
+        ds = run(["git", "-C", str(r), "diff", "--stat"], 2)
+        last = ds.strip().splitlines()[-1].strip() if ds and ds.strip() else "-"
+        rows.append((name, str(dirty), last))
+    _git_cache.update(t=now_mono, rows=rows)
+    return rows
+
+def detect_bg():
+    if os.environ.get("HNGH_TUI_BG"):
+        return os.environ["HNGH_TUI_BG"] if os.environ["HNGH_TUI_BG"] in PALETTES else "dark"
+    try:
+        import termios, tty
+        if not sys.stdout.isatty():
+            return "dark"
+        fd = sys.stdout.fileno()
+        old = termios.tcgetattr(fd)
+        tty.setcbreak(fd)
+        try:
+            termios.tcflush(fd, termios.TCIFLUSH)
+            os.write(fd, b"\x1b]11;?\x1b\\")
+            r, _, _ = select.select([fd], [], [], 0.25)
+            if r:
+                data = os.read(fd, 128)
+                m = __import__("re").search(rb"rgb:([0-9a-f]+)/([0-9a-f]+)/([0-9a-f]+)", data)
+                if m:
+                    lum = sum(int(g[:2], 16) for g in m.groups()) / 3
+                    return "light" if lum > 127 else "dark"
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    except Exception:
+        pass
+    return "dark"
+
+def _clip(s, n):
+    s = str(s)
+    return s if len(s) <= n else s[: n - 1] + "…"
+
+def _one_line(s, n):
+    return _clip(" ".join(str(s).split()), n)
+
+def _clean_proj(slug):
+    parts = [p for p in str(slug).strip("-").split("-") if p]
+    return "-".join(parts[-2:]) if parts else "?"
+
+def _bar(frac, n):
+    f = max(0, min(n, round(frac * n)))
+    return "█" * f + "·" * (n - f)
+
+# ---------- header ----------
+
+def build_header(post, pal, now):
+    t = Text()
+    t.append("hngh cockpit", style=pal["head"])
+    t.append(f"  {now:%H:%M:%S}  ", style=pal["accent"])
+    if post["vram"]:
+        u, tot = post["vram"]
+        frac = u / tot if tot else 0
+        t.append(_bar(frac, 8) + f" VRAM {u / 2**30:.1f}/{tot / 2**30:.0f}G  ", style=pal["bar"])
+    else:
+        t.append("VRAM —  ", style=pal["dim"])
+    if post["mem"]:
+        u, tot = post["mem"]
+        t.append(f"MEM {u / 2**30:.0f}/{tot / 2**30:.0f}G {100 * u / tot:.0f}%  ")
+    else:
+        t.append("MEM —  ", style=pal["dim"])
+    for label, pct in (("2TB", post["disk2tb"]), ("/", post["diskroot"])):
+        if pct is None:
+            t.append(f"{label} —  ", style=pal["dim"])
+        else:
+            st = pal["crit"] if pct >= 90 else (pal["warn"] if pct >= 80 else pal["accent"])
+            t.append(f"{label} {pct:.0f}%  ", style=st)
+    if post["load"] is not None:
+        t.append(f"load {post['load']:.2f}  ")
+    ok = post["bili"] > 0
+    t.append("bili ✓" if ok else "bili ✗", style=pal["ok"] if ok else pal["crit"])
+    return t
+
+# ---------- left column ----------
+
+def build_agents_table(agents, pal, max_rows=14):
+    if not agents:
+        return Group(Text("AGENTS", style=pal["head"]), Text("— no agents", style=pal["dim"]))
+    tb = Table(box=None, pad_edge=False, expand=True)
+    tb.add_column("", width=1)
+    tb.add_column("id", max_width=20, no_wrap=True)
+    tb.add_column("project", max_width=16, no_wrap=True)
+    tb.add_column("age", justify="right", width=6)
+    tb.add_column("kb", justify="right", width=5)
+    def sort_key(a):
+        return (0 if a.get("state") == "ACTIVE" else 1, float(a.get("age_min") or 0))
+    for a in sorted(agents, key=sort_key)[:max_rows]:
+        st = str(a.get("state") or "?")
+        dot, dot_st = ("●", pal["ok"]) if st == "ACTIVE" else (("◐", pal["warn"]) if st == "warm" else ("○", pal["dim"]))
+        age = float(a.get("age_min") or 0)
+        age_st = pal["ok"] if age < 15 else (pal["warn"] if age < 120 else pal["dim"])
+        tb.add_row(Text(dot, style=dot_st), _clip(str(a.get("id") or "?"), 20),
+                   Text(_clean_proj(a.get("project") or "?"), style=pal["dim"]),
+                   Text(f"{age:.0f}m", style=age_st), str(a.get("kb") or "?"))
+    return Group(Text("AGENTS", style=pal["head"]), tb)
+
+def build_changes_table(rows, pal):
+    tb = Table(box=None, pad_edge=False, expand=True)
+    tb.add_column("repo", max_width=18, no_wrap=True)
+    tb.add_column("dirty", justify="right", width=5)
+    tb.add_column("last diffstat", max_width=40, no_wrap=True, overflow="ellipsis")
+    for name, dirty, stat in rows:
+        st = pal["warn"] if dirty not in ("-",) and dirty != "0" else pal["dim"]
+        tb.add_row(name, Text(dirty, style=st), Text(stat, style=pal["dim"]))
+    return Group(Text("FILE CHANGES", style=pal["head"]),
+                 tb if rows else Text("— no repos", style=pal["dim"]))
+
+# ---------- stream ----------
+
+def pick_transcript(mode):
+    try:
+        if mode == "omp":
+            cands = list(OMP_DIR.glob("*/*.jsonl"))
+        else:
+            cands = [Path(p) for p in glob.glob(os.path.expanduser(WORK_GLOB))]
+        cands = [p for p in cands if p.is_file()]
+        return max(cands, key=lambda p: p.stat().st_mtime) if cands else None
+    except Exception:
+        return None
+
+def _fenced(text, pal):
+    text = _clip(text, 600)
+    parts = str(text).split("```")
+    out = []
+    for i, seg in enumerate(parts):
+        if i % 2 == 1:
+            lines = seg.split("\n", 1)
+            lang = lines[0].strip() or "text"
+            code = lines[1] if len(lines) > 1 else seg
+            try:
+                out.append(Syntax(_clip(code, 400), lang if lang.isalnum() else "text",
+                                  theme="ansi_dark" if STATE["bg"] == "dark" else "ansi_light",
+                                  word_wrap=True))
+            except Exception:
+                out.append(Text(code, style=pal["dim"]))
+        elif seg.strip():
+            out.append(Text(_clip(seg, 400)))
+    return Group(*out) if out else Text("…", style=pal["dim"])
+
+def _stream_record(rec, pal):
+    ts = parse_ts(rec.get("timestamp") or "")
+    stamp = Text(ts.strftime("%H:%M:%S ") if ts else "--:--:-- ", style=pal["dim"])
+    if rec.get("type") == "custom" and rec.get("customType") == "tool_execution_start":
+        d = rec.get("data") or {}
+        intent = d.get("intent") or (d.get("args") or {}).get("command") or ""
+        return Group(Text.assemble(stamp, (f"→ {d.get('toolName') or '?'} ", pal["tool"]),
+                                   (_one_line(intent, 90), f"dim {pal['tool']}")))
+    if rec.get("type") != "message":
+        return None
+    m = rec.get("message") or {}
+    role, content = m.get("role"), m.get("content")
+    texts, thinks, calls = [], [], []
+    if isinstance(content, str):
+        texts.append(content)
+    elif isinstance(content, list):
+        for c in content:
+            if not isinstance(c, dict):
+                continue
+            ct = c.get("type")
+            if ct == "text":
+                texts.append(c.get("text") or "")
+            elif ct == "thinking":
+                thinks.append(c.get("thinking") or "")
+            elif ct == "toolCall":
+                calls.append(c.get("intent") or c.get("name") or "?")
+    if role == "user":
+        head = Text.assemble(stamp, ("USER ", pal["user"]))
+        body = Group(*[_fenced(t, pal) for t in texts]) if texts else None
+    elif role == "assistant":
+        head = Text.assemble(stamp, ("ASST ", pal["asst"]))
+        bits = []
+        if thinks:
+            bits.append(Text("⋯ " + _one_line(" ".join(thinks), 70), style=pal["think"]))
+        for t in texts:
+            bits.append(_fenced(t, pal))
+        for c in calls:
+            bits.append(Text(f"→ {_one_line(c, 60)}", style=pal["tool"]))
+        body = Group(*bits) if bits else None
+    elif role == "toolResult":
+        head = Text.assemble(stamp, ("TOOL ", f"dim {pal['tool']}"))
+        body = Text(_one_line(" ".join(texts), 200), style=f"dim {pal['tool']}")
+    else:
+        return None
+    return Group(head, body) if body is not None else Group(head)
+
+def build_stream_panel(path, pal, height):
+    if path is None:
+        inner = Text("— no transcript found", style=pal["dim"])
+        bad = other = 0
+    else:
+        recs, bad = read_jsonl(path)
+        rendered, other = [], 0
+        for r in recs:
+            t = _stream_record(r, pal)
+            if t is None:
+                other += 1
+            else:
+                rendered.append(t)
+        inner = Group(*rendered[-30:]) if rendered else Text("— empty transcript", style=pal["dim"])
+    sub = f"skip {bad} bad · {other} other" if (bad or other) else ""
+    return Panel(inner, title=f"STREAM ▸ {MODES[STATE['mode']][1]} · {path.name if path else '—'}",
+                 subtitle=Text(sub, style=pal["dim"]), height=max(8, height))
+
+# ---------- bottom ----------
+
+def build_timeline(feed, bad_feed, pal, width, max_rows=8):
+    now = datetime.now(timezone.utc)
+    lo = now - timedelta(hours=6)
+    sess = {}
+    for r in feed:
+        s, ts = r.get("session"), parse_ts(r.get("ts") or "")
+        if s and ts:
+            sess.setdefault(s, []).append((ts, str(r.get("role") or "")))
+    rows = []
+    for s, evs in sess.items():
+        evs.sort()
+        a, b = max(evs[0][0], lo), min(evs[-1][0], now)
+        if b > a:
+            rows.append((s, a, b, evs[-1][1], evs[-1][0]))
+    rows.sort(key=lambda x: -x[4].timestamp())
+    rows = rows[:max_rows]
+    # bottom grid gives timeline ~5/8 of width; keep the bar Text inside that cell
+    bar_cols = max(24, min(80, width * 5 // 8 - 22))
+    q = max(6, bar_cols // 4)
+    lines = [Text(f"{'now-6h':<{q}}{'now-4h':<{q}}{'now-2h':<{q}}{'now':>{bar_cols - 3 * q}}",
+                  style=pal["dim"])]
+    for s, a, b, role, _ in rows:
+        col = Text(f"{_clip(s, 16):<16}", style=pal["dim"])
+        span = 6 * 3600
+        ia = max(0, min(bar_cols - 1, int((a - lo).total_seconds() / span * bar_cols)))
+        ib = max(0, min(bar_cols, int((b - lo).total_seconds() / span * bar_cols)))
+        if ib <= ia:
+            ib = ia + 1
+        col.append("·" * ia, style=pal["dim"])
+        col.append("█" * (ib - ia), style=ROLE_STYLE.get(role, pal["accent"]))
+        col.append("·" * (bar_cols - ib), style=pal["dim"])
+        lines.append(col)
+    if len(lines) == 1:
+        lines.append(Text("— no sessions in window", style=pal["dim"]))
+    title = f"TIMELINE · 6h · {len(rows)} sessions" + (f" · skip {bad_feed} bad" if bad_feed else "")
+    return Panel(Group(*lines), title=title, height=len(lines) + 2)
+
+def build_lines_strip(agents, feed, dash_rows, pal, max_rows=8):
+    act = {}
+    for a in agents:
+        tag = _clean_proj(a.get("project") or "?")
+        if a.get("state") == "ACTIVE":
+            act[tag] = act.get(tag, 0) + 1
+    last = {}
+    for tag, item, sev, ts in dash_rows:
+        last[tag] = (ts, _one_line(item, 58), sev == "warn")
+    for r in reversed(feed):  # file-order wins: append-only trust, last physical line is truth
+        for tag in r.get("lines") or []:
+            ts = parse_ts(r.get("ts") or "")
+            if ts and tag not in last:
+                last[tag] = (ts, _one_line(r.get("detail") or r.get("event") or "?", 58), False)
+    for tag in act:
+        last.setdefault(tag, (None, "—", False))
+    rows = sorted(last.items(), key=lambda kv: (-(kv[1][0].timestamp() if kv[1][0] else 0), kv[0]))[:max_rows]
+    tb = Table(box=None, pad_edge=False, expand=True)
+    tb.add_column("project", max_width=14, no_wrap=True)
+    tb.add_column("act", justify="right", width=4)
+    tb.add_column("last event", no_wrap=True, overflow="ellipsis")
+    for tag, (ts, detail, warn) in rows:
+        tb.add_row(tag, Text(str(act.get(tag, 0)), style=pal["ok"] if act.get(tag) else pal["dim"]),
+                   Text(("⚠ " if warn else "") + _clip(detail, 36), style=pal["warn"] if warn else pal["accent"]))
+    return Panel(tb if rows else Text("—", style=pal["dim"]), title="LINES", height=10)
+
+def read_dashboard():
+    rows = []
+    try:
+        for f in sorted(DASH_DIR.glob("*.jsonl")):
+            recs, _ = read_jsonl(f)
+            if recs:
+                r = recs[-1]  # file-order wins
+                rows.append((f.stem, r.get("item") or "?", r.get("severity") or "info",
+                             parse_ts(r.get("ts") or "")))
+    except Exception:
+        pass
+    return rows
+
+# ---------- frame ----------
+
+def build_frame(console):
+    pal = PALETTES[STATE["bg"]]
+    now = datetime.now()
+    post = read_posture()
+    agents = read_agents()
+    feed, bad_feed = read_jsonl(FEED)
+    git_rows = read_git_changes(time.monotonic())
+    dash_rows = read_dashboard()
+    w, h = console.size.width or 120, console.size.height or 24
+    tl = build_timeline(feed, bad_feed, pal, w)
+    bottom_h = tl.height
+    stream = build_stream_panel(pick_transcript(MODES[STATE["mode"]][0]), pal,
+                                h - 2 - bottom_h - 1)
+    grid = Table.grid(expand=True)
+    grid.add_column(ratio=2, min_width=40)
+    grid.add_column(ratio=3)
+    grid.add_row(Group(build_agents_table(agents, pal), Text(),
+                       build_changes_table(git_rows, pal)), stream)
+    bottom = Table.grid(expand=True)
+    bottom.add_column(ratio=5)
+    bottom.add_column(ratio=3)
+    bottom.add_row(tl, build_lines_strip(agents, feed, dash_rows, pal))
+    return Group(build_header(post, pal, now), grid, bottom)
+
+def render_one_frame():
+    STATE["bg"] = os.environ.get("HNGH_TUI_BG", "dark")
+    if STATE["bg"] not in PALETTES:
+        STATE["bg"] = "dark"
+    buf = __import__("io").StringIO()
+    c = Console(file=buf, width=int(os.environ.get("HNGH_TUI_COLS", "200")),
+                height=int(os.environ.get("HNGH_TUI_ROWS", "60")), no_color=True)
+    c.print(build_frame(c))
+    return buf.getvalue()
+
+def main(argv):
+    console = Console()
+    if "--once" in argv:
+        STATE["bg"] = detect_bg()
+        console.print(build_frame(console))
+        return 0
+    if not sys.stdout.isatty():
+        STATE["bg"] = "dark"
+        console.print(build_frame(console))
+        return 0
+    STATE["bg"] = detect_bg()
+    import termios, tty
+    pollable = sys.stdin.isatty()
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd) if pollable else None
+    last = 0.0
+    try:
+        if pollable:
+            tty.setcbreak(fd)
+        with Live(build_frame(console), console=console, refresh_per_second=2, screen=False) as live:
+            while True:
+                if pollable:
+                    r, _, _ = select.select([sys.stdin], [], [], 0.15)
+                    if r:
+                        ch = sys.stdin.read(1)
+                        if ch == "q":
+                            break
+                        if ch == "]":
+                            STATE["mode"] = (STATE["mode"] + 1) % len(MODES)
+                        elif ch == "[":
+                            STATE["mode"] = (STATE["mode"] - 1) % len(MODES)
+                else:
+                    time.sleep(0.15)
+                if time.monotonic() - last >= 2.0:
+                    live.update(build_frame(console))
+                    last = time.monotonic()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if pollable:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    return 0
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main(sys.argv[1:]))
+    except BrokenPipeError:
+        raise SystemExit(0)

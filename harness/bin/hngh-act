@@ -1,0 +1,536 @@
+#!/bin/bash
+
+# hngh-act — Hngh actuation broker. The ONLY writer (besides hngh-state's own flags).
+# Embodies ~/AGENTS.md §11 authority tiers, enforced at call time from the manifest:
+#   Silent         never asks            -> run, log
+#   Confirm        explicit --yes per invocation, or a cached per-domain consent
+#                  flag (human grants once: hngh-act consent grant <domain>)
+#   Presence-gated actuation only in an idle window — the design doc's probe
+#                  (omarchy-hyprland-session-locked, exit 0 = session locked) —
+#                  or an explicit per-action --go; otherwise observe-only
+#   Forbidden      refuse unless BOTH --allow-forbidden AND HNGH_ALLOW_FORBIDDEN=1
+#                  are present; every refusal is logged
+# Default posture: everything Confirm+ is dry-run unless its gate passes.
+# Exit codes: 0 acted/green · 1 runtime error · 2 gate-refused · 3 usage.
+# No model calls anywhere — pure bash gate (design §2.6).
+# Every actuation-path run appends one audit line to ~/.local/state/hngh/act.log.
+
+set -u
+
+STATE_DIR="${HNGH_STATE_DIR:-$HOME/.local/state/hngh}"
+CONSENT_DIR="$STATE_DIR/consent"
+LOG="$STATE_DIR/act.log"
+SENSE="${HNGH_SENSE:-$HOME/Projects/hngh/bin/hngh-sense}"
+STATE_CMD="${HNGH_STATE_CMD:-$HOME/Projects/hngh/bin/hngh-state}"
+mkdir -p "$CONSENT_DIR" "$STATE_DIR/toggles"
+
+# Manifest: name|tier|domain|target (implements)|effect|undo
+# Classification is design-time (~/AGENTS.md §11); the gate only checks it.
+# Pointer rows are executable: hngh-act drives hngh-pointer (the uinput
+# writer) behind the class+address assertion, twice, before every synthetic
+# event (design §3 safety contract).
+ACTIONS=(
+  "posture.refresh|Silent|posture|hngh-sense -> \$STATE_DIR/posture.json|Store a fresh machine posture blob|regenerate (idempotent)"
+  "presence.mode.toggle|Confirm|presence|hngh-state toggle toggles/presence-mode|Flip the menu-visible presence-mode flag|run again"
+  "sudo.grant|Confirm|sudo|omarchy-sudo-passwordless <minutes>|Time-boxed passwordless sudo|auto-expires via systemd timer"
+  "type_text|Presence-gated|input|wtype <text> (active window asserted twice)|Synthetic typing|n/a"
+  "key|Presence-gated|input|wtype -k <keysym> (active window asserted twice)|Synthetic key press|n/a"
+  "pointer.move|Presence-gated|input|hngh-pointer ABS move + cursorpos verify|cursor at coords|n/a"
+  "pointer.click|Presence-gated|input|hngh-pointer move + press/release after assert|click at coords|n/a"
+  "pointer.right_click|Presence-gated|input|hngh-pointer (BTN_RIGHT)|secondary click|n/a"
+  "pointer.double_click|Presence-gated|input|hngh-pointer (two presses)|double click|n/a"
+  "pointer.scroll|Presence-gated|input|hngh-pointer (REL_WHEEL)|scroll delta|n/a"
+  "focus.window|Presence-gated|input|hyprctl dispatch 'hl.dsp.focus({window=\"address:…\"})' + post-assert|focus target by address|refocus stored prior active"
+  # Legacy spellings of the pointer rows above (kept adjudicable for Fara
+  # drivers; the four adjudicate-only placeholder rows are gone).
+  "left_click|Presence-gated|input|alias of pointer.click|click at coords|n/a"
+  "right_click|Presence-gated|input|alias of pointer.right_click|secondary click|n/a"
+  "double_click|Presence-gated|input|alias of pointer.double_click|double click|n/a"
+  "scroll|Presence-gated|input|alias of pointer.scroll|scroll delta|n/a"
+  "screen.capture|Confirm|screen|hngh-grim -> shots store|PNG + sha256 + window-list JSON|delete the PNG"
+  "pkg.update|Forbidden|packages|omarchy-update|System package update|n/a"
+)
+
+usage() {
+  cat <<'EOF'
+hngh-act — actuation broker (the only writer; tiers per ~/AGENTS.md §11)
+
+Usage:
+  hngh-act <action> [args...] [flags]     actuate through the tier gate
+  hngh-act validate '<action-json>'       adjudicate a requester's flat action
+                                          JSON (e.g. Fara driver), no execution
+  hngh-act manifest [json-on-stdin]       posture blob -> pending-action manifest
+                                          with per-action gate verdicts
+  hngh-act consent grant|revoke <domain>  human-only per-domain consent
+  hngh-act reset                          clear all consent flags
+  hngh-act help                           this text
+
+Flags (anywhere on the line):
+  --yes              explicit per-action consent (Confirm gate)
+  --go               explicit per-action go (Presence-gated gate)
+  --allow-forbidden  half of the Forbidden override (needs HNGH_ALLOW_FORBIDDEN=1 too)
+  --dry-run          print the plan, actuate nothing (default outcome for Confirm+
+                     actions whose gate did not pass)
+
+Actions (name -> tier):
+  posture.refresh      Silent
+  presence.mode.toggle Confirm
+  sudo.grant           Confirm      [minutes]
+  type_text            Presence-gated  --window <class> -- <text>
+  key                  Presence-gated  --window <class> -- <keysym>
+  pointer.move         Presence-gated  --window <class> --address <0x…> --at <X,Y>
+  pointer.click        Presence-gated  --window <class> --address <0x…> --at <X,Y>
+  pointer.right_click  Presence-gated  --window <class> --address <0x…> --at <X,Y>
+  pointer.double_click Presence-gated  --window <class> --address <0x…> --at <X,Y>
+  pointer.scroll       Presence-gated  --window <class> --address <0x…> --at <X,Y> --delta <n>
+  focus.window         Presence-gated  --window <class> --address <0x…>
+  left_click | right_click | double_click | scroll
+                       Presence-gated  (legacy aliases of the pointer.* rows)
+  screen.capture      Confirm         [--monitor <name|all|focused>]
+                                       [--region <WxH+X+Y>] [--output <slug>]
+                                       -> prints "<png-path> <sha256>"
+  pkg.update           Forbidden       (a human runs: omarchy-update)
+
+Exit codes: 0 acted/green · 1 runtime error · 2 gate-refused · 3 usage.
+EOF
+}
+
+usage_exit() { echo "hngh-act: $*" >&2; usage >&2; exit 3; }
+
+log() { printf '%s asker=%s tier=%s action=%s result=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  "${HNGH_ASKER:-cli}" "${1:-}" "${2:-}" "${3:-}" >> "$LOG"; }
+
+session_locked_now() { ${HNGH_PRESENCE_PROBE:-omarchy-hyprland-session-locked} >/dev/null 2>&1; }
+
+# ---- pointer plumbing (design §3/§4, doc 2026-10-28-cu-stack-design) ------
+# hngh-pointer is the uinput writer. Resolve it from PATH so a sandbox stub
+# can shadow it; fall back to the repo copy.
+pointer_bin() {
+  if [[ -n "${HNGH_POINTER:-}" ]]; then printf '%s\n' "$HNGH_POINTER"; return; fi
+  if command -v hngh-pointer >/dev/null 2>&1; then command -v hngh-pointer; return; fi
+  printf '%s\n' "$HOME/Projects/hngh/bin/hngh-pointer"
+}
+
+# Hyprland IPC needs the instance signature. Compositor-started sessions
+# export it; agent shells may not, so fall back to the instance socket dir
+# when exactly one instance is running.
+hypr() {
+  if [[ -z ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+    local d="/run/user/$(id -u)/hypr" sig
+    sig="$(ls "$d" 2>/dev/null | head -1)"
+    if [[ -n $sig && $(ls "$d" 2>/dev/null | wc -l) -eq 1 ]]; then
+      HYPRLAND_INSTANCE_SIGNATURE="$sig"
+      export HYPRLAND_INSTANCE_SIGNATURE
+    fi
+  fi
+  hyprctl "$@"
+}
+
+# focused window -> "class<TAB>address"
+active_window() { hypr -j activewindow 2>/dev/null | jq -r '[.class // "", .address // ""] | @tsv'; }
+
+# live pointer position -> "x y"
+cursor_pos() { hypr cursorpos 2>/dev/null | tr -d ' ' | tr ',' ' '; }
+
+# union bounding box of the monitors -> "minx,miny,maxx,maxy" (absolute range
+# for the virtual pointer)
+monitor_bbox() {
+  local bbox
+  bbox="$(hypr -j monitors 2>/dev/null | jq -r '
+    # Hyprland reports the pre-transform resolution; a 90/270-degree
+    # transform swaps the footprint, so the union box needs the swap too.
+    [ .[] | { x: (.x // 0), y: (.y // 0),
+               w: (if ((.transform // 0) == 1 or (.transform // 0) == 3)
+                     then (.height // 0) else (.width // 0) end),
+               h: (if ((.transform // 0) == 1 or (.transform // 0) == 3)
+                     then (.width // 0) else (.height // 0) end) } ] as $m
+    | if ($m | length) == 0 then "0,0,1919,1079"
+      else [ ($m | map(.x) | min), ($m | map(.y) | min),
+             (($m | map(.x + .w) | max) - 1), (($m | map(.y + .h) | max) - 1) ] | @csv end' 2>/dev/null)"
+  [[ -n $bbox ]] || bbox="0,0,1919,1079"
+  printf '%s\n' "$bbox"
+}
+
+# assert_window — the binding safety contract (design §3): the focused
+# window's class AND address must equal the declared target (WCLASS/WADDR),
+# checked TWICE (two snapshots, both matching). Any mismatch aborts BEFORE
+# anything is emitted (exit 2, gate-refused).
+assert_window() {
+  local c1 a1 c2 a2
+  IFS=$'\t' read -r c1 a1 < <(active_window)
+  IFS=$'\t' read -r c2 a2 < <(active_window)
+  if [[ $c1 != "$WCLASS" || $a1 != "$WADDR" || $c2 != "$WCLASS" || $a2 != "$WADDR" ]]; then
+    echo "ABORT: safety assertion failed before synthetic pointer event: active window is '${c1:-<none>}' (${a1:-<no address>}), expected class '$WCLASS' address '$WADDR' — refusing to $ACTION" >&2
+    log "$TIER" "$ACTION" "refused-assert-mismatch"
+    exit 2
+  fi
+}
+
+# pointer_move_to <x,y> — absolute move first (exact, immune to pointer
+# acceleration), then verify with `hyprctl cursorpos`; if the compositor did
+# not take the absolute event, correct with relative moves (closed loop).
+# The loop learns the compositor's motion gain (pointer acceleration makes a
+# raw residual overshoot) and divides the residual by it, so it converges.
+pointer_move_to() {
+  local at="$1" bbox cx cy dx dy ax ay reqx reqy g=100 pcx="" pcy="" prx=0 pry=0
+  local mx my target_x target_y stall=0 i
+  target_x="${at%%,*}"; target_y="${at##*,}"
+  bbox="$(monitor_bbox)"
+  "$(pointer_bin)" move --abs "$at" --range "$bbox" || return 1
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    read -r cx cy < <(cursor_pos) || return 1
+    [[ -n $cx && -n $cy ]] || return 1
+    dx=$(( target_x - cx )); dy=$(( target_y - cy ))
+    ax=$(( dx < 0 ? -dx : dx )); ay=$(( dy < 0 ? -dy : dy ))
+    (( ax <= 2 && ay <= 2 )) && return 0
+    if [[ -n $pcx ]]; then                     # gain from the last request
+      if (( prx != 0 )); then
+        mx=$(( cx - pcx )); (( mx < 0 )) && mx=$(( -mx ))
+        g=$(( mx * 100 / (prx < 0 ? -prx : prx) ))
+      elif (( pry != 0 )); then
+        my=$(( cy - pcy )); (( my < 0 )) && my=$(( -my ))
+        g=$(( my * 100 / (pry < 0 ? -pry : pry) ))
+      fi
+      (( g < 5 )) && g=5
+      (( g > 1000 )) && g=1000
+    fi
+    reqx=$(( dx * 100 / g )); reqy=$(( dy * 100 / g ))
+    (( reqx == 0 && dx != 0 )) && reqx=$(( dx > 0 ? 1 : -1 ))
+    (( reqy == 0 && dy != 0 )) && reqy=$(( dy > 0 ? 1 : -1 ))
+    # The first request has no gain estimate yet: ask for half the residual
+    # so a fast compositor (pointer acceleration) cannot overshoot wildly.
+    if [[ -z $pcx ]]; then reqx=$(( reqx / 2 )); reqy=$(( reqy / 2 ))
+      (( reqx == 0 && dx != 0 )) && reqx=$(( dx > 0 ? 1 : -1 ))
+      (( reqy == 0 && dy != 0 )) && reqy=$(( dy > 0 ? 1 : -1 )); fi
+    (( reqx > 4000 )) && reqx=4000; (( reqx < -4000 )) && reqx=-4000
+    (( reqy > 4000 )) && reqy=4000; (( reqy < -4000 )) && reqy=-4000
+    if [[ -n $pcx && $cx == "$pcx" && $cy == "$pcy" ]]; then
+      stall=$(( stall + 1 ))
+      (( stall >= 2 )) && return 1     # the cursor is not moving at all
+    else
+      stall=0
+    fi
+    assert_window                            # every synthetic event is asserted
+    pcx=$cx; pcy=$cy; prx=$reqx; pry=$reqy
+    "$(pointer_bin)" move --rel "$reqx,$reqy" || return 1
+  done
+  return 1
+}
+
+# lookup <name> -> sets FOUND TIER DOMAIN TARGET EFFECT UNDO
+lookup() {
+  FOUND=""; TIER=""; DOMAIN=""; TARGET=""; EFFECT=""; UNDO=""
+  local entry name rest rest2
+  for entry in "${ACTIONS[@]}"; do
+    name="${entry%%|*}"; rest="${entry#*|}"
+    if [[ $name == "$1" ]]; then
+      FOUND="$name"; TIER="${rest%%|*}"; rest2="${rest#*|}"; DOMAIN="${rest2%%|*}"
+      rest="${rest2#*|}"; TARGET="${rest%%|*}"; rest="${rest#*|}"
+      EFFECT="${rest%%|*}"; UNDO="${rest#*|}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# verdict <tier> <domain> <mode> <locked>  mode: act|list   locked: "true"/"false"/""
+# (mode=act honors --yes/--go/--allow-forbidden; mode=list reflects persistent
+#  state only, for the manifest). Prints "verdict<TAB>reason".
+verdict() {
+  local tier="$1" domain="$2" mode="$3" locked="$4"
+  case "$tier" in
+    Silent)
+      printf 'granted\tsilent tier: never asks' ;;
+    Confirm)
+      if [[ -e "$CONSENT_DIR/$domain" ]]; then
+        printf 'granted\tconsent flag on file for domain "%s"' "$domain"
+      elif [[ $mode == act && $YES == 1 ]]; then
+        printf 'granted\texplicit --yes on this invocation'
+      else
+        printf 'refused\tConfirm-tier: pass --yes for this invocation, or a human grants once: hngh-act consent grant %s' "$domain"
+      fi ;;
+    Presence-gated)
+      if [[ $mode == act && $GO == 1 ]]; then
+        printf 'granted\texplicit per-action --go'
+      elif [[ $locked == true ]]; then
+        printf 'granted\tidle window: session locked'
+      else
+        printf 'refused\tPresence-gated: session not locked and no --go — observe-only'
+      fi ;;
+    Forbidden)
+      if [[ $mode == act && $ALLOW_FORBIDDEN == 1 && ${HNGH_ALLOW_FORBIDDEN:-} == 1 ]]; then
+        printf 'granted\texplicit override: --allow-forbidden + HNGH_ALLOW_FORBIDDEN=1'
+      else
+        printf 'override-only\tForbidden-tier: a human runs it personally; override needs BOTH --allow-forbidden AND HNGH_ALLOW_FORBIDDEN=1'
+      fi ;;
+    *)
+      printf 'refused\tunclassified action (design-time classification missing)' ;;
+  esac
+}
+
+# ---- parse flags ----------------------------------------------------------
+YES=0 DRYRUN=0 GO=0 ALLOW_FORBIDDEN=0
+ARGS=()
+for a in "$@"; do
+  case "$a" in
+    --yes) YES=1 ;;
+    --dry-run) DRYRUN=1 ;;
+    --go) GO=1 ;;
+    --allow-forbidden) ALLOW_FORBIDDEN=1 ;;
+    --) ARGS+=("$a") ;;
+    -h|--help|help) usage; exit 0 ;;
+    # Other dash-args are action-local (--window, key names); the action
+    # parser validates them.
+    *) ARGS+=("$a") ;;
+  esac
+done
+ACTION="${ARGS[0]:-}"
+[[ -z $ACTION ]] && usage_exit "no action given"
+
+# ---- human-only consent administration (outside the action manifest) ------
+case "$ACTION" in
+  consent)
+    verb="${ARGS[1]:-}"; domain="${ARGS[2]:-}"
+    case "$verb" in
+      grant)  mkdir -p "$CONSENT_DIR"; touch "$CONSENT_DIR/$domain"; echo "consent granted: $domain"; log human "consent.$verb" "ok:$domain"; exit 0 ;;
+      revoke) rm -f "$CONSENT_DIR/$domain"; echo "consent revoked: $domain"; log human "consent.$verb" "ok:$domain"; exit 0 ;;
+      *) usage_exit "consent takes grant|revoke <domain>" ;;
+    esac ;;
+  reset)
+    rm -rf "$CONSENT_DIR"; mkdir -p "$CONSENT_DIR"; echo "all consent flags cleared"; log human reset ok; exit 0 ;;
+esac
+
+# ---- manifest: posture blob -> pending-action manifest with gate verdicts --
+if [[ $ACTION == manifest ]]; then
+  if [[ ! -t 0 ]]; then blob=$(cat); else blob="$("$SENSE" --json)"; fi
+  jq -e . >/dev/null 2>&1 <<<"$blob" || usage_exit "posture blob is not valid JSON"
+  # jq's // swallows false, so select explicitly: true/false, "" when absent.
+  locked="$(jq -r 'if .session_locked == null then "" else .session_locked end' <<<"$blob")"
+  pgen="$(jq -r '.generated_at // "unknown"' <<<"$blob")"
+  items=()
+  for entry in "${ACTIONS[@]}"; do
+    IFS='|' read -r name tier domain target effect undo <<<"$entry"
+    read -r v r < <(verdict "$tier" "$domain" list "${locked:-false}" | tr '\t' ' ')
+    item="$(jq -n --arg a "$name" --arg t "$tier" --arg d "$domain" \
+      --arg tg "$target" --arg e "$effect" --arg u "$undo" \
+      --arg v "$v" --arg r "$r" \
+      '{action:$a,tier:$t,domain:$d,target:$tg,effect:$e,undo:$u,gate:{verdict:$v,reason:$r}}')"
+    items+=("$item")
+  done
+  joined="$(IFS=,; printf '%s' "${items[*]}")"
+  jq -n --arg g "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg pg "$pgen" \
+    --argjson locked "${locked:-null}" --argjson acts "[$joined]" \
+    '{generated_at:$g,posture_generated_at:$pg,session_locked:$locked,actions:$acts}'
+  exit 0
+fi
+
+# ---- validate: adjudicate a requester's flat action JSON (no execution) ----
+if [[ $ACTION == validate ]]; then
+  input="${ARGS[1]:-}"
+  [[ -z $input && ! -t 0 ]] && input=$(cat)
+  [[ -z $input ]] && usage_exit "validate needs action JSON (arg or stdin)"
+  jq -e . >/dev/null 2>&1 <<<"$input" || usage_exit "input is not valid JSON"
+  name="$(jq -r '.action // empty' <<<"$input")"
+  [[ -z $name ]] && usage_exit "action JSON missing .action"
+  if ! lookup "$name"; then
+    jq -n --arg a "$name" '{action:$a,tier:null,verdict:"refused",reason:"not in the hngh-act manifest; a human must classify it at design time"}'
+    exit 2
+  fi
+  # adjudication honors explicit flags (e.g. a human relaying --go/--yes) but the
+  # presence state comes from the live probe, not the JSON — requesters cannot
+  # claim the session is locked.
+  locked=false; session_locked_now && locked=true
+  read -r v r < <(verdict "$TIER" "$DOMAIN" act "$locked" | tr '\t' ' ')
+  jq -n --arg a "$name" --arg t "$TIER" --arg v "$v" --arg r "$r" \
+    '{action:$a,tier:$t,verdict:$v,reason:$r}'
+  [[ $v == granted ]] && exit 0 || exit 2
+fi
+
+# ---- direct action door ----------------------------------------------------
+if ! lookup "$ACTION"; then
+  echo "refused: '$ACTION' is not in the hngh-act manifest."
+  echo "Hngh refuses anything not in the manifest; a human must add it explicitly (design-time classification)."
+  log "-" "$ACTION" "refused-not-in-manifest"
+  exit 2
+fi
+
+locked=false; session_locked_now && locked=true
+read -r v r < <(verdict "$TIER" "$DOMAIN" act "$locked" | tr '\t' ' ')
+
+# Explicit --dry-run: print the plan, actuate nothing, green.
+if [[ $DRYRUN == 1 ]]; then
+  echo "dry-run: $ACTION [$TIER] -> $TARGET"
+  echo "  effect: $EFFECT · undo: $UNDO · gate: $v ($r)"
+  exit 0
+fi
+
+# Default posture: Confirm+ whose gate did not pass is refused, plan shown.
+if [[ $v != granted ]]; then
+  echo "refused: $ACTION [$TIER] — $r"
+  echo "dry-run plan: $ACTION -> $TARGET"
+  echo "  effect: $EFFECT · undo: $UNDO"
+  [[ $v == refused ]] && res="refused" || res="refused:$v"
+  log "$TIER" "$ACTION" "$res"
+  exit 2
+fi
+
+case "$ACTION" in
+  posture.refresh)
+    out="$("$SENSE" --json)" || { log "$TIER" "$ACTION" error; exit 1; }
+    printf '%s\n' "$out" > "$STATE_DIR/posture.json"
+    "$STATE_CMD" generate >/dev/null
+    echo "posture refreshed -> $STATE_DIR/posture.json"
+    log "$TIER" "$ACTION" ok
+    ;;
+  presence.mode.toggle)
+    "$STATE_CMD" toggle toggles/presence-mode
+    log "$TIER" "$ACTION" ok
+    ;;
+  sudo.grant)
+    minutes="${ARGS[1]:-15}"
+    if ! [[ $minutes =~ ^[0-9]+$ ]]; then
+      echo "refused: sudo.grant takes a whole number of minutes."
+      log "$TIER" "$ACTION" "refused-bad-arg"
+      exit 3
+    fi
+    omarchy-sudo-passwordless "$minutes"
+    log "$TIER" "$ACTION" ok
+    ;;
+  type_text|key)
+    # §2.3 synthetic-input contract: assert the target active window twice —
+    # once after the caller's focus, once immediately before input — verify
+    # class AND address, abort loudly on any mismatch, BEFORE typing.
+    wclass=""; payload=""
+    i=1
+    while [[ $i -lt ${#ARGS[@]} ]]; do
+      case "${ARGS[$i]}" in
+        --window) wclass="${ARGS[$((i+1))]:-}"; i=$((i+2)) ;;
+        --) payload="${ARGS[@]:$((i+1))}"; break ;;
+        *) usage_exit "type_text/key: expected --window <class> or -- (got '${ARGS[$i]}')" ;;
+      esac
+    done
+    [[ -z $wclass || -z $payload ]] && usage_exit "type_text/key need: --window <class> -- <text|keysym>"
+    snap() { hyprctl -j activewindow 2>/dev/null | jq -r '[.class // "", .address // ""] | @tsv'; }
+    read -r c1 addr1 < <(snap)
+    abort() {
+      echo "ABORT: safety assertion failed before synthetic input: active window is '${1:-<none>}' (${2:-<no address>}), expected class '$wclass' — refusing to $ACTION" >&2
+      log "$TIER" "$ACTION" "refused-assert-mismatch"
+      exit 2
+    }
+    [[ $c1 == "$wclass" ]] || abort "$c1" "$addr1"
+    read -r c2 addr2 < <(snap)   # immediately before input
+    [[ $c2 == "$wclass" && $addr1 == "$addr2" ]] || abort "$c2" "$addr2"
+    if [[ $ACTION == type_text ]]; then wtype "$payload"; else wtype -k "$payload"; fi
+    log "$TIER" "$ACTION" ok
+    ;;
+  pointer.move|pointer.click|pointer.right_click|pointer.double_click|pointer.scroll|left_click|right_click|double_click|scroll)
+    # Executable pointer rows (design §5). Legacy names (left_click etc.) are
+    # aliases of the pointer.* rows — superseded, but still adjudicable.
+    # Grammar:
+    #   --window <class> --address <0x…> [--at <X,Y>] [--delta <n>]
+    # The binding safety contract (§3) applies to EVERY synthetic event: the
+    # active window's class AND address must equal the declared target,
+    # asserted TWICE (two snapshots, both matching) immediately before the
+    # pointer binary is invoked. Any mismatch aborts WITHOUT emitting.
+    wclass=""; waddr=""; at=""; delta=""; button="left"; count=1; op=""
+    case "$ACTION" in
+      left_click)   op=click ;;
+      right_click)  op=click; button=right ;;
+      double_click) op=click; count=2 ;;
+      scroll)       op=scroll ;;
+      pointer.move) op=move ;;
+      pointer.click) op=click ;;
+      pointer.right_click) op=click; button=right ;;
+      pointer.double_click) op=click; count=2 ;;
+      pointer.scroll) op=scroll ;;
+    esac
+    i=1
+    while [[ $i -lt ${#ARGS[@]} ]]; do
+      case "${ARGS[$i]}" in
+        --window) wclass="${ARGS[$((i+1))]:-}"; i=$((i+2)) ;;
+        --address) waddr="${ARGS[$((i+1))]:-}"; i=$((i+2)) ;;
+        --at) at="${ARGS[$((i+1))]:-}"; i=$((i+2)) ;;
+        --delta) delta="${ARGS[$((i+1))]:-}"; i=$((i+2)) ;;
+        *) usage_exit "$ACTION: expected --window/--address/--at/--delta (got '${ARGS[$i]}')" ;;
+      esac
+    done
+    [[ -z $wclass || -z $waddr ]] && usage_exit "$ACTION needs --window <class> --address <0x…>"
+    [[ -n $at ]] || usage_exit "$ACTION needs --at <X,Y>"
+    [[ $op == scroll && -z $delta ]] && usage_exit "$ACTION needs --delta <n>"
+    WCLASS="$wclass"; WADDR="$waddr"
+    # --- move phase: absolute first, closed-loop relative correction -------
+    if [[ -n $at ]]; then
+      assert_window
+      pointer_move_to "$at" || { log "$TIER" "$ACTION" "error:pointer-move"; exit 1; }
+    fi
+    # --- event phase: assert again, immediately before emitting -----------
+    assert_window
+    case "$op" in
+      move)   : ;;                       # the move was the event
+      click)  "$(pointer_bin)" click --button "$button" --count "$count" \
+                || { log "$TIER" "$ACTION" "error:pointer-click"; exit 1; } ;;
+      scroll) "$(pointer_bin)" scroll --delta "$delta" \
+                || { log "$TIER" "$ACTION" "error:pointer-scroll"; exit 1; } ;;
+    esac
+    log "$TIER" "$ACTION" ok
+    ;;
+  focus.window)
+    # Focus the declared window by address (Lua dispatch form, Hyprland
+    # 0.56.2 — wayland-spike F4), then POST-assert that the focus landed on
+    # exactly that window. The prior active window is stored so the undo
+    # ("refocus stored prior active") is a real, reachable state.
+    wclass=""; waddr=""
+    i=1
+    while [[ $i -lt ${#ARGS[@]} ]]; do
+      case "${ARGS[$i]}" in
+        --window) wclass="${ARGS[$((i+1))]:-}"; i=$((i+2)) ;;
+        --address) waddr="${ARGS[$((i+1))]:-}"; i=$((i+2)) ;;
+        *) usage_exit "focus.window: expected --window/--address (got '${ARGS[$i]}')" ;;
+      esac
+    done
+    [[ -z $wclass || -z $waddr ]] && usage_exit "focus.window needs --window <class> --address <0x…>"
+    prior="$(active_window)"
+    hypr dispatch "hl.dsp.focus({window=\"address:$waddr\"})" >/dev/null 2>&1 \
+      || { log "$TIER" "$ACTION" "error:focus-dispatch"; exit 1; }
+    sleep 0.3   # focus settle (wayland-spike: 0.3 s)
+    IFS=$'\t' read -r c1 a1 < <(active_window)
+    if [[ $c1 != "$wclass" || $a1 != "$waddr" ]]; then
+      echo "ABORT: focus landed on '${c1:-<none>}' (${a1:-<no address>}), expected class '$wclass' address '$waddr' — refusing to continue" >&2
+      log "$TIER" "$ACTION" "refused-assert-mismatch"
+      exit 2
+    fi
+    printf '%s\t%s\n' "$prior" > "$STATE_DIR/pointer-prior-active"
+    log "$TIER" "$ACTION" ok
+    ;;
+  screen.capture)
+    # Gate passed (Confirm: --yes or consent flag for domain "screen") — run
+    # the producer. All output/geometry handling lives in hngh-grim.
+    GRIM="${HNGH_GRIM:-$HOME/Projects/hngh/bin/hngh-grim}"
+    mon="" reg="" lab=""
+    i=1
+    while [[ $i -lt ${#ARGS[@]} ]]; do
+      case "${ARGS[$i]}" in
+        --monitor) mon="${ARGS[$((i+1))]:-}"; i=$((i+2)) ;;
+        --region)  reg="${ARGS[$((i+1))]:-}"; i=$((i+2)) ;;
+        --output|--label) lab="${ARGS[$((i+1))]:-}"; i=$((i+2)) ;;
+        *) usage_exit "screen.capture: expected --monitor/--region/--output (got '${ARGS[$i]}')" ;;
+      esac
+    done
+    cmd=("$GRIM")
+    [[ -n $mon ]] && cmd+=(--monitor "$mon")
+    [[ -n $reg ]] && cmd+=(--region "$reg")
+    [[ -n $lab ]] && cmd+=(--output "$lab")
+    # stamp the asker so a gated capture is distinguishable from a raw
+    # hngh-grim call (hngh-look's cloud egress gate checks this)
+    HNGH_ASKER=hngh-act "${cmd[@]}"; rc=$?
+    [[ $rc == 0 ]] && res=ok || res="error:$rc"
+    log "$TIER" "$ACTION" "$res"
+    exit $rc
+    ;;
+  pkg.update)
+    # Gate override passed (--allow-forbidden + HNGH_ALLOW_FORBIDDEN=1): the
+    # human has explicitly asked. Run the delegation.
+    omarchy-update
+    log "$TIER" "$ACTION" ok
+    ;;
+esac

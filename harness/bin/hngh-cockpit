@@ -1,0 +1,26 @@
+#!/bin/bash
+# hngh-cockpit — toggle the hngh dashboard tab (hngh-tui) in the Tern window.
+# Focus-and-raise if a LIVE tab exists, else (re)create it. Tern is
+# single-instance: CLI invocations attach tabs to the running window, never new
+# windows.
+# Exits 0 always.
+set -u
+
+tab_block() { # tab_block <tab name> -> id of that tab's first live block
+	tern ls --json 2>/dev/null | jq -r --arg n "$1" '[.sessions[] | .tabs[] | select(.name == $n) | .blocks[] | select(.exited == null) | .id] | .[0] // empty'
+}
+
+bid=$(tab_block hngh-cockpit)
+if [ -n "$bid" ]; then
+	tern focus "$bid" >/dev/null 2>&1
+	exit 0
+fi
+
+# A crashed or Ctrl-C'd dashboard leaves its block behind (--keep-open); drop
+# the stale tab so the toggle relaunches instead of focusing a corpse.
+stale=$(tern ls --json 2>/dev/null | jq -r '[.sessions[] | .tabs[] | select(.name == "hngh-cockpit") | .blocks[] | .id] | .[0] // empty')
+[ -n "$stale" ] && tern close "$stale" >/dev/null 2>&1
+
+bid=$(tern new tab --keep-open --json -- "$HOME/Projects/hngh/bin/hngh-tui" 2>/dev/null | jq -r '.block // empty')
+[ -n "$bid" ] && tern rename "$bid" hngh-cockpit >/dev/null 2>&1
+exit 0

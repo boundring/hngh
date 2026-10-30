@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""hngh-tail — live, syntax-highlighted stream of agent session transcripts.
+
+Follows the most recently active transcript under ~/Work/sessions/*/sessions/
+(switching automatically when a newer one starts) and renders records with ANSI
+colors: user=cyan, assistant=green, tools=dim yellow, results=dim, exits=magenta.
+Usage: hngh-tail [--root DIR] [--history N]
+"""
+
+import argparse
+import glob
+import os
+import re
+import shutil
+import sys
+import time
+
+ANSI = {
+    "user": "\033[1;36m", "assistant": "\033[0;32m", "tool": "\033[2;33m",
+    "result": "\033[2;37m", "exit": "\033[1;35m", "dim": "\033[2m",
+    "warn": "\033[0;33m", "reset": "\033[0m",
+}
+
+
+def parse_args(argv):
+    p = argparse.ArgumentParser(prog="hngh-tail")
+    p.add_argument("--root", default=os.path.expanduser("~/Work/sessions"))
+    p.add_argument("--path", default=None, metavar="FILE",
+                   help="follow this explicit transcript instead of the newest slot")
+    p.add_argument("--history", type=int, default=25, metavar="N",
+                   help="lines of recent history to render on start (default 25)")
+    p.add_argument("--width", type=int, default=0)
+    try:
+        return p.parse_args(argv)
+    except SystemExit:
+        raise SystemExit(0)
+
+
+def newest(root):
+    files = glob.glob(f"{root}/*/sessions/*.jsonl")
+    return max(files, key=os.path.getmtime) if files else None
+
+
+def text_of(rec):
+    m = rec.get("message") or {}
+    c = m.get("content")
+    if isinstance(c, list):
+        c = " ".join(b.get("text", "") for b in c if isinstance(b, dict))
+    return " ".join(str(c).split()) if isinstance(c, str) else ""
+
+
+def render(rec, width):
+    ts = (rec.get("timestamp") or "")[11:19]
+    m = rec.get("message") or {}
+    role = m.get("role")
+    ct = rec.get("customType")
+    if ct == "tool_execution_start":
+        d = rec.get("data") or {}
+        return (f"{ANSI['dim']}{ts} {ANSI['tool']}→ tool {d.get('toolName','?')} "
+                f"{ANSI['dim']}· {(d.get('intent') or '')[:width]}{ANSI['reset']}")
+    if ct == "session_exit":
+        d = rec.get("data") or {}
+        return f"{ANSI['exit']}{ts} ■ session exit: {d.get('reason','?')}{ANSI['reset']}"
+    if role in ("user", "assistant"):
+        body = text_of(rec)
+        if not body:
+            return None
+        tag = "You" if role == "user" else "AI "
+        col = ANSI[role]
+        body = body[:width]
+        return f"{ANSI['dim']}{ts}{ANSI['reset']} {col}{tag}{ANSI['reset']} {body}"
+    if role == "toolResult":
+        body = text_of(rec)
+        return (f"{ANSI['dim']}{ts} ← result {body[:width // 2]}{ANSI['reset']}") if body else None
+    return None
+
+
+def follow(root, history, width):
+    cur, offset, shown_sep = None, 0, False
+    while True:
+        new = newest(root)
+        if new != cur:
+            if cur is not None or not shown_sep:
+                print(f"{ANSI['warn']}── following {new or '(none)'} ──{ANSI['reset']}", flush=True)
+                shown_sep = True
+            cur, offset = new, 0
+            if new and history:
+                with open(new, encoding="utf-8", errors="replace") as fh:
+                    hlines = fh.readlines()
+                for raw in hlines[-history:]:
+                    try:
+                        out = render(json_loads(raw), width)
+                        if out:
+                            print(out, flush=True)
+                    except Exception:
+                        pass
+                offset = sum(len(l.encode()) for l in hlines)
+        if cur:
+            try:
+                size = os.path.getsize(cur)
+                if size < offset:  # truncated/rotated
+                    offset = 0
+                if size > offset:
+                    with open(cur, encoding="utf-8", errors="replace") as fh:
+                        fh.seek(offset)
+                        chunk = fh.read()
+                        offset = fh.tell()
+                    for raw in chunk.splitlines():
+                        try:
+                            out = render(json_loads(raw), width)
+                            if out:
+                                print(out, flush=True)
+                        except Exception:
+                            pass
+            except OSError:
+                pass
+        time.sleep(1.0)
+
+
+def follow_path(path, history, width):
+    print(f"{ANSI['warn']}── following {path} ──{ANSI['reset']}", flush=True)
+    offset = 0
+    if history and os.path.exists(path):
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            hlines = fh.readlines()
+        for raw in hlines[-history:]:
+            try:
+                out = render(json_loads(raw), width)
+                if out:
+                    print(out, flush=True)
+            except Exception:
+                pass
+        offset = sum(len(l.encode()) for l in hlines)
+    while True:
+        try:
+            size = os.path.getsize(path)
+            if size < offset:
+                offset = 0
+            if size > offset:
+                with open(path, encoding="utf-8", errors="replace") as fh:
+                    fh.seek(offset)
+                    chunk = fh.read()
+                    offset = fh.tell()
+                for raw in chunk.splitlines():
+                    try:
+                        out = render(json_loads(raw), width)
+                        if out:
+                            print(out, flush=True)
+                    except Exception:
+                        pass
+        except OSError:
+            pass
+        time.sleep(1.0)
+
+
+def json_loads(raw):
+    import json
+    return json.loads(raw)
+
+
+def main(argv):
+    a = parse_args(argv)
+    width = a.width or max(60, shutil.get_terminal_size().columns - 2)
+    if a.path:
+        try:
+            follow_path(a.path, a.history, width)
+        except KeyboardInterrupt:
+            pass
+        return 0
+    try:
+        follow(a.root, a.history, width)
+    except KeyboardInterrupt:
+        pass
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

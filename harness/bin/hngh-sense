@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# hngh-sense — Hngh sensor bus (Silent tier). One total-function posture blob.
+# Contract (carried forward from archive/2026-10-21/harness-state/README.md):
+#   - every source capped with `timeout 2`, total budget <= 5 s
+#   - any failure degrades to null
+#   - output is always exactly one JSON object
+#   - exit 0 always; no secrets, ever
+
+set -u
+
+# capture <var> <cmd...> — run with a 2 s cap; empty output becomes null
+capture() {
+  local __var="$1"; shift
+  timeout 2 "$@" 2>/dev/null || true
+}
+
+# json_or_null <text> — the text when it is valid JSON, "null" otherwise.
+# The blob's contract is "one JSON object, always", and a source that failed
+# (no Hyprland signature in a service shell, a daemon that is down) must
+# degrade to null rather than break the whole posture.
+json_or_null() {
+  if printf '%s' "$1" | jq -e . >/dev/null 2>&1; then printf '%s' "$1"; else printf 'null'; fi
+}
+
+battery=$(timeout 2 omarchy-battery-status 2>/dev/null)
+network=$(timeout 2 omarchy-network-status 2>/dev/null)
+# Exit-code probe (0 locked, 1 unlocked, 2 undetermined — callers treat 2 as unlocked);
+# reported as a boolean so the manifest can consume it.
+if timeout 2 omarchy-hyprland-session-locked 2>/dev/null; then locked=true; else locked=false; fi
+updates=$(timeout 2 omarchy-update-status 2>/dev/null)
+theme=$(timeout 2 omarchy-theme-current 2>/dev/null)
+monitors=$(timeout 2 omarchy-monitor-state 2>/dev/null)
+stats=$(timeout 2 omarchy-system-stats 2>/dev/null)
+hmon=$(timeout 2 hyprctl -j monitors 2>/dev/null)
+hcli=$(timeout 2 hyprctl -j clients 2>/dev/null)
+# The Tern observation lane: the portfolio's own working surface, read-only.
+# `tern ls --json` is a daemon round trip; the 2 s cap and the null-degradation
+# keep the posture contract (one JSON object, always) intact.
+ternsessions=$(timeout 2 tern ls --json 2>/dev/null || true)
+ternsummary=$(printf '%s' "$ternsessions" \
+	| jq -c '{sessions: (.sessions | length), tabs: ([.sessions[].tabs[]] | length), names: [.sessions[].name]}' 2>/dev/null || true)
+hmon=$(json_or_null "$hmon")
+hcli=$(json_or_null "$hcli")
+ternsummary=$(json_or_null "$ternsummary")
+
+jq -n \
+  --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --arg battery "${battery:-}" \
+  --arg network "${network:-}" \
+  --argjson session_locked "${locked:-null}" \
+  --arg updates "${updates:-}" \
+  --arg theme "${theme:-}" \
+  --arg monitor_state "${monitors:-}" \
+  --arg system_stats "${stats:-}" \
+  --argjson hyprland_monitors "${hmon:-null}" \
+  --argjson hyprland_clients "${hcli:-null}" \
+  --argjson tern_sessions "${ternsummary:-null}" \
+  '{
+    generated_at: $generated_at,
+    battery: (if $battery == "" then null else $battery end),
+    network: (if $network == "" then null else ($network | gsub("[\\t\\n]+"; " ") | gsub("\\s+$"; "")) end),
+    session_locked: $session_locked,
+    updates: (if $updates == "" then null else ($updates | gsub("[\\t\\n]+"; " ") | gsub("\\s+$"; "")) end),
+    theme: (if $theme == "" then null else $theme end),
+    monitor_state: (if $monitor_state == "" then null else ($monitor_state | gsub("[\\t\\n]+"; " ") | gsub("\\s+$"; "")) end),
+    system_stats: (if $system_stats == "" then null else ($system_stats | gsub("[\\t\\n]+"; " ") | gsub("\\s+$"; "")) end),
+    hyprland_monitors: $hyprland_monitors,
+    hyprland_clients: $hyprland_clients,
+    tern_sessions: $tern_sessions
+  }'
+exit 0

@@ -1,0 +1,117 @@
+#!/bin/bash
+# hngh-digest-moved-selfcheck — assert the movement digest reader.
+# Sandbox: sibling readers are stubbed on PATH per invocation (never exported);
+# no real ledger or state dir is touched.
+set -u
+HERE="$(dirname "$(readlink -f "$0")")"
+READ="$HERE/hngh-digest-moved"
+fails=0
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+ckf() { # ckf <desc> <actual> <expected>
+	if [[ "$2" == "$3" ]]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1 (got: $2, want: $3)"; fails=$((fails + 1))
+	fi
+}
+
+mkstubs() { # mkstubs <dir> <rollup-json-file> <sessions-json-file>
+	mkdir -p "$1"
+	printf '#!/bin/sh\ncat "%s"\n' "$2" >"$1/hngh-digest-rollup"
+	printf '#!/bin/sh\ncat "%s"\n' "$3" >"$1/hngh-sessions"
+	chmod +x "$1/hngh-digest-rollup" "$1/hngh-sessions"
+}
+
+# -- fixtures ----------------------------------------------------------------
+
+# rollup: day 28 moved, day 27 zero-delta, day 26 moved (newest first)
+cat >"$tmp/rollup.json" <<'EOF'
+[{"day":"2026-10-28","first":{"at":"2026-10-28T08:00:00Z"},"last":{"at":"2026-10-28T20:00:00Z"},"delta":{"sessions":1,"agents":2,"active_agents":1},"movement":"sessions +1, agents +2, active +1"},
+ {"day":"2026-10-27","first":{"at":"2026-10-27T08:00:00Z"},"last":{"at":"2026-10-27T20:00:00Z"},"delta":{"sessions":0,"agents":0,"active_agents":0},"movement":"no change"},
+ {"day":"2026-10-26","first":{"at":"2026-10-26T08:00:00Z"},"last":{"at":"2026-10-26T20:00:00Z"},"delta":{"sessions":3,"agents":-1,"active_agents":0},"movement":"sessions +3, agents -1, active +0"}]
+EOF
+
+# sessions: 8 in-window milestones (ages 10..80), one non-milestone, one too old
+{	printf '['
+	for i in 1 2 3 4 5 6 7 8; do
+		printf '{"session":"s%d","event":"deliverable","age_minutes":%d,"role":"task"},' "$i" $((i * 10))
+	done
+	printf '{"session":"notemgr","event":"note","age_minutes":5,"role":"task"},'
+	printf '{"session":"oldgate","event":"awaiting_gate","age_minutes":5000,"role":"task"}'
+	printf ']\n'
+} >"$tmp/sessions.json"
+
+mkstubs "$tmp/stubs" "$tmp/rollup.json" "$tmp/sessions.json"
+R="PATH=$tmp/stubs:\$PATH"
+
+# all-zero rollup fixture for the all-zero-days rule
+cat >"$tmp/rollup-zero.json" <<'EOF'
+[{"day":"2026-10-28","first":{"at":"2026-10-28T08:00:00Z"},"last":{"at":"2026-10-28T20:00:00Z"},"delta":{"sessions":0,"agents":0,"active_agents":0},"movement":"no change"},
+ {"day":"2026-10-27","first":{"at":"2026-10-27T08:00:00Z"},"last":{"at":"2026-10-27T20:00:00Z"},"delta":{"sessions":0,"agents":0,"active_agents":0},"movement":"no change"}]
+EOF
+mkstubs "$tmp/stubs-zero" "$tmp/rollup-zero.json" "$tmp/sessions.json"
+
+# -- 1. bad flag still exits 0 ------------------------------------------------
+env PATH="$tmp/stubs:$PATH" "$READ" --no-such-flag >/dev/null 2>&1
+[[ $? == 0 ]] && echo "ok: bad flag still exits 0" || { echo "FAIL: bad flag exit"; fails=$((fails + 1)); }
+
+# -- 2. zero-delta day skipped when window > 1 day, moved day kept -------------
+out=$(env PATH="$tmp/stubs:$PATH" "$READ" --days 2)
+echo "$out" | grep -q "2026-10-28: sessions +1, agents +2, active +1" \
+	&& echo "ok: moved day shown" || { echo "FAIL: moved day missing"; fails=$((fails + 1)); }
+echo "$out" | grep -q "2026-10-27" \
+	&& { echo "FAIL: zero-delta day not skipped"; fails=$((fails + 1)); } \
+	|| echo "ok: zero-delta day skipped (N>1)"
+
+# -- 3. all days zero -> all shown --------------------------------------------
+out=$(env PATH="$tmp/stubs-zero:$PATH" "$READ" --days 2)
+ckf "all-zero window keeps both days" "$(echo "$out" | grep -c '^  2026-')" 2
+
+# -- 4. milestones: window filter, non-milestone filter, cap 6, newest first --
+out=$(env PATH="$tmp/stubs:$PATH" "$READ" --days 1)
+echo "$out" | grep -q "notemgr" \
+	&& { echo "FAIL: non-milestone event leaked"; fails=$((fails + 1)); } \
+	|| echo "ok: non-milestone event filtered"
+echo "$out" | grep -q "oldgate" \
+	&& { echo "FAIL: out-of-window milestone leaked"; fails=$((fails + 1)); } \
+	|| echo "ok: out-of-window milestone filtered"
+ckf "milestone cap is 6" "$(echo "$out" | grep -c '^  s[0-9]')" 6
+ckf "milestones newest first" "$(echo "$out" | grep '^  s[0-9]' | head -1)" "  s1 deliverable"
+
+# -- 5. --json shape -----------------------------------------------------------
+js=$(env PATH="$tmp/stubs:$PATH" "$READ" --days 2 --json)
+ckf "json: window echoes --days" "$(echo "$js" | jq -r .window)" 2
+ckf "json: zero-delta day excluded from movement" "$(echo "$js" | jq -r '[.movement[].day] | join(",")')" "2026-10-28,2026-10-26"
+ckf "json: milestone fields" "$(echo "$js" | jq -r '.milestones[0] | "\(.session) \(.event) \(.age_minutes)"')" "s1 deliverable 10"
+ckf "json: has at stamp" "$(echo "$js" | jq -r '.at | type')" "string"
+
+# -- 6. unavailable / malformed sources fold, never raise ---------------------
+mkdir -p "$tmp/badstubs"
+printf '#!/bin/sh\necho "not json at all"\n' >"$tmp/badstubs/hngh-digest-rollup"
+printf '#!/bin/sh\necho "{broken"\n' >"$tmp/badstubs/hngh-sessions"
+chmod +x "$tmp/badstubs/"*
+out=$(env PATH="$tmp/badstubs:$PATH" "$READ" --json 2>/dev/null); rc=$?
+[[ $rc == 0 ]] && echo "ok: malformed readers still exit 0" || { echo "FAIL: malformed rc=$rc"; fails=$((fails + 1)); }
+ckf "malformed json: movement folds to empty" "$(echo "$out" | jq -r '.movement | length')" 0
+out=$(env PATH="$tmp/badstubs:$PATH" "$READ")
+ckf "malformed text: movement unavailable" "$(echo "$out" | grep -c 'unavailable')" 2
+
+# readers missing from PATH: a PATH with the interpreters but neither the real
+# bin dir nor ~/.local/bin, so both sibling lookups fail
+out=$(env PATH=/usr/bin:/bin "$READ" 2>/dev/null); rc=$?
+[[ $rc == 0 && "$(echo "$out" | grep -c unavailable)" == 2 ]] \
+	&& echo "ok: missing readers fold to (unavailable)" || { echo "FAIL: missing readers"; fails=$((fails + 1)); }
+
+# -- 7. text output never exceeds 12 lines ------------------------------------
+lines=$(env PATH="$tmp/stubs:$PATH" "$READ" --days 3 | wc -l)
+ckf "line cap <= 12" "$(( lines <= 12 ? 1 : 0 ))" "1"
+
+if (( fails == 0 )); then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK: $fails failure(s)"
+exit 1

@@ -1,0 +1,217 @@
+#!/bin/bash
+# hngh-fill-selfcheck — sandboxed checks for the local-fill runner.
+# Everything is sandboxed: the queue root is overridden via HNGH_FILL_DIR, the
+# credential file via HNGH_ENV_DIR, and `curl` is a STUB on PATH — no model call
+# ever leaves the box and the real queue is never touched.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+export HNGH_FILL_DIR="$sandbox/queue"
+export HNGH_ENV_DIR="$sandbox/env"
+export STUB_STATE="$sandbox/stub"
+mkdir -p "$HNGH_ENV_DIR" "$STUB_STATE/calls" "$sandbox/bin"
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+fill="$selfcheck_dir/hngh-fill"
+FAKE_KEY='sk-local-stub-key-DO-NOT-LEAK-0123456789'
+printf 'UNSLOTH_API_KEY=%s\n' "$FAKE_KEY" > "$HNGH_ENV_DIR/70-unsloth.conf"
+
+# ---- stub curl: per-fixture canned answers, records every request body -------
+cat > "$sandbox/bin/curl" <<'STUB'
+#!/bin/bash
+# stub curl — never talks to a network. Records request bodies under $STUB_STATE.
+set -u
+out=""; data=""; url=""
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-o) out=${2-}; shift 2 ;;
+		-w) shift 2 ;;
+		-H) shift 2 ;;
+		--max-time) shift 2 ;;
+		--data-binary) data=${2-}; shift 2 ;;
+		*) url=$1; shift ;;
+	esac
+done
+body=${data#@}
+[ -f "$body" ] || body=""
+if [ -f "$STUB_STATE/down" ]; then
+	printf '000'
+	exit 7
+fi
+if [ -z "$body" ]; then   # preflight probe (no request body): up, but not a model call
+	printf '200'
+	exit 0
+fi
+marker=$(grep -o 'FIXTURE:[A-Z]*' "$body" 2>/dev/null | head -1 | cut -d: -f2)
+[ -n "$marker" ] || marker=GREEN
+count_file="$STUB_STATE/count.$marker"
+n=$(cat "$count_file" 2>/dev/null || echo 0)
+n=$((n + 1)); printf '%s' "$n" > "$count_file"
+cp "$body" "$STUB_STATE/calls/$marker.$n.body" 2>/dev/null
+
+emit() { # emit <content>
+	printf '{"choices":[{"message":{"content":%s}}]}' "$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1")" > "$out"
+	printf '200'
+}
+
+case "$marker" in
+GREEN) emit '--- hello.txt
++++ hello.txt
+@@ -1,1 +1,2 @@
+ original
++FIXED' ;;
+RETRY)
+	if [ "$n" = 1 ]; then
+		emit '--- hello.txt
++++ hello.txt
+@@ -1,1 +1,2 @@
+ original
++WRONG'
+	else
+		emit '--- hello.txt
++++ hello.txt
+@@ -1,1 +1,2 @@
+ original
++FIXED'
+	fi ;;
+RED) emit 'I am sorry, I cannot produce that patch.' ;;
+DOWN) printf '000'; exit 7 ;;
+*) emit 'no diff' ;;
+esac
+STUB
+chmod +x "$sandbox/bin/curl"
+export PATH="$sandbox/bin:$PATH"
+
+# ---- fixtures ---------------------------------------------------------------
+mk_item() { # mk_item <id> <marker> <test-body>
+	local id=$1 marker=$2 body=$3
+	local d="$HNGH_FILL_DIR/queued/$id"
+	mkdir -p "$d/tests" "$d/workdir"
+	printf '# spec for %s\nFIXTURE:%s\n' "$id" "$marker" > "$d/SPEC.md"
+	printf 'assert FIXED present in hello.txt\n' > "$d/tests/test_spec.txt"
+	printf 'original\n' > "$d/workdir/hello.txt"
+	printf '%s\n' "$body" > "$d/workdir/test.sh"
+	printf '{"id":"%s","test_cmd":"bash test.sh","workdir_rel":"workdir"}\n' "$id" > "$d/item.json"
+}
+
+mk_item green-item GREEN 'grep -q FIXED hello.txt && echo PASS || { echo "expected FIXED"; exit 1; }'
+mk_item red-item RED 'grep -q FIXED hello.txt && echo PASS || { echo "expected FIXED"; exit 1; }'
+mk_item retry-item RETRY 'grep -q FIXED hello.txt && echo PASS || { echo "expected FIXED"; exit 1; }'
+
+# ---- 1. drain: green fills, red escalates -----------------------------------
+out=$(bash "$fill" drain --attempts 2 2>&1)
+rc=$?
+[ $rc = 0 ] && [ -d "$HNGH_FILL_DIR/filled/green-item" ] && [ ! -d "$HNGH_FILL_DIR/queued/green-item" ]
+check "drain exits 0 and moves the green item to filled/" $?
+
+[ -f "$HNGH_FILL_DIR/filled/green-item/result.json" ] &&
+	python3 -c '
+import json,sys
+r=json.load(open(sys.argv[1]))
+assert r["status"]=="filled", r
+assert r["attempts"]==1, r
+assert r["id"]=="green-item", r' "$HNGH_FILL_DIR/filled/green-item/result.json"
+check "filled item has result.json with status=filled and attempts=1" $?
+
+grep -q FIXED "$HNGH_FILL_DIR/filled/green-item/workdir/hello.txt"
+check "the patch was applied into workdir/" $?
+
+[ -d "$HNGH_FILL_DIR/escalate/red-item" ] && [ ! -d "$HNGH_FILL_DIR/queued/red-item" ]
+check "the red item moves to escalate/" $?
+
+python3 -c '
+import json,sys
+r=json.load(open(sys.argv[1]))
+assert r["status"]=="escalated", r
+assert r["attempts"]==2, r' "$HNGH_FILL_DIR/escalate/red-item/result.json"
+check "escalated item has result.json with status=escalated and attempts=N" $?
+
+# ---- 2. the second prompt carries the failing output -------------------------
+[ -f "$STUB_STATE/calls/RED.2.body" ] &&
+	grep -q 'no unified diff in model reply' "$STUB_STATE/calls/RED.2.body"
+check "second prompt for the red item includes the failing output" $?
+
+[ -f "$STUB_STATE/calls/RETRY.2.body" ] &&
+	grep -q 'expected FIXED' "$STUB_STATE/calls/RETRY.2.body"
+check "second prompt for the retry item includes the real failing test output" $?
+
+[ -d "$HNGH_FILL_DIR/filled/retry-item" ]
+check "the retry item is filled once the second prompt fixes it" $?
+
+# ---- 3. status shows every state -------------------------------------------
+st=$(bash "$fill" status 2>&1)
+printf '%s' "$st" | grep -q 'green-item filled' &&
+	printf '%s' "$st" | grep -q 'red-item escalate' &&
+	printf '%s' "$st" | grep -q 'retry-item filled'
+check "status lists filled and escalated items" $?
+
+# ---- 4. log.jsonl records the transitions -----------------------------------
+python3 -c '
+import json,sys
+rows=[json.loads(l) for l in open(sys.argv[1]) if l.strip()]
+pairs={(r["id"], r["from"], r["to"]) for r in rows}
+assert ("green-item","queued","filled") in pairs, pairs
+assert ("red-item","queued","escalate") in pairs, pairs
+for r in rows:
+    for k in ("at","id","from","to","attempts","note"):
+        assert k in r, (k, r)' "$HNGH_FILL_DIR/log.jsonl"
+check "log.jsonl records transitions with the required fields" $?
+
+# ---- 5. server down moves nothing ------------------------------------------
+export HNGH_FILL_DIR="$sandbox/queue_down"
+mkdir -p "$HNGH_FILL_DIR"
+mk_item down-item DOWN 'grep -q FIXED hello.txt && echo PASS || exit 1'
+touch "$STUB_STATE/down"
+down_out=$(bash "$fill" drain 2>&1)
+down_rc=$?
+[ $down_rc != 0 ] && [ -d "$HNGH_FILL_DIR/queued/down-item" ] &&
+	[ ! -d "$HNGH_FILL_DIR/filled/down-item" ] && [ ! -d "$HNGH_FILL_DIR/escalate/down-item" ]
+check "server down: nonzero exit and no item moved" $?
+
+[ ! -f "$STUB_STATE/calls/DOWN.1.body" ]
+check "server down: the model was never called" $?
+
+rm -f "$STUB_STATE/down"
+
+printf '%s' "$down_out" | grep -qi 'server down'
+check "server down: the failure is reported" $?
+
+export HNGH_FILL_DIR="$sandbox/queue"
+
+# ---- 6. reset returns an escalated item to the queue -------------------------
+out=$(bash "$fill" reset red-item 2>&1)
+rc=$?
+[ $rc = 0 ] && [ -d "$HNGH_FILL_DIR/queued/red-item" ] && [ ! -d "$HNGH_FILL_DIR/escalate/red-item" ]
+check "reset moves an escalated item back to queued/" $?
+
+# ---- 7. unknown subcommand --------------------------------------------------
+bash "$fill" bogus > "$sandbox/bogus.out" 2>&1
+rc=$?
+[ $rc != 0 ] && grep -qi 'unknown subcommand' "$sandbox/bogus.out"
+check "unknown subcommand is refused with a message" $?
+
+# ---- 8. no credential material in any output ---------------------------------
+leak=0
+for f in "$sandbox/bogus.out"; do grep -q "$FAKE_KEY" "$f" && leak=1; done
+printf '%s' "$out" "$st" "$down_out" | grep -q "$FAKE_KEY" && leak=1
+[ $leak = 0 ]
+check "no output contains the API key" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

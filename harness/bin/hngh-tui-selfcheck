@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# hngh-tui selfcheck — sandboxed via HNGH_TUI_* env overrides, never touches real state.
+set -u
+PY="$HOME/.venvs/hngh-tui/bin/python3"
+TUI="$HOME/Projects/hngh/bin/hngh-tui"
+fails=0
+ok()   { printf 'ok: %s\n' "$1"; }
+bad()  { printf 'FAIL: %s\n' "$1"; fails=$((fails+1)); }
+check(){ # check <desc> <needle-file> <needle>
+  if grep -qF -- "$3" "$2"; then ok "$1"; else bad "$1 (missing: $3)"; fi
+}
+absent(){ # absent <desc> <needle-file> <needle>
+  if grep -qF -- "$3" "$2"; then bad "$1 (unexpected: $3)"; else ok "$1"; fi
+}
+
+T=$(mktemp -d) || exit 1
+trap 'rm -rf "$T"' EXIT
+
+# --- fixtures ---
+# timestamps are computed relative to NOW: build_timeline renders a 6h window,
+# so fixed dates age out and the selfcheck starts failing days later
+T0=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+T1=$(date -u -d "-3 hours" +%Y-%m-%dT%H:%M:%SZ)
+T2=$(date -u -d "-2 hours" +%Y-%m-%dT%H:%M:%SZ)
+T3=$(date -u -d "-4 hours" +%Y-%m-%dT%H:%M:%SZ)
+cat > "$T/feed.jsonl" <<EOF
+{"ts":"$T1","session":"alpha","event":"phase_done","role":"dev","lines":["cistern"],"detail":"first event"}
+garbage not json
+{"ts":"$T2","session":"alpha","event":"deliverable","role":"orchestrator","lines":["hngh"],"detail":"second event"}
+{"ts":"$T3","session":"alpha","event":"note","role":"dev","lines":["hngh"],"detail":"backdated ts, file-last wins"}
+EOF
+cat > "$T/agents.json" <<'EOF'
+[{"kind":"sub","id":"TuiTest","project":"-Projects-omp-work","age_min":3.0,"state":"ACTIVE","kb":12,"path":"/tmp/x.jsonl"},
+ {"kind":"sub","id":"OldOne","project":"-Projects-omp-work","age_min":300.0,"state":"parked","kb":1,"path":"/tmp/y.jsonl"}]
+EOF
+mkdir -p "$T/sysfs"
+echo 1073741824  > "$T/sysfs/mem_info_vram_used"
+echo 21474836480 > "$T/sysfs/mem_info_vram_total"
+mkdir -p "$T/work/alpha/sessions"
+cat > "$T/work/alpha/sessions/slot.jsonl" <<'EOF'
+{"type":"message","timestamp":"2026-10-27T15:00:01Z","message":{"role":"user","content":[{"type":"text","text":"hello cockpit"}]}}
+{"type":"custom","customType":"tool_execution_start","data":{"toolName":"bash","args":{"command":"ls"},"intent":"Probing slots"},"timestamp":"2026-10-27T15:00:02Z"}
+{"type":"message","timestamp":"2026-10-27T15:00:03Z","message":{"role":"assistant","content":[{"type":"text","text":"```python\nprint(1)\n```\ndone"}]}}
+not json at all
+EOF
+git -q -C "$T" init repo 2>/dev/null || { mkdir -p "$T/repo" && git -C "$T/repo" init -q; }
+echo hi > "$T/repo/f"
+git -C "$T/repo" add f
+mkdir -p "$T/dash"
+echo '{"ts":"2026-10-27T14:30:00Z","writer":"w","namespace":"cistern","item":"dash item one","severity":"warn"}' > "$T/dash/cistern.jsonl"
+
+ENV=(HNGH_TUI_FEED="$T/feed.jsonl" HNGH_TUI_AGENTS="$T/agents.json" HNGH_TUI_SYSFS="$T/sysfs"
+     HNGH_TUI_WORK_GLOB="$T/work/*/sessions/*.jsonl" HNGH_TUI_OMP_DIR="$T/nowhere"
+     HNGH_TUI_DASH_DIR="$T/dash" HNGH_TUI_REPOS="$T/repo")
+
+# --- 0. venv + rich present ---
+if [ -x "$PY" ] && "$PY" -c 'import rich' 2>/dev/null; then ok "venv python has rich"; else bad "venv python has rich"; fi
+
+# --- 1. render_one_frame() import contract ---
+FRAME=$(env "${ENV[@]}" "$PY" - "$TUI" <<'PYEOF'
+import importlib.util, sys
+import importlib.machinery
+spec = importlib.util.spec_from_file_location("hngh_tui", sys.argv[1],
+    loader=importlib.machinery.SourceFileLoader("hngh_tui", sys.argv[1]))
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print(m.render_one_frame())
+PYEOF
+) || bad "render_one_frame import"
+printf '%s' "$FRAME" > "$T/frame.txt"
+
+check "header markers"       "$T/frame.txt" "hngh cockpit"
+check "vram from fake sysfs" "$T/frame.txt" "VRAM 1.0/20G"
+check "2TB strip"            "$T/frame.txt" "2TB"
+check "bili marker"          "$T/frame.txt" "bili"
+check "agents panel"         "$T/frame.txt" "AGENTS"
+check "agent id rendered"    "$T/frame.txt" "TuiTest"
+check "changes panel"        "$T/frame.txt" "FILE CHANGES"
+check "repo dirty count"     "$T/frame.txt" "repo"
+check "stream panel"         "$T/frame.txt" "STREAM ▸"
+check "stream user text"     "$T/frame.txt" "hello cockpit"
+check "stream tool intent"   "$T/frame.txt" "→ bash"
+check "stream bad-line skip" "$T/frame.txt" "skip 1 bad"
+check "timeline panel"       "$T/frame.txt" "TIMELINE"
+check "timeline session"     "$T/frame.txt" "alpha"
+check "lines panel"          "$T/frame.txt" "LINES"
+check "dash last event"      "$T/frame.txt" "dash item one"
+check "fold file-order wins" "$T/frame.txt" "backdated ts, file-last wins"
+absent "feed garbage skipped" "$T/frame.txt" "garbage not json"
+
+# --- 2. malformed feed skipped-and-counted (feed bad counter) ---
+check "feed bad counter"     "$T/frame.txt" "skip 1 bad"
+
+# --- 3. --once subprocess: exit 0 + frame text ---
+if env "${ENV[@]}" "$TUI" --once > "$T/once.txt" 2>"$T/once.err"; then
+  ok "--once exits 0"
+  check "--once renders STREAM" "$T/once.txt" "STREAM ▸"
+  check "--once renders TIMELINE" "$T/once.txt" "TIMELINE"
+else
+  bad "--once exits 0"; sed 's/^/  stderr: /' "$T/once.err"
+fi
+
+# --- 4. empty/missing sources degrade to — not crash ---
+if env HNGH_TUI_FEED="$T/none.jsonl" HNGH_TUI_AGENTS="$T/none.json" HNGH_TUI_SYSFS="$T/nowhere" \
+       HNGH_TUI_WORK_GLOB="$T/none/*.jsonl" HNGH_TUI_DASH_DIR="$T/nowhere2" \
+       HNGH_TUI_REPOS="" "$TUI" --once > "$T/empty.txt" 2>&1; then
+  ok "missing sources exit 0"
+  check "missing agents em-dash" "$T/empty.txt" "— no agents"
+  check "missing stream em-dash" "$T/empty.txt" "— no transcript"
+else
+  bad "missing sources exit 0"
+fi
+
+if [ "$fails" -eq 0 ]; then echo "SELF-CHECK GREEN"; else echo "SELF-CHECK: $fails failure(s)"; exit 1; fi

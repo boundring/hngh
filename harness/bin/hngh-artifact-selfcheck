@@ -1,0 +1,110 @@
+#!/bin/bash
+# hngh-artifact-selfcheck — sandboxed checks for the MP-3 artifact-store writer.
+# The store root is overridden to a mktemp sandbox via HNGH_ARTIFACTS_DIR;
+# nothing real is ingested, the real store is never touched.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+export HNGH_ARTIFACTS_DIR="$sandbox/store"
+
+check() { # check <name> <condition-result>
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+art="$selfcheck_dir/hngh-artifact"
+
+# Fixture: a small png-named file, and a no-extension file
+printf '\x89PNG fake render bytes\n' > "$sandbox/render.png"
+printf 'no ext bytes\n' > "$sandbox/noext"
+
+# 1. ingest: output '<sha16> <path>', stored file exists under that name
+out=$(bash "$art" ingest "$sandbox/render.png" --domain manga --licence "CC-BY-4.0" --origin "$sandbox/render.png" 2>/dev/null)
+rc=$?
+sha16=$(printf '%s' "$out" | cut -d' ' -f1)
+stored_path=$(printf '%s' "$out" | cut -d' ' -f2)
+[ $rc = 0 ] && [ -f "$stored_path" ] && [ "${stored_path##*/}" = "$sha16.png" ]
+check "ingest prints '<sha16> <stored-path>' and stores <sha16>.<ext>" $?
+
+# 2. address stability: address of the source equals the ingested sha16, and address copies nothing
+addr=$(bash "$art" address "$sandbox/render.png" 2>/dev/null)
+[ "$addr" = "$sha16" ]
+check "address matches ingested sha16 without copying" $?
+
+# 3. dedup on re-ingest: 'already stored', no second index line, no second copy
+out2=$(bash "$art" ingest "$sandbox/render.png" --domain manga 2>/dev/null)
+lines=$(wc -l < "$HNGH_ARTIFACTS_DIR/manga/index.jsonl")
+printf '%s' "$out2" | grep -q 'already stored' && [ "$lines" = 1 ]
+check "re-ingest of byte-identical file reports 'already stored' and appends nothing" $?
+
+# 4. index line has all required fields and parses as JSON
+line=$(grep -m1 . "$HNGH_ARTIFACTS_DIR/manga/index.jsonl")
+printf '%s' "$line" | python3 -c '
+import json,sys
+r=json.loads(sys.stdin.readline())
+for k in ("at","sha256","sha16","bytes","ext","domain","licence","origin","path"):
+    assert k in r, k
+assert r["sha16"]==r["sha256"][:16] and r["ext"]=="png" and r["domain"]=="manga"
+' 2>/dev/null
+check "index line is JSON with all required fields" $?
+
+# 5. ext detection: no-extension file stores as .bin
+out3=$(bash "$art" ingest "$sandbox/noext" --domain test 2>/dev/null)
+printf '%s' "$out3" | grep -qE '^[0-9a-f]{16} .*\.bin$'
+check "no-extension file stores as .bin" $?
+
+# 6. domain validation: uppercase domain refused, nonzero exit
+bash "$art" ingest "$sandbox/render.png" --domain Manga 2>/dev/null
+[ $? != 0 ]
+check "invalid domain refused (nonzero)" $?
+
+# 7. missing and empty files refused on ingest
+bash "$art" ingest "$sandbox/missing.png" --domain manga 2>/dev/null
+rc=$?
+: > "$sandbox/empty.png"
+bash "$art" ingest "$sandbox/empty.png" --domain manga 2>/dev/null
+rc2=$?
+[ $rc != 0 ] && [ $rc2 != 0 ]
+check "missing and empty files refused (nonzero)" $?
+
+# 8. list: one line per entry, filtered by domain
+outl=$(bash "$art" list --domain manga 2>/dev/null)
+printf '%s' "$outl" | grep -q "$sha16" && [ "$(printf '%s\n' "$outl" | wc -l)" = 1 ]
+outall=$(bash "$art" list 2>/dev/null)
+[ "$(printf '%s\n' "$outall" | wc -l)" = 2 ]
+check "list shows per-entry lines and honors --domain" $?
+
+# 9. verify clean: exit 0, summary says 2 checked, 0 mismatched
+outv=$(bash "$art" verify 2>/dev/null)
+printf '%s' "$outv" | grep -q 'verify: 2 file(s) checked, 0 missing, 0 mismatched'
+check "verify clean store exits 0 with summary" $?
+
+# 10. verify catches a tampered stored file (still exit 0, mismatch reported)
+printf 'TAMPERED' >> "$stored_path"
+outv2=$(bash "$art" verify --domain manga 2>/dev/null)
+rcv=$?
+printf '%s' "$outv2" | grep -q 'MISMATCH' && printf '%s' "$outv2" | grep -q '1 mismatched' && [ $rcv = 0 ]
+check "verify reports tampered file as MISMATCH, exit 0" $?
+
+# 11. file contents never printed by any subcommand
+leak=0
+for o in "$out" "$out2" "$out3" "$outl" "$outv2" "$addr"; do
+	printf '%s' "$o" | grep -q 'fake render bytes' && leak=1
+done
+[ "$leak" = 0 ]
+check "no subcommand prints file contents" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

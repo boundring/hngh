@@ -1,0 +1,363 @@
+#!/bin/bash
+# hngh-plan-selfcheck — sandboxed checks for the PLAN stage.
+# Everything lives in a mktemp sandbox: HNGH_FILL_DIR points the queue root at the
+# sandbox, the plan's repo is a fake tree inside the sandbox, and no model is ever
+# contacted (hngh-plan is deterministic).
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+export HNGH_FILL_DIR="$sandbox/queue"
+repo="$sandbox/repo"
+mkdir -p "$repo/src" "$repo/tests" "$repo/docs/spec" "$HNGH_FILL_DIR"
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+plan_tool="$selfcheck_dir/hngh-plan"
+[ -x "$plan_tool" ] || { echo "FAIL: hngh-plan is missing" >&2; exit 1; }
+
+# ---- fixture repo -----------------------------------------------------------
+printf 'def alpha():\n    return 1\n' > "$repo/src/alpha.py"
+printf 'from src.alpha import alpha\n\ndef test_alpha():\n    assert alpha() == 1\n' > "$repo/tests/test_alpha.py"
+printf 'def beta():\n    return 2\n' > "$repo/src/beta.py"
+printf 'def test_beta():\n    assert True\n' > "$repo/tests/test_beta.py"
+printf '# spec for alpha\n' > "$repo/docs/spec/alpha.md"
+printf '# spec for beta\n' > "$repo/docs/spec/beta.md"
+printf 'def helper():\n    pass\n\ndef test_stub():\n    assert helper() is not None\n' > "$repo/tests/test_stub.py"
+
+# ---- plan writers -----------------------------------------------------------
+mkplan() { # mkplan <file> <sessions-yaml>
+	local f=$1
+	cat > "$f" <<EOF
+repo: $repo
+sessions:
+$2
+EOF
+}
+
+GOOD_SESSION='  - id: alpha-add
+    kind: add
+    scope: add alpha helper
+    owned_files: [src/alpha.py]
+    spec: docs/spec/alpha.md
+    tests: tests/test_alpha.py
+    test_cmd: "pytest ../tests/test_alpha.py"
+    integration:
+      command: "cp workdir/alpha.py src/alpha.py"
+      paths: [src/alpha.py]'
+
+MOD_SESSION='  - id: beta-modify
+    kind: modify
+    scope: change beta
+    owned_files: [src/beta.py]
+    spec: docs/spec/beta.md
+    tests: tests/test_beta.py
+    test_cmd: "pytest ../tests/test_beta.py"
+    regression: "beta_returns_two"
+    callers: [src/alpha.py]
+    integration:
+      command: "cp workdir/beta.py src/beta.py"
+      paths: [src/beta.py]'
+
+plan_good="$sandbox/good.yaml"
+mkplan "$plan_good" "$GOOD_SESSION"
+
+# ---- 1. a valid plan validates ---------------------------------------------
+out=$(bash "$plan_tool" validate "$plan_good" 2>&1)
+rc=$?
+[ $rc = 0 ] && printf '%s' "$out" | grep -q '^OK alpha-add'
+check "validate exits 0 and reports OK for a valid session" $?
+
+# ---- 2. a valid plan queues an item ----------------------------------------
+out=$(bash "$plan_tool" queue "$plan_good" 2>&1)
+rc=$?
+[ $rc = 0 ] && [ -d "$HNGH_FILL_DIR/queued/alpha-add" ]
+check "queue exits 0 and creates queued/<id>/" $?
+
+# ---- 3. the queued item layout ----------------------------------------------
+item="$HNGH_FILL_DIR/queued/alpha-add"
+[ -f "$item/SPEC.md" ] && [ -d "$item/tests" ] && [ -f "$item/item.json" ] && [ -d "$item/workdir" ]
+check "queued item has SPEC.md, tests/, item.json and workdir/" $?
+
+[ -f "$item/tests/test_alpha.py" ] && grep -q 'assert' "$item/tests/test_alpha.py"
+check "the named test file is copied with its assertion" $?
+
+grep -q 'alpha' "$item/SPEC.md" && grep -q 'src/alpha.py' "$item/SPEC.md" && grep -q 'pytest' "$item/SPEC.md"
+check "SPEC.md names the scope, the file and the test command" $?
+
+python3 -c '
+import json,sys
+r=json.load(open(sys.argv[1]))
+assert r["id"]=="alpha-add", r
+assert r["workdir_rel"]=="workdir", r
+assert "pytest" in r["test_cmd"], r' "$item/item.json"
+check "item.json holds {id, test_cmd, workdir_rel}" $?
+
+# ---- 4. a two-file item is refused -----------------------------------------
+plan_two="$sandbox/two.yaml"
+mkplan "$plan_two" '  - id: two-files
+    kind: modify
+    scope: touches two files
+    owned_files: [src/alpha.py, src/beta.py]
+    spec: docs/spec/alpha.md
+    tests: tests/test_alpha.py
+    test_cmd: "pytest ../tests/test_alpha.py"
+    regression: "alpha_still_returns_one"
+    callers: [src/beta.py]
+    integration:
+      command: "cp workdir/*.py src/"
+      paths: [src/alpha.py, src/beta.py]'
+out=$(bash "$plan_tool" validate "$plan_two" 2>&1)
+rc=$?
+[ $rc = 1 ] && printf '%s' "$out" | grep -q '^REFUSED two-files' && printf '%s' "$out" | grep -qi 'two source files'
+check "a two-file item is refused" $?
+
+bash "$plan_tool" queue "$plan_two" >/dev/null 2>&1
+[ ! -d "$HNGH_FILL_DIR/queued/two-files" ]
+check "a refused session is never queued" $?
+
+# ---- 5. a modify item without regression is refused -------------------------
+plan_noreg="$sandbox/noregression.yaml"
+mkplan "$plan_noreg" '  - id: no-regression
+    kind: modify
+    scope: modify without a regression assertion
+    owned_files: [src/beta.py]
+    spec: docs/spec/beta.md
+    tests: tests/test_beta.py
+    test_cmd: "pytest ../tests/test_beta.py"
+    callers: [src/alpha.py]
+    integration:
+      command: "cp workdir/beta.py src/beta.py"
+      paths: [src/beta.py]'
+out=$(bash "$plan_tool" validate "$plan_noreg" 2>&1)
+rc=$?
+[ $rc = 1 ] && printf '%s' "$out" | grep -qi 'regression'
+check "a modify item without a regression assertion is refused" $?
+
+# ---- 6. a modify item without callers is refused ----------------------------
+plan_nocallers="$sandbox/nocallers.yaml"
+mkplan "$plan_nocallers" '  - id: no-callers
+    kind: modify
+    scope: modify without callers
+    owned_files: [src/beta.py]
+    spec: docs/spec/beta.md
+    tests: tests/test_beta.py
+    test_cmd: "pytest ../tests/test_beta.py"
+    regression: "beta_returns_two"
+    integration:
+      command: "cp workdir/beta.py src/beta.py"
+      paths: [src/beta.py]'
+out=$(bash "$plan_tool" validate "$plan_nocallers" 2>&1)
+rc=$?
+[ $rc = 1 ] && printf '%s' "$out" | grep -qi 'callers'
+check "a modify item without callers is refused" $?
+
+# ---- 7. a missing spec path is refused -------------------------------------
+plan_nospec="$sandbox/nospec.yaml"
+mkplan "$plan_nospec" '  - id: no-spec
+    kind: add
+    scope: missing spec
+    owned_files: [src/alpha.py]
+    spec: docs/spec/does-not-exist.md
+    tests: tests/test_alpha.py
+    test_cmd: "pytest ../tests/test_alpha.py"
+    integration:
+      command: "cp workdir/alpha.py src/alpha.py"
+      paths: [src/alpha.py]'
+out=$(bash "$plan_tool" validate "$plan_nospec" 2>&1)
+rc=$?
+[ $rc = 1 ] && printf '%s' "$out" | grep -qi 'spec path does not exist'
+check "a missing spec path is refused" $?
+
+# ---- 8. a cycle in depends_on is refused -----------------------------------
+plan_cycle="$sandbox/cycle.yaml"
+mkplan "$plan_cycle" '  - id: cyc-a
+    kind: add
+    scope: a
+    owned_files: [src/alpha.py]
+    spec: docs/spec/alpha.md
+    tests: tests/test_alpha.py
+    test_cmd: "pytest ../tests/test_alpha.py"
+    depends_on: [cyc-b]
+    integration:
+      command: "cp workdir/alpha.py src/alpha.py"
+      paths: [src/alpha.py]
+  - id: cyc-b
+    kind: add
+    scope: b
+    owned_files: [src/beta.py]
+    spec: docs/spec/beta.md
+    tests: tests/test_beta.py
+    test_cmd: "pytest ../tests/test_beta.py"
+    depends_on: [cyc-a]
+    integration:
+      command: "cp workdir/beta.py src/beta.py"
+      paths: [src/beta.py]'
+out=$(bash "$plan_tool" validate "$plan_cycle" 2>&1)
+rc=$?
+[ $rc = 1 ] && printf '%s' "$out" | grep -qi 'cycle'
+check "a cycle in depends_on is refused" $?
+
+# ---- 9. a dependency on a later session is refused --------------------------
+plan_later="$sandbox/later.yaml"
+mkplan "$plan_later" '  - id: later-first
+    kind: add
+    scope: depends on a session defined later
+    owned_files: [src/alpha.py]
+    spec: docs/spec/alpha.md
+    tests: tests/test_alpha.py
+    test_cmd: "pytest ../tests/test_alpha.py"
+    depends_on: [later-second]
+    integration:
+      command: "cp workdir/alpha.py src/alpha.py"
+      paths: [src/alpha.py]
+  - id: later-second
+    kind: add
+    scope: the dependency
+    owned_files: [src/beta.py]
+    spec: docs/spec/beta.md
+    tests: tests/test_beta.py
+    test_cmd: "pytest ../tests/test_beta.py"
+    integration:
+      command: "cp workdir/beta.py src/beta.py"
+      paths: [src/beta.py]'
+out=$(bash "$plan_tool" validate "$plan_later" 2>&1)
+rc=$?
+[ $rc = 1 ] && printf '%s' "$out" | grep -qi 'not defined earlier'
+check "a dependency on a later session is refused" $?
+
+# ---- 10. a modify item copies its source file into workdir/ -----------------
+plan_mod="$sandbox/modify.yaml"
+mkplan "$plan_mod" "$MOD_SESSION"
+bash "$plan_tool" queue "$plan_mod" >/dev/null 2>&1
+[ -f "$HNGH_FILL_DIR/queued/beta-modify/workdir/beta.py" ] && \
+	grep -q 'def beta' "$HNGH_FILL_DIR/queued/beta-modify/workdir/beta.py"
+check "a modify item gets a copy of its owned source file in workdir/" $?
+
+# ---- 10b. an empty test body becomes a TODO stub ---------------------------
+plan_stub="$sandbox/stub.yaml"
+mkplan "$plan_stub" '  - id: stub-item
+    kind: add
+    scope: a test whose body is a stub
+    owned_files: [src/alpha.py]
+    spec: docs/spec/alpha.md
+    tests: tests/test_stub.py
+    test_cmd: "pytest ../tests/test_stub.py"
+    integration:
+      command: "cp workdir/alpha.py src/alpha.py"
+      paths: [src/alpha.py]'
+bash "$plan_tool" queue "$plan_stub" >/dev/null 2>&1
+grep -q 'TODO' "$HNGH_FILL_DIR/queued/stub-item/tests/test_stub.py"
+check "an empty test body is materialized as a TODO stub" $?
+
+# ---- 11. status shows queued vs refused ------------------------------------
+out=$(bash "$plan_tool" status "$plan_good" 2>&1)
+printf '%s' "$out" | grep -q '^queued alpha-add' && printf '%s' "$out" | grep -q "$HNGH_FILL_DIR/queued/alpha-add"
+check "status reports a queued session with its item dir" $?
+
+out=$(bash "$plan_tool" status "$plan_two" 2>&1)
+printf '%s' "$out" | grep -q '^refused two-files'
+check "status reports a refused session" $?
+
+out=$(bash "$plan_tool" status "$plan_later" 2>&1)
+printf '%s' "$out" | grep -q '^refused later-first'
+check "status reports the session that breaks the dependency order as refused" $?
+
+# a valid session whose dependency is refused shows as blocked-dependency
+plan_blocked="$sandbox/blocked.yaml"
+mkplan "$plan_blocked" '  - id: blocked-dep
+    kind: add
+    scope: dependency is refused
+    owned_files: [src/alpha.py]
+    spec: docs/spec/does-not-exist.md
+    tests: tests/test_alpha.py
+    test_cmd: "pytest ../tests/test_alpha.py"
+    integration:
+      command: "cp workdir/alpha.py src/alpha.py"
+      paths: [src/alpha.py]
+  - id: blocked-waiter
+    kind: add
+    scope: waits on the refused session
+    owned_files: [src/beta.py]
+    spec: docs/spec/beta.md
+    tests: tests/test_beta.py
+    test_cmd: "pytest ../tests/test_beta.py"
+    depends_on: [blocked-dep]
+    integration:
+      command: "cp workdir/beta.py src/beta.py"
+      paths: [src/beta.py]'
+out=$(bash "$plan_tool" status "$plan_blocked" 2>&1)
+printf '%s' "$out" | grep -q '^refused blocked-dep' && printf '%s' "$out" | grep -q '^blocked-dependency blocked-waiter'
+check "status reports a session blocked on a refused dependency" $?
+
+bash "$plan_tool" queue "$plan_blocked" >/dev/null 2>&1
+[ ! -d "$HNGH_FILL_DIR/queued/blocked-waiter" ] && [ ! -d "$HNGH_FILL_DIR/queued/blocked-dep" ]
+check "a session blocked on a refused dependency is not queued" $?
+
+# ---- 12. exit codes ---------------------------------------------------------
+bash "$plan_tool" validate "$plan_good" >/dev/null 2>&1
+[ $? = 0 ]
+check "validate on a valid plan exits 0" $?
+
+bash "$plan_tool" validate "$plan_two" >/dev/null 2>&1
+[ $? = 1 ]
+check "validate on a plan with a refused session exits 1" $?
+
+bash "$plan_tool" queue "$plan_good" >/dev/null 2>&1
+[ $? = 0 ]
+check "queue on a valid plan exits 0" $?
+
+bash "$plan_tool" bogus > "$sandbox/bogus.out" 2>&1
+rc=$?
+[ $rc != 0 ] && grep -qi 'unknown subcommand' "$sandbox/bogus.out"
+check "unknown subcommand is refused with a message" $?
+
+# ---- 13. existing queue items are never deleted ----------------------------
+printf 'KEEP\n' > "$HNGH_FILL_DIR/queued/alpha-add/SPEC.md"
+bash "$plan_tool" queue "$plan_good" >/dev/null 2>&1
+grep -q 'KEEP' "$HNGH_FILL_DIR/queued/alpha-add/SPEC.md"
+check "an existing queue item is kept, never deleted or rewritten" $?
+
+# ---- 14. nothing is written outside the sandbox ----------------------------
+real_queue=/home/bricker/.local/state/hngh/fill
+before=""
+if [ -d "$real_queue/queued" ]; then
+	before=$(ls -1 "$real_queue/queued" | sort)
+fi
+bash "$plan_tool" queue "$plan_good" >/dev/null 2>&1
+bash "$plan_tool" queue "$plan_two" >/dev/null 2>&1
+after=""
+if [ -d "$real_queue/queued" ]; then
+	after=$(ls -1 "$real_queue/queued" | sort)
+fi
+[ "$before" = "$after" ]
+check "the real queue root is untouched" $?
+
+# the plan's repo is never written to either
+repo_before=$(cd "$repo" && find . -type f | sort | xargs -r md5sum)
+bash "$plan_tool" queue "$plan_mod" >/dev/null 2>&1
+repo_after=$(cd "$repo" && find . -type f | sort | xargs -r md5sum)
+[ "$repo_before" = "$repo_after" ]
+check "the plan's repo tree is not modified" $?
+
+# every write landed inside the sandbox
+outside=$(find "$sandbox" -maxdepth 1 -name 'queue' | wc -l)
+[ "$outside" = 1 ] && [ -d "$HNGH_FILL_DIR/queued" ]
+check "the queue root is the sandboxed HNGH_FILL_DIR" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK: $failures failure(s)" >&2
+exit 1

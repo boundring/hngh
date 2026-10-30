@@ -1,0 +1,528 @@
+#!/bin/bash
+# hngh-plan — the PLAN stage of the local-first pipeline
+# (PLANS/2026-10-29-local-first-execution.md).
+#
+#   hngh-plan validate <plan.yaml>   check every session against the local-safe contract
+#   hngh-plan queue    <plan.yaml>   materialize queue items for the passing sessions
+#   hngh-plan status   <plan.yaml>   one line per session: queued/blocked-dependency/refused
+#
+# Queue root: ${HNGH_FILL_DIR:-/home/bricker/.local/state/hngh/fill}
+#   queued/<id>/SPEC.md      the item's spec text
+#   queued/<id>/tests/       the test file(s) the item is judged by
+#   queued/<id>/item.json    {id, test_cmd, workdir_rel}
+#   queued/<id>/workdir/     what the local model completes
+#
+# Deterministic: no model is contacted, nothing is pushed, no path outside the
+# queue root and the plan's own files is written, existing items are never deleted.
+set -u
+
+ROOT=${HNGH_FILL_DIR:-/home/bricker/.local/state/hngh/fill}
+
+usage() {
+	cat <<'EOF'
+hngh-plan — plan.yaml -> validated local-fill queue items.
+
+  validate <plan.yaml>   print OK/REFUSED per session; exit 1 if any session is refused
+  queue    <plan.yaml>   write queued/<id>/ for every passing session (never overwrites)
+  status   <plan.yaml>   print queued/blocked-dependency/refused per session
+
+Plan format (top level):
+  repo: /path/to/repo
+  sessions:
+    - id: item-id
+      kind: add | modify | pure_function
+      pure_function: false        # optional; true waives the owned-file requirement
+      scope: "..."                # one-line scope of the session
+      owned_files: [src/a.py]     # exactly one (no item may touch two source files)
+                                 # a pure_function item may own none
+      spec: docs/spec/a.md        # path (relative to repo, or to the plan) that must exist
+      tests: tests/a_test.py      # file, directory of files, or list of files
+      test_cmd: "pytest ..."      # fixed command, run from the item workdir
+      depends_on: [other-id]      # ids defined EARLIER in the plan
+      callers: [src/b.py]         # required for kind: modify; each path must exist
+      regression: "name"          # required for kind: modify
+      interfaces: ["..."]         # optional; what the item must expose
+      edge_cases: ["..."]         # optional; behavior the item must handle
+      integration:
+        command: "..."            # required
+        paths: [src/a.py]         # required, explicit pathspecs
+EOF
+}
+
+die() { echo "hngh-plan: $*" >&2; exit 1; }
+
+cmd=${1:-}
+[ -n "$cmd" ] || { usage >&2; exit 1; }
+shift
+case "$cmd" in
+	validate|queue|status) ;;
+	-h|--help|help) usage; exit 0 ;;
+	*) usage >&2; die "unknown subcommand: $cmd" ;;
+esac
+plan=${1:-}
+[ -n "$plan" ] || die "$cmd needs a plan file"
+[ -f "$plan" ] || die "no such plan file: $plan"
+plan=$(cd "$(dirname "$plan")" && pwd)/$(basename "$plan")
+
+python3 - "$cmd" "$plan" "$ROOT" <<'PY'
+import json
+import os
+import re
+import shutil
+import sys
+
+import yaml
+
+mode, plan_path, root = sys.argv[1], sys.argv[2], sys.argv[3]
+plan_dir = os.path.dirname(plan_path)
+
+
+def fail(msg):
+    print("hngh-plan: %s" % msg, file=sys.stderr)
+    sys.exit(1)
+
+
+try:
+    with open(plan_path, encoding="utf-8") as fh:
+        plan = yaml.safe_load(fh)
+except Exception as exc:  # noqa: BLE001 - surfaced verbatim to the operator
+    fail("cannot parse %s: %s" % (plan_path, exc))
+
+if not isinstance(plan, dict):
+    fail("%s: top level must be a mapping" % plan_path)
+sessions = plan.get("sessions")
+if not isinstance(sessions, list) or not sessions:
+    fail("%s: no 'sessions:' list" % plan_path)
+
+repo_raw = plan.get("repo")
+if not repo_raw or not isinstance(repo_raw, str):
+    fail("%s: plan names no 'repo:' root" % plan_path)
+repo = repo_raw if os.path.isabs(repo_raw) else os.path.normpath(os.path.join(plan_dir, repo_raw))
+if not os.path.isdir(repo):
+    fail("%s: repo root does not exist: %s" % (plan_path, repo))
+
+KINDS = ("add", "modify", "pure_function")
+
+
+def rpath(p, base):
+    return p if os.path.isabs(p) else os.path.normpath(os.path.join(base, p))
+
+
+def read_text(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            return fh.read()
+    except OSError:
+        return ""
+
+
+def as_list(value):
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    return [value]
+
+
+def test_files_of(entry):
+    """Resolve a 'tests:' entry to a list of files (relative to repo)."""
+    if isinstance(entry, str):
+        p = rpath(entry, repo)
+        if os.path.isdir(p):
+            out = []
+            for root, dirs, names in os.walk(p):
+                dirs.sort()
+                for n in sorted(names):
+                    out.append(os.path.join(root, n))
+            return out
+        return [p]
+    return [rpath(e, repo) for e in as_list(entry) if isinstance(e, str)]
+
+
+def tests_base(entry):
+    """The directory the item's tests/ mirrors, so test_cmd paths still hold."""
+    entries = [e for e in as_list(entry) if isinstance(e, str)]
+    if not entries:
+        return repo
+    bases = []
+    for e in entries:
+        p = rpath(e, repo)
+        bases.append(p if os.path.isdir(p) else os.path.dirname(p))
+    try:
+        return os.path.commonpath(bases)
+    except ValueError:
+        return repo
+
+
+ASSERT_HINTS = ("assert", "expect(", "should", "raises")
+
+
+def has_assertion(text):
+    low = text.lower()
+    return any(h in low for h in ASSERT_HINTS)
+
+
+def stubify(text):
+    """Keep the assertions; make every stub body an explicit TODO."""
+    out = []
+    prev = ""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped in ("pass", "...") and prev.rstrip().endswith(":"):
+            out.append(line + "  # TODO: implement")
+        else:
+            out.append(line)
+        if stripped:
+            prev = stripped
+    # a def with no body at all gets an explicit TODO stub
+    result = []
+    for i, line in enumerate(out):
+        result.append(line)
+        m = re.match(r"^(\s*)def\s+\w+\s*\(.*\)\s*:\s*$", line)
+        if not m:
+            continue
+        indent = len(m.group(1))
+        j = i + 1
+        while j < len(out) and not out[j].strip():
+            j += 1
+        if j < len(out) and (len(out[j]) - len(out[j].lstrip())) > indent:
+            continue  # the body is not empty
+        result.append(" " * (indent + 4) + "pass  # TODO: implement")
+    return "\n".join(result) + "\n"
+
+
+# ---- validation -------------------------------------------------------------
+
+ids = []
+for s in sessions:
+    if isinstance(s, dict):
+        sid = s.get("id")
+        ids.append(sid if isinstance(sid, str) else "")
+id_index = {}
+for i, sid in enumerate(ids):
+    if sid and sid not in id_index:
+        id_index[sid] = i
+
+
+def find_cycle():
+    """Return the set of ids that sit on a depends_on cycle."""
+    graph = {}
+    for i, s in enumerate(sessions):
+        if not isinstance(s, dict):
+            continue
+        sid = s.get("id")
+        deps = [d for d in as_list(s.get("depends_on")) if isinstance(d, str)]
+        graph[sid] = deps
+    bad = set()
+    state = {}
+
+    def visit(node, stack):
+        state[node] = 1
+        for dep in graph.get(node, []):
+            if dep not in graph:
+                continue
+            if state.get(dep) == 1:
+                bad.update(stack[stack.index(dep):] + [dep])
+            elif state.get(dep, 0) == 0:
+                visit(dep, stack + [dep])
+        state[node] = 2
+
+    for node in graph:
+        if state.get(node, 0) == 0:
+            visit(node, [node])
+    return bad
+
+
+cycle_ids = find_cycle()
+
+checked = []
+for pos, s in enumerate(sessions):
+    errs = []
+    sid = ""
+    if not isinstance(s, dict):
+        checked.append({"id": "", "errors": ["session entry is not a mapping"], "session": {}})
+        continue
+
+    raw_id = s.get("id")
+    if not isinstance(raw_id, str) or not raw_id.strip():
+        errs.append("missing id")
+    else:
+        sid = raw_id.strip()
+        if "/" in sid or ".." in sid or any(c.isspace() for c in sid) or sid.startswith("."):
+            errs.append("id %r is not usable as a queue directory name" % sid)
+        if ids.count(sid) > 1:
+            errs.append("duplicate id %r" % sid)
+
+    kind = s.get("kind")
+    if kind is None:
+        kind = "add"
+    if kind not in KINDS:
+        errs.append("kind %r is not one of %s" % (kind, "/".join(KINDS)))
+
+    pure = bool(s.get("pure_function")) or kind == "pure_function"
+
+    owned = [o for o in as_list(s.get("owned_files")) if isinstance(o, str)]
+    if len(owned) > 1:
+        errs.append("owns %d files (%s); one owned file only (no item may touch two source files)" % (len(owned), ", ".join(owned)))
+    elif not owned and not pure:
+        errs.append("no owned_files declared")
+
+    owned_abs = [rpath(o, repo) for o in owned]
+
+    # spec
+    spec_ref = s.get("spec")
+    spec_text = s.get("spec_text")
+    spec_path = None
+    if isinstance(spec_text, str) and spec_text.strip():
+        spec_text = spec_text.strip()
+    else:
+        spec_text = None
+    if not isinstance(spec_ref, str) or not spec_ref.strip():
+        if spec_text is None:
+            errs.append("no spec path")
+    else:
+        for cand in (rpath(spec_ref, repo), rpath(spec_ref, plan_dir), rpath(spec_ref, os.getcwd()),
+                     rpath(spec_ref, os.path.join(root, "queued", sid or "_"))):
+            if os.path.isfile(cand):
+                spec_path = cand
+                break
+        if spec_path is None:
+            errs.append("spec path does not exist: %s" % spec_ref)
+
+    # tests
+    tests_entry = s.get("tests")
+    tfiles = test_files_of(tests_entry) if tests_entry is not None else []
+    existing_tests = [t for t in tfiles if os.path.isfile(t)]
+    if not tests_entry:
+        errs.append("no tests path")
+    elif not existing_tests:
+        errs.append("tests path has no files: %s" % tests_entry)
+    for t in tfiles:
+        if not os.path.isfile(t):
+            errs.append("test file does not exist: %s" % os.path.relpath(t, repo))
+    for t in existing_tests:
+        # a python test file without any assertion cannot judge anything; other
+        # languages (shell, etc.) are exempt from the word check
+        body = read_text(t) if t.endswith(".py") else ""
+        if body and ("def test" in body or "class Test" in body) and not has_assertion(body):
+            errs.append("test file has no assertion: %s" % os.path.relpath(t, repo))
+
+    # test_cmd
+    test_cmd = s.get("test_cmd")
+    if not isinstance(test_cmd, str) or not test_cmd.strip():
+        errs.append("no test_cmd")
+    else:
+        test_cmd = test_cmd.strip()
+
+    # integration
+    integ = s.get("integration")
+    if not isinstance(integ, dict):
+        errs.append("no integration block")
+    else:
+        icmd = integ.get("command")
+        if not isinstance(icmd, str) or not icmd.strip():
+            errs.append("integration.command missing")
+        ipaths = [p for p in as_list(integ.get("paths")) if isinstance(p, str) and p.strip()]
+        if not ipaths:
+            errs.append("integration.paths missing or empty")
+
+    # modify-only rules
+    if kind == "modify":
+        reg = s.get("regression")
+        if not isinstance(reg, str) or not reg.strip():
+            errs.append("modify item declares no regression assertion")
+        callers = [c for c in as_list(s.get("callers")) if isinstance(c, str) and c.strip()]
+        if not callers:
+            errs.append("modify item declares no callers")
+        for c in callers:
+            if not os.path.exists(rpath(c, repo)):
+                errs.append("caller path does not exist: %s" % c)
+        for o in owned_abs:
+            if not os.path.isfile(o):
+                errs.append("owned file does not exist: %s" % os.path.relpath(o, repo))
+    else:
+        for c in as_list(s.get("callers")):
+            if isinstance(c, str) and c.strip() and not os.path.exists(rpath(c, repo)):
+                errs.append("caller path does not exist: %s" % c)
+
+    # depends_on
+    deps = [d for d in as_list(s.get("depends_on")) if isinstance(d, str) and d.strip()]
+    for d in deps:
+        if d not in id_index:
+            errs.append("depends_on %r is not an id in this plan" % d)
+        elif id_index[d] >= pos:
+            errs.append("depends_on %r is not defined earlier in the plan" % d)
+    if sid and sid in cycle_ids:
+        errs.append("depends_on cycle detected")
+
+    checked.append({
+        "id": sid,
+        "errors": errs,
+        "session": s,
+        "kind": kind,
+        "pure": pure,
+        "owned": owned,
+        "owned_abs": owned_abs,
+        "spec_path": spec_path,
+        "spec_text": spec_text,
+        "tests": existing_tests,
+        "tests_base": tests_base(tests_entry) if tests_entry else repo,
+        "test_cmd": test_cmd if isinstance(test_cmd, str) else "",
+        "deps": deps,
+    })
+
+by_id = {c["id"]: c for c in checked if c["id"]}
+
+
+def item_dir(sid):
+    return os.path.join(root, "queued", sid)
+
+
+def dep_satisfied(sid):
+    """A dependency counts as satisfied once it left the queue for filled/escalate."""
+    for state in ("queued", "filled", "escalate"):
+        if os.path.isdir(os.path.join(root, state, sid)):
+            return True
+    return False
+
+
+def render_spec(c):
+    s = c["session"]
+    lines = ["# %s" % (c["id"] or "item"), ""]
+    scope = s.get("scope")
+    lines.append("## Scope")
+    lines.append(scope.strip() if isinstance(scope, str) and scope.strip()
+                 else "See the spec text below.")
+    lines.append("")
+    lines.append("## File to %s" % ("edit" if c["kind"] == "modify" else "create"))
+    if c["owned"]:
+        lines.append(c["owned"][0])
+    else:
+        lines.append("(pure function - no file)")
+    lines.append("")
+    lines.append("## Interfaces to expose")
+    ifaces = [i for i in as_list(s.get("interfaces")) if isinstance(i, str) and i.strip()]
+    if ifaces:
+        lines.extend("- %s" % i for i in ifaces)
+    else:
+        lines.append("- (none declared)")
+    lines.append("")
+    lines.append("## Edge cases")
+    edges = [e for e in as_list(s.get("edge_cases")) if isinstance(e, str) and e.strip()]
+    if edges:
+        lines.extend("- %s" % e for e in edges)
+    else:
+        lines.append("- (none declared)")
+    lines.append("")
+    lines.append("## Test command")
+    lines.append("Run from the item workdir:")
+    lines.append("")
+    lines.append("```")
+    lines.append(c["test_cmd"])
+    lines.append("```")
+    lines.append("")
+    if c["kind"] == "modify":
+        lines.append("## Regression assertion (must remain true)")
+        lines.append(c["session"].get("regression", "").strip())
+        lines.append("")
+    lines.append("## Spec text")
+    lines.append("")
+    if c["spec_path"]:
+        lines.append(read_text(c["spec_path"]).rstrip())
+    elif c["spec_text"]:
+        lines.append(c["spec_text"])
+    else:
+        lines.append("(no spec text available)")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def materialize(c):
+    """Write queued/<id>/ for a passing session. Returns (ok, message)."""
+    sid = c["id"]
+    d = item_dir(sid)
+    if os.path.exists(d):
+        return False, "already queued (kept): %s" % d
+    for state in ("filled", "escalate"):
+        done = os.path.join(root, state, sid)
+        if os.path.isdir(done):
+            return False, "already %s (kept): %s" % (state, done)
+    tdir = os.path.join(d, "tests")
+    wdir = os.path.join(d, "workdir")
+    os.makedirs(tdir, exist_ok=True)
+    os.makedirs(wdir, exist_ok=True)
+    for t in c["tests"]:
+        rel = os.path.relpath(t, c["tests_base"])
+        dest = os.path.join(tdir, rel)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(t, encoding="utf-8", errors="replace") as fh:
+            body = fh.read()
+        with open(dest, "w", encoding="utf-8") as fh:
+            fh.write(stubify(body))
+    # the workdir holds exactly one file for the local model to complete: the
+    # source it edits, or an empty placeholder for a file it creates
+    if c["owned_abs"] and os.path.isfile(c["owned_abs"][0]):
+        shutil.copyfile(c["owned_abs"][0], os.path.join(wdir, os.path.basename(c["owned_abs"][0])))
+    elif c["owned"]:
+        open(os.path.join(wdir, os.path.basename(c["owned"][0])), "w").close()
+    with open(os.path.join(d, "SPEC.md"), "w", encoding="utf-8") as fh:
+        fh.write(render_spec(c))
+    with open(os.path.join(d, "item.json"), "w", encoding="utf-8") as fh:
+        json.dump({"id": sid, "test_cmd": c["test_cmd"], "workdir_rel": "workdir"}, fh, indent=2)
+        fh.write("\n")
+    return True, d
+
+
+if mode == "validate":
+    bad = 0
+    for c in checked:
+        if c["errors"]:
+            bad += 1
+            print("REFUSED %s: %s" % (c["id"] or "?", "; ".join(c["errors"])))
+        else:
+            print("OK %s" % c["id"])
+    sys.exit(1 if bad else 0)
+
+if mode == "queue":
+    bad = 0
+    queued = set()
+    os.makedirs(os.path.join(root, "queued"), exist_ok=True)
+    for c in checked:
+        if c["errors"]:
+            bad += 1
+            print("REFUSED %s: %s" % (c["id"] or "?", "; ".join(c["errors"])))
+            continue
+        # depends_on ids come earlier in the plan, so a dependency is always
+        # seen first: a session whose dependency was refused cannot be filled
+        waiting = [d for d in c["deps"] if d not in queued and not dep_satisfied(d)]
+        if waiting:
+            bad += 1
+            print("blocked-dependency %s waiting on %s" % (c["id"], ", ".join(waiting)))
+            continue
+        ok, msg = materialize(c)
+        if ok:
+            queued.add(c["id"])
+            print("QUEUED %s: %s" % (c["id"], msg))
+        else:
+            queued.add(c["id"])
+            print("KEPT %s: %s" % (c["id"], msg))
+    sys.exit(1 if bad else 0)
+
+if mode == "status":
+    for c in checked:
+        if c["errors"]:
+            print("refused %s: %s" % (c["id"] or "?", "; ".join(c["errors"])))
+            continue
+        d = item_dir(c["id"])
+        if os.path.isdir(d):
+            print("queued %s %s" % (c["id"], d))
+        else:
+            blocked = [dep for dep in c["deps"] if not dep_satisfied(dep)]
+            if blocked:
+                print("blocked-dependency %s waiting on %s" % (c["id"], ", ".join(blocked)))
+            else:
+                print("blocked-dependency %s not queued yet" % (c["id"],))
+    sys.exit(0)
+
+fail("unreachable mode %r" % mode)
+PY

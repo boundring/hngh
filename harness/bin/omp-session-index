@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+"""omp-session-index — persistent index of omp agent transcripts.
+
+Roots (explicit allowlist):
+  ~/.omp/agent/sessions/**/*.jsonl           (parent + sidecar subagent jsonls)
+  ~/Work/sessions/*/sessions/**/*.jsonl      (slot sessions)
+
+Schema: kb-schemas §4 agent_session + deltas cost_total/parent_session/exit_state.
+Fill rules pinned 2026-10-21: tokens summed over BOTH lanes (assistant
+message.usage + model_usage.usage, disjoint per spec §4.1); message_count counts
+type:"message" records; models = distinct message.model ∪ model_usage.model;
+last_activity_at = max record timestamp incl. title.updatedAt.
+
+Incremental: a file is re-indexed only when (size, mtime) changed vs the
+_files ledger; unchanged files keep their existing rows.
+"""
+import json
+import glob
+import os
+import sqlite3
+import sys
+import time
+
+DB = os.path.expanduser("~/.local/state/omp-session-index/sessions.db")
+ROOTS = [
+    os.path.expanduser("~/.omp/agent/sessions"),
+]
+ROOTS += sorted(glob.glob(os.path.expanduser("~/Work/sessions/*/sessions")))
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS agent_session (
+  id INTEGER PRIMARY KEY,
+  path TEXT NOT NULL UNIQUE,
+  session_id TEXT,
+  cwd TEXT,
+  title TEXT,
+  agent_version TEXT,
+  started_at TEXT,
+  last_activity_at TEXT,
+  message_count INTEGER NOT NULL DEFAULT 0,
+  input_tokens INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+  cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+  total_tokens INTEGER NOT NULL DEFAULT 0,
+  models TEXT,
+  cost_total REAL,
+  parent_session TEXT,
+  exit_state TEXT
+);
+CREATE TABLE IF NOT EXISTS _files (
+  path TEXT PRIMARY KEY,
+  size INTEGER NOT NULL,
+  mtime REAL NOT NULL
+);
+"""
+
+
+def iter_jsonls():
+    for root in ROOTS:
+        if not os.path.isdir(root):
+            continue
+        for dirpath, _dirnames, filenames in os.walk(root):
+            for fn in filenames:
+                if fn.endswith(".jsonl"):
+                    yield os.path.join(dirpath, fn)
+
+
+def scan_file(path):
+    """One row dict per transcript file. Streaming: line by line."""
+    tokens = dict.fromkeys(
+        ("input", "output", "cacheRead", "cacheWrite", "totalTokens"), 0)
+    cost_total = 0.0
+    models, message_count, agent_version = set(), 0, None
+    session_id = cwd = title = parent_session = exit_state = None
+    started_at = last_activity_at = None
+
+    def bump(ts):
+        nonlocal last_activity_at
+        if ts and (last_activity_at is None or ts > last_activity_at):
+            last_activity_at = ts
+
+    def add_usage(u):
+        nonlocal cost_total
+        for k in tokens:
+            tokens[k] += u.get(k) or 0
+        c = u.get("cost") or {}
+        cost_total += c.get("total") or 0.0
+
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                rt = rec.get("type")
+                ts = rec.get("timestamp")
+                bump(ts)
+                if rt == "session":
+                    session_id = rec.get("id")
+                    cwd = rec.get("cwd")
+                    started_at = ts
+                    parent_session = rec.get("parentSession")
+                elif rt == "message":
+                    message_count += 1
+                    msg = rec.get("message") or {}
+                    if rec.get("runtime", {}).get("version"):
+                        agent_version = rec["runtime"]["version"]
+                    if msg.get("model"):
+                        models.add(msg["model"])
+                    u = msg.get("usage")
+                    if u:
+                        add_usage(u)
+                elif rt in ("title", "title_change"):
+                    if rec.get("title"):
+                        title = rec["title"]
+                    bump(rec.get("updatedAt"))
+                elif rt == "model_usage":
+                    if rec.get("model"):
+                        models.add(rec["model"])
+                    u = rec.get("usage")
+                    if u:
+                        add_usage(u)
+                elif rt == "custom" and rec.get("customType") == "session_exit":
+                    exit_state = (rec.get("data") or {}).get("reason")
+    except OSError as e:
+        print(f"warn: cannot read {path}: {e}", file=sys.stderr)
+        return None
+    return (
+        path, session_id, cwd, title, agent_version, started_at,
+        last_activity_at, message_count,
+        tokens["input"], tokens["output"], tokens["cacheRead"],
+        tokens["cacheWrite"], tokens["totalTokens"],
+        json.dumps(sorted(models)), cost_total, parent_session, exit_state,
+    )
+
+
+ROW_COLS = ("path, session_id, cwd, title, agent_version, started_at, "
+            "last_activity_at, message_count, input_tokens, output_tokens, "
+            "cache_read_tokens, cache_write_tokens, total_tokens, models, "
+            "cost_total, parent_session, exit_state")
+
+
+def upsert(db, row):
+    db.execute(
+        f"INSERT INTO agent_session ({ROW_COLS}) VALUES "
+        "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+        "ON CONFLICT(path) DO UPDATE SET " + ",".join(
+            f"{c}=excluded.{c}" for c in ROW_COLS.split(", ") if c != "path"),
+        row)
+
+
+def main():
+    rebuild = "--rebuild" in sys.argv
+    as_json = "--json" in sys.argv
+    os.makedirs(os.path.dirname(DB), exist_ok=True)
+    db = sqlite3.connect(DB)
+    db.execute("PRAGMA journal_mode=WAL")
+    existing = {r[1] for r in db.execute("PRAGMA table_info(agent_session)")}
+    for col, decl in (("cost_total", "REAL"), ("parent_session", "TEXT"),
+                      ("exit_state", "TEXT")):
+        if existing and col not in existing:
+            db.execute(f"ALTER TABLE agent_session ADD COLUMN {col} {decl}")
+    db.executescript(SCHEMA)
+    if rebuild:
+        db.execute("DELETE FROM agent_session")
+        db.execute("DELETE FROM _files")
+    db.execute("PRAGMA user_version=1")
+
+    indexed = 0
+    t0 = time.time()
+    for path in sorted(iter_jsonls()):
+        try:
+            st = os.stat(path)
+        except OSError:
+            continue
+        prior = db.execute(
+            "SELECT size, mtime FROM _files WHERE path=?", (path,)).fetchone()
+        if prior and prior[0] == st.st_size and prior[1] == st.st_mtime:
+            continue
+        row = scan_file(path)
+        if row is None:
+            continue
+        upsert(db, row)
+        db.execute("INSERT OR REPLACE INTO _files(path,size,mtime) VALUES(?,?,?)",
+                   (path, st.st_size, st.st_mtime))
+        indexed += 1
+        if time.time() - t0 > 5:
+            db.commit()
+            t0 = time.time()
+    db.commit()
+
+    total, oldest, newest = db.execute(
+        "SELECT COUNT(*), MIN(last_activity_at), MAX(last_activity_at) "
+        "FROM agent_session").fetchone()
+    out = {"rows_indexed": indexed, "rows_total": total,
+           "oldest_last_activity": oldest, "newest_last_activity": newest}
+    if as_json:
+        print(json.dumps(out))
+    else:
+        print(f"rows-indexed {indexed}  rows-total {total}  "
+              f"oldest {oldest}  newest {newest}")
+
+
+if __name__ == "__main__":
+    main()

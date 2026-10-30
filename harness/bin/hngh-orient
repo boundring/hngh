@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""hngh-orient — context assembler for starting/resuming hngh work.
+
+One command that folds what an agent needs to START or RESUME work into a
+single snapshot: which briefs to read first, the latest handoff (with its
+Status/next-action lines), the portfolio overview, open gates, active
+sessions, and portfolio movement.
+Sources (each degrades to `(unavailable)`, never raises):
+  handoffs: $HNGH_HANDOFF_DIR/*.md (2026-*.md, newest wins)
+  briefs:   $HNGH_WORK_DIR/briefs/
+  readers:  hngh-overview, hngh-job --json, hngh-sessions --json,
+            hngh-digest-rollup --last 1 (invoked via PATH, 2 s cap each)
+Reporting tool: always exits 0.
+"""
+
+import datetime
+import json
+import os
+import re
+import subprocess
+import sys
+
+HANDOFF_DIR = os.environ.get(
+    "HNGH_HANDOFF_DIR", os.path.expanduser("~/Projects/omp-work/session-handoffs"))
+WORK_DIR = os.environ.get("HNGH_WORK_DIR", os.path.expanduser("~/Projects/omp-work"))
+
+ALWAYS_READ = os.path.join(WORK_DIR, "briefs", "00-always.md")
+TYPE_MAP = {
+    "orientation": ["README.md"],
+    "investigation": ["briefs/90-session-types.md"],
+    "config-change": ["briefs/90-session-types.md"],
+    "long-work": ["briefs/90-session-types.md", "session-handoffs/_TEMPLATE.md"],
+    "fanout": ["briefs/90-session-types.md", "briefs/10-agents.md"],
+    "credentials": ["briefs/40-secrets.md", "briefs/10-agents.md"],
+}
+HANDOFF_LINE_RE = re.compile(r"(^>)|(Status)|(Next concrete)")
+
+
+def _abspath(rel):
+    return rel if os.path.isabs(rel) else os.path.join(WORK_DIR, rel)
+
+
+def read_first(stype):
+    paths = [ALWAYS_READ]
+    paths += [_abspath(p) for p in TYPE_MAP.get(stype, TYPE_MAP["orientation"])]
+    return paths
+
+
+def latest_handoff():
+    try:
+        names = sorted(
+            n for n in os.listdir(HANDOFF_DIR)
+            if n.startswith("2026-") and n.endswith(".md")
+            and n != "_TEMPLATE.md" and ".bak-" not in n)
+    except OSError:
+        return None
+    if not names:
+        return None
+    path = os.path.join(HANDOFF_DIR, names[-1])
+    lines = []
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for raw in fh:
+                if HANDOFF_LINE_RE.search(raw.rstrip("\n")):
+                    lines.append(raw.rstrip("\n"))
+                    if len(lines) >= 8:
+                        break
+    except OSError:
+        return None
+    return {"path": path, "lines": lines}
+
+
+def _run(args):
+    try:
+        proc = subprocess.run(args, capture_output=True, text=True, timeout=2)
+    except Exception:
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout
+
+
+def overview_text():
+    out = _run(["hngh-overview"])
+    return out if out is not None else "(unavailable)"
+
+
+def gates():
+    out = _run(["hngh-job", "--json"])
+    if out is None:
+        return None
+    try:
+        recs = json.loads(out)
+        assert isinstance(recs, list)
+        return [f"{r['job']} (gate @ {r.get('at', '-')})"
+                for r in recs if isinstance(r, dict) and r.get("event") == "gate"]
+    except Exception:
+        return None
+
+
+def sessions():
+    out = _run(["hngh-sessions", "--json"])
+    if out is None:
+        return None
+    try:
+        recs = json.loads(out)
+        assert isinstance(recs, list)
+    except Exception:
+        return None
+    lines = []
+    for r in recs:
+        if not isinstance(r, dict) or r.get("event") in ("done", "aborted"):
+            continue
+        state = "active" if r.get("age_minutes", 1e18) <= 90 else "warm"
+        lines.append(f"{r.get('session', '-')} {state} {r.get('event', '-')}")
+    return lines
+
+
+def movement():
+    out = _run(["hngh-digest-rollup", "--last", "1", "--json"])
+    if out:
+        try:
+            recs = json.loads(out)
+            if isinstance(recs, list) and recs and isinstance(recs[0], dict):
+                mv = recs[0].get("movement")
+                if mv:
+                    return f"{recs[0].get('day', '-')}: {mv}"
+        except Exception:
+            pass
+    out = _run(["hngh-digest-rollup", "--last", "1"])
+    if out is not None:
+        for line in reversed(out.splitlines()):
+            # data row: not the header, not the dashed rule
+            if line.strip() and "movement" not in line and not line.lstrip().startswith("day") \
+                    and set(line.strip()) != {"-"} and "day " not in line[:5]:
+                return line.strip()
+    return "(unavailable)"
+
+
+def collect(stype, cwd):
+    handoff = latest_handoff()
+    g = gates()
+    s = sessions()
+    return {
+        "type": stype,
+        "cwd": cwd,
+        "read_first": read_first(stype),
+        "handoff": handoff,
+        "overview": overview_text(),
+        "gates": g if g is not None else [],
+        "sessions": s if s is not None else [],
+        "movement": movement(),
+    }
+
+
+def human(data):
+    h = data["handoff"]
+    lines = [
+        f"hngh orient @ {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')} "
+        f"type={data['type']} cwd={data['cwd']}",
+        "READ FIRST",
+    ]
+    lines += [f"- {p}" for p in data["read_first"]]
+    lines.append("LATEST HANDOFF")
+    if h:
+        lines.append(h["path"])
+        lines += h["lines"]
+    else:
+        lines.append("(no handoff found)")
+    lines.append("OVERVIEW")
+    lines.append(data["overview"])
+    lines.append("OPEN GATES")
+    if data["gates"]:
+        lines += data["gates"]
+    else:
+        lines.append("no open gates")
+    lines.append("ACTIVE SESSIONS")
+    lines += data["sessions"] if data["sessions"] else ["none"]
+    lines.append("MOVEMENT")
+    lines.append(data["movement"])
+    return "\n".join(lines)
+
+
+def main(argv):
+    stype, cwd, json_mode = "orientation", os.getcwd(), False
+    args = list(argv)
+    while args:
+        a = args.pop(0)
+        if a == "--json":
+            json_mode = True
+        elif a == "--type" and args:
+            stype = args.pop(0)
+        elif a == "--cwd" and args:
+            cwd = args.pop(0)
+        elif a in ("--help", "-h"):
+            print(__doc__.strip())
+            return 0
+        else:
+            print(f"warning: unrecognized argument: {a}", file=sys.stderr)
+    if stype not in TYPE_MAP:
+        print(f"warning: unknown --type '{stype}', falling back to orientation",
+              file=sys.stderr)
+        stype = "orientation"
+    data = collect(stype, cwd)
+    if json_mode:
+        print(json.dumps(data, indent=1))
+    else:
+        print(human(data))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except SystemExit:
+        raise
+    except BrokenPipeError:
+        sys.exit(0)
+    except Exception as e:  # reporting tool: degrade, never fail
+        print(f"warning: {e}", file=sys.stderr)
+        sys.exit(0)

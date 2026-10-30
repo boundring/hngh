@@ -1,0 +1,104 @@
+#!/bin/bash
+# hngh-dashboard-selfcheck — deterministic asserts for the dashboard feed/render pair.
+# Sandboxed: state goes to a temp HNGH_DASHBOARD_DIR. No network, no sleeps.
+set -u
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FEED="$HERE/hngh-dashboard-feed"
+VIEW="$HERE/hngh-dashboard"
+SB="$(mktemp -d)"
+trap 'rm -rf "$SB"' EXIT
+export HNGH_DASHBOARD_DIR="$SB/dashboard"
+
+fails=0
+ck() { # ck <name> <expected-rc> <cmd...>
+  local name="$1" want="$2" got=0; shift 2
+  "$@" >/dev/null 2>&1 || got=$?
+  if [[ $got == "$want" ]]; then echo "PASS $name (exit $got)"
+  else echo "FAIL $name: exit $got, want $want"; fails=$((fails+1)); fi
+}
+ok() { if [[ $1 == 0 ]]; then echo "PASS $2"; else echo "FAIL $2"; fails=$((fails+1)); fi }
+
+# 1. Renderer exits 0 with no output on an empty/missing registry
+HNGH_DASHBOARD_DIR="$SB/empty" "$VIEW" >"$SB/empty.out" 2>"$SB/empty.err"
+ok $? "renderer exit 0 on empty/missing dir"
+[[ ! -s $SB/empty.out ]]
+ok $? "renderer silent on empty/missing dir"
+
+# 2. Two writers appending concurrently: 30 items each, same namespace
+for w in alice bob; do
+  ( i=0; while [[ $i -lt 30 ]]; do
+      "$FEED" conc "{\"writer\":\"$w\",\"item\":\"item-$w-$i\"}" >/dev/null
+      i=$((i+1))
+    done ) &
+done
+wait
+F="$HNGH_DASHBOARD_DIR/conc.jsonl"
+[[ $(wc -l < "$F") == 60 ]]
+ok $? "concurrent append: 60 stored lines, none lost"
+# jq exits nonzero on a torn line (parse error), so this check is falsifiable
+jq -se 'length==60 and all(.[]; (keys == ["item","namespace","severity","ts","writer"]
+  and (.writer=="alice" or .writer=="bob") and .namespace=="conc" and .severity=="info"))' "$F" >/dev/null
+ok $? "all 60 stored lines jq-valid: exact 5 keys + writer/namespace/severity"
+"$VIEW" --namespace conc >"$SB/conc.render"
+[[ $(wc -l < "$SB/conc.render") == 60 ]]
+ok $? "render: 60 rendered lines, one per item"
+grep -q 'alice: item-alice-' "$SB/conc.render"; ok $? "render shows writer alice"
+grep -q 'bob: item-bob-' "$SB/conc.render"; ok $? "render shows writer bob"
+m=$(grep -cE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+Z info \[conc\] (alice|bob): item-(alice|bob)-[0-9]+$' "$SB/conc.render")
+[[ $m == 60 ]]
+ok $? "render format exact on all 60 lines"
+
+# 3. Malformed JSON / schema violations refused: exit 1, loud stderr, nothing appended
+"$FEED" bad 'not json' >/dev/null 2>"$SB/m1.err"; rc=$?
+[[ $rc == 1 && -s $SB/m1.err && ! -e "$HNGH_DASHBOARD_DIR/bad.jsonl" ]]
+ok $? "malformed JSON: exit 1, loud stderr, nothing appended"
+ck "missing item rejected" 1 "$FEED" bad '{"writer":"w"}'
+ck "empty writer rejected" 1 "$FEED" bad '{"writer":"","item":"x"}'
+ck "item not a string rejected" 1 "$FEED" bad '{"writer":"w","item":7}'
+ck "bad severity rejected" 1 "$FEED" bad '{"writer":"w","item":"x","severity":"meh"}'
+ck "bad ts rejected" 1 "$FEED" bad '{"writer":"w","item":"x","ts":"not-a-time"}'
+ck "non-object payload rejected" 1 "$FEED" bad '["writer","item"]'
+
+# 4. Bad namespace / usage: exit 2
+ck "space in namespace" 2 "$FEED" "bad ns" '{"writer":"w","item":"x"}'
+ck "empty namespace" 2 "$FEED" "" '{"writer":"w","item":"x"}'
+ck "leading dot namespace" 2 "$FEED" ".x" '{"writer":"w","item":"x"}'
+ck "no args is usage" 2 "$FEED"
+ck "one arg is usage" 2 "$FEED" ok
+
+# 5. Stored line is exactly what feed prints, extras dropped, severity defaults to info
+out=$("$FEED" def '{"writer":"w","item":"plain","extra":1}'); rc=$?
+[[ $rc == 0 && $(jq -r .severity <<<"$out") == info && $(jq -r keys' == ["item","namespace","severity","ts","writer"]' <<<"$out") == true ]]
+ok $? "severity defaults to info, extra keys dropped"
+[[ $(tail -n1 "$HNGH_DASHBOARD_DIR/def.jsonl") == "$out" ]]
+ok $? "feed stdout is the stored line"
+
+# 6. --namespace filter isolates
+"$FEED" alpha '{"writer":"wa","item":"a1"}' >/dev/null
+"$FEED" alpha '{"writer":"wa","item":"a2"}' >/dev/null
+"$FEED" beta '{"writer":"wb","item":"b1"}' >/dev/null
+"$VIEW" --namespace alpha >"$SB/alpha.render"
+[[ $(wc -l < "$SB/alpha.render") == 2 ]] && grep -q '\[alpha\]' "$SB/alpha.render" && ! grep -q '\[beta\]' "$SB/alpha.render"
+ok $? "--namespace alpha isolates (2 lines, no beta)"
+[[ -z $("$VIEW" --namespace nope) ]]
+ok $? "--namespace unknown renders nothing"
+
+# 7. Newest-first by ts, reverse tiebreak on ns+line
+"$FEED" order '{"writer":"w","item":"first","ts":"2026-10-22T10:00:00Z"}' >/dev/null
+"$FEED" order '{"writer":"w","item":"second","ts":"2026-10-22T10:05:00Z"}' >/dev/null
+"$FEED" order '{"writer":"w","item":"third","ts":"2026-10-22T10:03:00Z"}' >/dev/null
+[[ $("$VIEW" --namespace order | sed -n 's/.*: //p' | tr '\n' ' ') == "second third first " ]]
+ok $? "static render newest-first by ts"
+
+# 8. Renderer exit codes and malformed pre-existing lines
+ck "viewer bad namespace exit 2" 2 "$VIEW" --namespace "bad ns"
+ck "viewer missing option value exit 2" 2 "$VIEW" --namespace
+ck "viewer unknown option exit 2" 2 "$VIEW" --bogus
+printf '{"ts":"2026-10-22T10:00:00Z","writer":"w","namespace":"junk","item":"x","severity":"info"}\nnot json\n{"nope":1}\n' >>"$HNGH_DASHBOARD_DIR/junk.jsonl"
+"$VIEW" --namespace junk >"$SB/junk.render" 2>"$SB/junk.err"; rc=$?
+[[ $rc == 0 && $(wc -l < "$SB/junk.render") == 1 && $(wc -l < "$SB/junk.err") == 1 ]]
+ok $? "malformed pre-existing lines skipped with a single stderr note"
+
+echo
+if [[ $fails == 0 ]]; then echo "SELF-CHECK GREEN"; exit 0
+else echo "SELF-CHECK: $fails failure(s)"; exit 1; fi

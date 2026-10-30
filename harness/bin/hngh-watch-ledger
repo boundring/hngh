@@ -1,0 +1,10 @@
+#!/bin/bash
+# hngh-watch-ledger — live milestone ledger + sessions dashboard feed.
+set -u
+while :; do
+	clear
+	hngh-sessions
+	echo
+	hngh-dashboard --namespace sessions 2>/dev/null | tail -15
+	sleep 10
+done

@@ -1,0 +1,107 @@
+#!/bin/bash
+# hngh-look-selfcheck — sandboxed checks for the grounding reader.
+# Stub `tesseract` and `curl` on PATH stand in for the real tools; the
+# state dir and env dir are overridden to sandbox paths. Nothing real is
+# read, no network, no credentials touched.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+stub="$sandbox/bin"
+mkdir -p "$stub" "$sandbox/state/look" "$sandbox/env"
+
+export HNGH_STATE_DIR="$sandbox/state"
+export HNGH_ENV_DIR="$sandbox/env"
+export PATH="$stub:$PATH"
+
+# Stub tesseract: known png -> text; anything else -> nothing
+cat > "$stub/tesseract" <<'STUB'
+#!/bin/bash
+case "$1" in *shot.png) printf '  QUOTA PAGE  \n\nminimax  95.9%% used\n' ;; esac
+exit 0
+STUB
+# Stub curl: returns a fixed vision answer
+cat > "$stub/curl" <<'STUB'
+#!/bin/bash
+printf '%s' '{"choices":[{"message":{"content":"a settings page, text: QUOTA 95.9%"}}]}'
+STUB
+chmod +x "$stub/tesseract" "$stub/curl"
+
+# Real env files with a dummy key (value is never printed by the tool)
+printf 'ZAI_API_KEY=dummy\n' > "$HNGH_ENV_DIR/84-zai.conf"
+printf 'MINIMAX_API_KEY=dummy\n' > "$HNGH_ENV_DIR/80-minimax.conf"
+
+check() { # check <name> <condition-result>
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+shot="$sandbox/shot.png"
+printf 'png' > "$shot"
+
+# 1. OCR path: stub text is trimmed and blank lines dropped
+out=$(bash "$selfcheck_dir/hngh-look" "$shot" 2>/dev/null)
+[ "$(printf '%s\n' "$out" | wc -l)" = 2 ] && printf '%s' "$out" | grep -qx 'QUOTA PAGE' &&
+	printf '%s' "$out" | grep -q 'minimax  95.9%'
+check "OCR path returns trimmed tesseract text" $?
+
+# 2. Missing file: message + exit 0
+out=$(bash "$selfcheck_dir/hngh-look" "$sandbox/nope.png" 2>/dev/null)
+rc=$?
+printf '%s' "$out" | grep -q 'no such file' && [ $rc = 0 ]
+check "missing file -> message, exit 0" $?
+
+# 3. Unknown lane: message + exit 0
+out=$(bash "$selfcheck_dir/hngh-look" "$shot" --lane fara 2>/dev/null)
+rc=$?
+printf '%s' "$out" | grep -q 'unknown lane' && [ $rc = 0 ]
+check "unknown lane -> message, exit 0" $?
+
+# 4. Cloud egress without per-capture consent is refused (operator ruling)
+out=$(bash "$selfcheck_dir/hngh-look" "$shot" --lane cloud 2>/dev/null)
+rc=$?
+printf '%s' "$out" | grep -q 'cloud egress refused' && [ $rc = 0 ]
+check "cloud egress refused without consent" $?
+
+# 4b. Cloud-untested fold (consent given, no lanes.json)
+out=$(bash "$selfcheck_dir/hngh-look" "$shot" --lane cloud --yes 2>/dev/null)
+rc=$?
+printf '%s' "$out" | grep -q '(lane B untested — run hngh-look-laneprobe)' && [ $rc = 0 ]
+check "cloud-untested fold" $?
+
+# 5. Cloud path with a passing lane: lanes.json + stub curl
+printf '{"lanes":{"zai":{"ok":true,"model":"glm-5.3-flash","baseUrl":"https://api.z.ai/api/coding/paas/v4"}}}\n' > "$HNGH_STATE_DIR/look/lanes.json"
+out=$(bash "$selfcheck_dir/hngh-look" "$shot" --lane cloud --yes 2>/dev/null)
+printf '%s' "$out" | grep -q 'settings page'
+check "cloud lane returns the model answer" $?
+
+# 6. --json shape on the OCR path
+out=$(bash "$selfcheck_dir/hngh-look" "$shot" --json 2>/dev/null)
+printf '%s' "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["lane"]=="ocr" and "text" in d and d["ok"] is True' 2>/dev/null
+check "--json parses with lane/ok/text" $?
+
+# 7. --json shape on the cloud-untested fold
+rm -f "$HNGH_STATE_DIR/look/lanes.json"
+out=$(bash "$selfcheck_dir/hngh-look" "$shot" --lane cloud --yes --json 2>/dev/null)
+printf '%s' "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["lane"]=="cloud" and d["ok"] is False and "untested" in d["note"]' 2>/dev/null
+check "--json cloud-untested shape" $?
+
+# 8. Empty OCR output degrades to (unavailable), exit 0
+printf 'png' > "$sandbox/blank.png"
+out=$(bash "$selfcheck_dir/hngh-look" "$sandbox/blank.png" 2>/dev/null)
+rc=$?
+[ "$out" = "(unavailable)" ] && [ $rc = 0 ]
+check "empty OCR folds to (unavailable)" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

@@ -1,0 +1,78 @@
+#!/bin/bash
+# hngh-digest-rollup-selfcheck — assert the daily rollup reader.
+# Sandbox: HNGH_DIGESTS_DIR is overridden per invocation to a temp dir; the real ledger is untouched.
+set -u
+HERE="$(dirname "$(readlink -f "$0")")"
+READ="$HERE/hngh-digest-rollup"
+fails=0
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+ckf() { # ckf <desc> <actual> <expected>
+	if [[ "$2" == "$3" ]]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1 (got: $2, want: $3)"; fails=$((fails + 1))
+	fi
+}
+
+# 1. missing ledger: clean report, exit 0
+HNGH_DIGESTS_DIR="$tmp/missing" out=$("$READ" 2>&1); rc=$?
+[[ $rc == 0 && -n "$out" ]] && echo "ok: missing ledger exits 0 with report" || { echo "FAIL: missing ledger"; fails=$((fails + 1)); }
+HNGH_DIGESTS_DIR="$tmp/missing" ckf "missing ledger: json is empty array" "$(HNGH_DIGESTS_DIR="$tmp/missing" "$READ" --json)" "[]"
+
+# 2. empty ledger: clean report, exit 0
+mkdir -p "$tmp/empty"; : >"$tmp/empty/digests.jsonl"
+HNGH_DIGESTS_DIR="$tmp/empty" out=$("$READ" 2>&1); rc=$?
+[[ $rc == 0 && -n "$out" ]] && echo "ok: empty ledger exits 0 with report" || { echo "FAIL: empty ledger"; fails=$((fails + 1)); }
+
+# 3. fixture: two days; day 2's last record differs from its first (delta must
+# reflect the LAST record), plus a backdated-ts pair and a malformed line.
+mkdir -p "$tmp/data"; ledger="$tmp/data/digests.jsonl"
+printf '{"at":"2026-10-26T08:00:00Z","sessions":2,"agents":4,"active_agents":1,"summary":"d1 first"}\n' >>"$ledger"
+printf '{"at":"2026-10-26T20:00:00Z","sessions":3,"agents":5,"active_agents":2,"summary":"d1 last"}\n' >>"$ledger"
+printf '{"at":"2026-10-27T09:00:00Z","sessions":3,"agents":5,"active_agents":2,"summary":"d2 first"}\n' >>"$ledger"
+printf '{"at":"2026-10-27T11:00:00Z","sessions":4,"agents":6,"active_agents":3,"summary":"d2 mid"}\n' >>"$ledger"
+printf '{"at":"2026-10-27T05:00:00Z","sessions":9,"agents":9,"active_agents":9,"summary":"backdated ts"}\n' >>"$ledger"
+printf '{"at":"2026-10-27T15:00:00Z","sessions":5,"agents":8,"active_agents":1,"summary":"d2 last"}\n' >>"$ledger"
+printf 'not json at all\n' >>"$ledger"
+
+export HNGH_DIGESTS_DIR="$tmp/data"
+
+# 4. malformed line skipped and counted
+ckf "malformed: skipped, 2 days remain" "$("$READ" --json | jq 'length')" 2
+"$READ" >/dev/null 2>"$tmp/err"
+grep -q "malformed line(s) skipped" "$tmp/err" && echo "ok: malformed: counted on stderr" || { echo "FAIL: malformed count"; fails=$((fails + 1)); }
+
+# 5. delta reflects the LAST record, not the first
+ckf "delta: day2 sessions uses last record" "$("$READ" --json | jq -r '.[] | select(.day=="2026-10-27") | .delta.sessions')" 2
+ckf "delta: day2 active uses last record" "$("$READ" --json | jq -r '.[] | select(.day=="2026-10-27") | .delta.active_agents')" -1
+ckf "delta: day1 first/last correct" "$("$READ" --json | jq -r '.[] | select(.day=="2026-10-26") | "\(.first.sessions)-\(.last.sessions)-\(.delta.sessions)"')" "2-3-1"
+
+# 6. fold order within a day: backdated-ts line must NOT win over a later physical line
+ckf "fold: backdated ts does not win; last physical line is day's last" \
+	"$("$READ" --json | jq -r '.[] | select(.day=="2026-10-27") | .last.at')" "2026-10-27T15:00:00Z"
+
+# 7. --since polarity: on the day's LAST record
+ckf "since: far future excludes all" "$("$READ" --json --since 2099-01-01T00:00:00Z | jq 'length')" 0
+ckf "since: far past includes all" "$("$READ" --json --since 2000-01-01T00:00:00Z | jq 'length')" 2
+ckf "since: boundary on last record includes that day" \
+	"$("$READ" --json --since 2026-10-27T15:00:00Z | jq -r '[.[].day] | join(",")')" "2026-10-27"
+ckf "since: just below last record still includes day (>= on last.at)" \
+	"$("$READ" --json --since 2026-10-26T20:00:00Z | jq -r '[.[].day] | join(",")')" "2026-10-26,2026-10-27"
+
+# 8. --last N: newest day first
+ckf "last: newest day first" "$("$READ" --json --last 1 | jq -r '.[0].day')" "2026-10-27"
+ckf "last: two days, newest first" "$("$READ" --json --last 2 | jq -r '[.[].day] | join(",")')" "2026-10-27,2026-10-26"
+
+# 9. bad flag still exits 0
+"$READ" --no-such-flag >/dev/null 2>&1; [[ $? == 0 ]] \
+	&& echo "ok: bad flag still exits 0" || { echo "FAIL: bad flag exit"; fails=$((fails + 1)); }
+
+if (( fails == 0 )); then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK: $fails failure(s)"
+exit 1

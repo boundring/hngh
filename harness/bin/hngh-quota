@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""hngh-quota — read-only fold of the hngh quota ledger.
+
+Ledger: $HNGH_QUOTAS_DIR/quotas.jsonl (written by hngh-quota-note)
+Shows the latest record per service. Reporting tool: always exits 0.
+"""
+
+import argparse
+import json
+import os
+import sys
+
+LEDGER = os.path.join(
+    os.environ.get("HNGH_QUOTAS_DIR", os.path.expanduser("~/.local/state/hngh/quotas")),
+    "quotas.jsonl",
+)
+
+
+def parse_args(argv):
+    p = argparse.ArgumentParser(
+        prog="hngh-quota",
+        description="Latest-known quota per service from the hngh quota ledger (read-only).",
+    )
+    p.add_argument("--service", metavar="NAME", action="append", default=None,
+                   help="only this service (repeatable: one summary line each)")
+    p.add_argument("--json", action="store_true", help="emit folded records as JSON")
+    try:
+        return p.parse_args(argv)
+    except SystemExit:
+        raise SystemExit(0)  # reporting tool: bad flags reported, never a failing exit
+
+
+def load_folded():
+    if not os.path.exists(LEDGER):
+        return {}, 0
+    folded, malformed = {}, 0
+    with open(LEDGER, encoding="utf-8", errors="replace") as fh:
+        for raw in fh:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                rec = json.loads(raw)
+                svc = rec["service"]
+                assert isinstance(svc, str) and svc
+            except Exception:
+                malformed += 1
+                continue
+            folded[svc] = rec  # append-only ledger; last physical line wins
+    return folded, malformed
+
+
+def fmt_num(n):
+    if n is None:
+        return "-"
+    return f"{n:,}"
+
+
+def main(argv):
+    args = parse_args(argv)
+    folded, malformed = load_folded()
+
+    if args.service and not args.json:
+        # Script mode: exactly one line per requested service, in request order.
+        for svc in args.service:
+            rec = folded.get(svc)
+            if rec is None:
+                print(f"{svc}: no data")
+                continue
+            pct = rec.get("percent")
+            if not isinstance(pct, (int, float)):
+                used, total = rec.get("used"), rec.get("total")
+                pct = (used / total * 100) if isinstance(used, (int, float)) and isinstance(total, (int, float)) and total else None
+            plan = rec.get("plan", "-") or "-"
+            pct_s = f"{pct:g}" if isinstance(pct, (int, float)) else "-"
+            print(f"{svc} {fmt_num(rec.get('used'))}/{fmt_num(rec.get('total'))} "
+                  f"{rec.get('unit', 'count')} ({pct_s}%, {plan}) @ {rec.get('at', '-')}")
+        if malformed:
+            print(f"warning: {malformed} malformed line(s) skipped", file=sys.stderr)
+        return 0
+
+    rows = [(svc, rec) for svc, rec in folded.items()
+            if args.service is None or svc in args.service]
+    rows.sort(key=lambda r: r[0])
+
+    if args.json:
+        print(json.dumps([rec for _, rec in rows], indent=1))
+    else:
+        print(f"hngh quota ledger: {len(folded)} service(s) known")
+        if not rows:
+            print("no services match")
+        else:
+            hdr = f"{'service':<20} {'used/total':>30} {'%':>7}  at"
+            print(hdr)
+            print("-" * len(hdr))
+            for svc, rec in rows:
+                ut = f"{fmt_num(rec.get('used'))}/{fmt_num(rec.get('total'))}"
+                pct = rec.get("percent")
+                pct_s = f"{pct:g}" if isinstance(pct, (int, float)) else "-"
+                print(f"{svc[:20]:<20} {ut:>30} {pct_s:>7}  {rec.get('at', '-')}")
+    if malformed:
+        print(f"warning: {malformed} malformed line(s) skipped", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except BrokenPipeError:
+        sys.exit(0)

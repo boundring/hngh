@@ -1,0 +1,19 @@
+# Role manifest — hngh-agent-spawn smoke probe (fabric §2 step-1 end-to-end proof)
+role: smoke-probe
+description: >
+  Minimal end-to-end spawn proof: reads one file, reports via the session ledger,
+  writes its handoff, exits. No other writes.
+models:
+  task: zai/glm-5.3-flash
+fallbacks: {}
+lines: [hngh]
+consent_ceiling: Confirm
+add_dirs: []
+primes:
+  briefs: [briefs/00-always.md]
+recall: ""
+constraints:
+  - This is a pipeline smoke test: read the named file, write the handoff, done.
+  - Do not write outside your workspace; no installs; no network beyond local.
+owns:
+  - '<ws>/**'

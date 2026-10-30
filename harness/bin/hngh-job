@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""hngh-job — read-only fold of the hngh job registry.
+
+Ledger: $HNGH_JOBS_DIR/jobs.jsonl (written by hngh-job-note)
+Folds per job id — last physical line wins (append-only trust, never max-ts).
+Reporting tool: always exits 0. It only reports what was recorded; it never
+authorizes anything.
+"""
+
+import argparse
+import json
+import os
+import sys
+
+LEDGER = os.path.join(
+    os.environ.get("HNGH_JOBS_DIR", os.path.expanduser("~/.local/state/hngh/jobs")),
+    "jobs.jsonl",
+)
+
+
+def parse_args(argv):
+    p = argparse.ArgumentParser(
+        prog="hngh-job",
+        description="Latest-known state per job from the hngh job registry (read-only).",
+    )
+    p.add_argument("--job", metavar="ID", default=None,
+                   help="only this job id")
+    p.add_argument("--json", action="store_true", help="emit folded records as JSON")
+    p.add_argument("--since", metavar="ISO", default=None,
+                   help="only jobs whose latest record was stamped at/after this ISO-8601 time")
+    try:
+        return p.parse_args(argv)
+    except SystemExit:
+        raise SystemExit(0)  # reporting tool: bad flags reported, never a failing exit
+
+
+def load_folded():
+    """Fold to {job_id: rec}; last physical line wins. Returns (folded, counts, malformed_count)."""
+    if not os.path.exists(LEDGER):
+        return {}, {}, 0
+    folded, counts, malformed = {}, {}, 0
+    with open(LEDGER, encoding="utf-8", errors="replace") as fh:
+        for raw in fh:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                rec = json.loads(raw)
+                job = rec["job"]
+                assert isinstance(job, str) and job
+            except Exception:
+                malformed += 1
+                continue
+            folded[job] = rec  # append-only ledger; last physical line wins
+            counts[job] = counts.get(job, 0) + 1
+    return folded, counts, malformed
+
+
+def main(argv):
+    args = parse_args(argv)
+    folded, counts, malformed = load_folded()
+
+    rows = [(job, rec) for job, rec in folded.items()
+            if args.job is None or job == args.job]
+    if args.since is not None:
+        rows = [(job, rec) for job, rec in rows
+                if isinstance(rec.get("at"), str) and rec["at"] >= args.since]
+    rows.sort(key=lambda r: r[0])
+
+    if args.json:
+        print(json.dumps([rec for _, rec in rows], indent=1))
+    else:
+        print(f"hngh job registry: {len(rows)} job(s) known")
+        if not rows:
+            print("no jobs match")
+        else:
+            hdr = f"{'job':<24} {'event':<10} {'events':>6}  {'tier':<16} outcome"
+            print(hdr)
+            print("-" * len(hdr))
+            for job, rec in rows:
+                tier = rec.get("tier") or "-"
+                outcome = (rec.get("outcome") or "-")[:60]
+                print(f"{job[:24]:<24} {rec.get('event', '-'):<10} "
+                      f"{counts.get(job, 0):>6}  {tier:<16} {outcome}  ({rec.get('at', '-')})")
+    if malformed:
+        print(f"warning: {malformed} malformed line(s) skipped", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except BrokenPipeError:
+        sys.exit(0)

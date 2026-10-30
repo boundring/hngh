@@ -1,0 +1,260 @@
+#!/bin/bash
+# hngh-quota-refresh — read a service's quota and append it to the quota ledger.
+#
+# Xiaomi's console publishes no quota API and its session lives inside a
+# browser, so the reading is taken from the console page in the operator's own
+# Chrome through omp's browser relay (a CDP subset: Target.createTarget,
+# Target.attachToTarget, Page.navigate, Runtime.evaluate). The login cookie
+# never leaves that browser: nothing here reads or stores it, and the
+# operator's own tabs are never touched — a fresh tab is opened and closed.
+#
+# The extraction happens inside the page (the relay returns small results
+# only), so the page text never travels back over the wire.
+#
+# Usage: hngh-quota-refresh [--service xiaomi] [--source browser-relay|omp-usage]
+#                          [--json] [--no-append]
+# Env:   HNGH_QUOTAS_DIR     ledger directory (default ~/.local/state/hngh/quotas)
+#        XIAOMI_RELAY_PORTS  relay ports to try, space separated
+#                           (default "9224 9225": the dedicated user service is
+#                            on 9224 since 2026-10-28; 9225 kept as fallback)
+#        HNGH_OMP_BIN        omp binary (default ~/.local/bin/omp)
+set -u
+
+service=xiaomi
+source_mode=browser-relay
+as_json=0
+append=1
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--service) service=${2:?}; shift 2 ;;
+		--source) source_mode=${2:?}; shift 2 ;;
+		--json) as_json=1; shift ;;
+		--no-append) append=0; shift ;;
+		*) echo "usage: hngh-quota-refresh [--service name] [--source browser-relay|omp-usage] [--json] [--no-append]" >&2; exit 2 ;;
+	esac
+done
+
+# Dated pause: a service can be paused without touching the timer (honest-blocked
+# state). Marker: <quotas dir>/<service>-paused-until holding YYYY-MM-DD; refresh
+# resumes automatically on that date.
+if [ "$service" = xiaomi ]; then
+	paused_file="${HNGH_QUOTAS_DIR:-$HOME/.local/state/hngh/quotas}/xiaomi-paused-until"
+	paused_until=$(cat "$paused_file" 2>/dev/null)
+	if [ -n "$paused_until" ] && [ "$(date -u +%Y%m%d)" -lt "$(printf '%s' "$paused_until" | tr -d -)" ]; then
+		if [ "$as_json" = 1 ]; then
+			printf '{"service":"xiaomi","paused_until":"%s"}\n' "$paused_until"
+		else
+			echo "hngh-quota-refresh: xiaomi paused until $paused_until (operator ruling 2026-10-29; quota exhausted)"
+		fi
+		exit 0
+	fi
+fi
+
+note() { # note <service> <used> <total> <percent> <label> <source> [unit]
+	[ "$append" = "1" ] || return 0
+	[ -f "$HOME/Projects/hngh/bin/hngh-quota-note" ] || return 0
+	local args=(--service "$1" --used "$2" --total "$3" --source "$6")
+	[ -n "$4" ] && args+=(--percent "$4")
+	[ -n "$5" ] && args+=(--plan "$5")
+	[ -n "$7" ] && args+=(--unit "$7")
+	HNGH_QUOTAS_DIR=${HNGH_QUOTAS_DIR:-$HOME/.local/state/hngh/quotas} \
+		bash "$HOME/Projects/hngh/bin/hngh-quota-note" "${args[@]}" >/dev/null
+}
+
+# The other providers: omp already polls their quotas, so read them from it.
+if [ "$source_mode" = "omp-usage" ]; then
+	ompbin=${HNGH_OMP_BIN:-$HOME/.local/bin/omp}
+	[ -x "$ompbin" ] || ompbin=$(command -v omp || true)
+	if [ -z "$ompbin" ]; then
+		echo "hngh-quota-refresh: omp not found" >&2
+		exit 5
+	fi
+	usage=$("$ompbin" usage --json 2>/dev/null)
+	if [ -z "$usage" ]; then
+		echo "hngh-quota-refresh: omp usage returned nothing" >&2
+		exit 1
+	fi
+	printf '%s' "$usage" | jq -r '
+		.reports[]? as $r
+		| $r.limits[]?
+		| [
+			($r.provider + ":" + (.window.id // "total")),
+			(.amount.used // 0),
+			(if .amount.limit then .amount.limit elif .amount.unit == "percent" then 100 else 0 end),
+			((.amount.usedFraction // 0) * 100),
+			(.label // ""),
+			"omp-usage",
+			(.amount.unit // "count")
+		] | @tsv' | while IFS="$(printf '\t')" read -r svc used total pct label src unit; do
+			[ -z "$svc" ] && continue
+			[ "$total" = "0" ] && continue
+			note "$svc" "$used" "$total" "$pct" "$label" "$src" "$unit"
+			[ "$as_json" = "1" ] && printf '%s\t%s\t%s\t%s\n' "$svc" "$used" "$total" "$pct"
+		done
+	exit 0
+fi
+
+JS=$(cat <<'EOF'
+const http = require("http");
+const port = process.argv[1];
+const want = process.argv[2];
+const reachable = (path) => new Promise((res) => {
+  http.get({ host: "127.0.0.1", port, path: path }, (r) => { r.resume(); res(true); }).on("error", () => res(false));
+});
+// Runs in the page: returns a small JSON string with the quota, never the
+// page text itself.
+const EXTRACT = "(() => { const t = (document.body && document.body.textContent) || '';"
+  + " const s = t.replace(/\\s+/g, ' ');"
+  + " const p = s.match(/([0-9]{1,3}(?:,[0-9]{3})+)\\s*\\/\\s*([0-9]{1,3}(?:,[0-9]{3})+)/);"
+  + " const pct = s.match(/Used\\s+([0-9.]+)\\s*%/);"
+  + " const plan = s.match(/((?:Max|Pro|Standard|Lite) Monthly Plan)/);"
+  + " const valid = s.match(/Valid until\\s+(\\d{4}-\\d{2}-\\d{2})/);"
+  + " if (!p) return JSON.stringify({ error: /Sign in/i.test(s) ? 'console shows the sign-in page' : 'no quota on the page' });"
+  + " return JSON.stringify({ used: Number(p[1].replace(/,/g, '')), total: Number(p[2].replace(/,/g, '')),"
+  + " percent: pct ? Number(pct[1]) : null, plan: plan ? plan[1].trim() : null, valid_until: valid ? valid[1] : null });"
+  + " })()";
+(async () => {
+  if (!(await reachable("/json/version"))) {
+    process.stdout.write(JSON.stringify({ error: "relay not connected" }));
+    process.exit(3);
+  }
+  let ws;
+  try {
+    ws = new WebSocket("ws://127.0.0.1:" + port + "/cdp");
+    await new Promise((res, rej) => { ws.addEventListener("open", res); ws.addEventListener("error", rej); });
+  } catch (e) {
+    process.stdout.write(JSON.stringify({ error: "relay not connected" }));
+    process.exit(3);
+  }
+  let nextId = 1000;
+  const send = (method, params, sessionId) => new Promise((res) => {
+    const id = nextId++;
+    const onMessage = (e) => {
+      const m = JSON.parse(e.data);
+      if (m.id === id) { ws.removeEventListener("message", onMessage); res(m); }
+    };
+    ws.addEventListener("message", onMessage);
+    const msg = { id, method, params: params || {} };
+    if (sessionId) msg.sessionId = sessionId;
+    ws.send(JSON.stringify(msg));
+  });
+  // A fresh tab of our own: the operator's tabs are never navigated, and a
+  // discarded background tab has no DOM left to read. background: true keeps
+  // the tab from activating — the quota check must not steal the operator's
+  // focus (2026-10-28 operator complaint).
+  const created = await send("Target.createTarget", { url: "about:blank", background: true });
+  const targetId = created.result && created.result.targetId;
+  if (!targetId) {
+    process.stdout.write(JSON.stringify({ error: "cannot open a console tab" }));
+    process.exit(4);
+  }
+  const attached = await send("Target.attachToTarget", { targetId: targetId, flatten: true });
+  let session = attached.result && attached.result.sessionId;
+  try {
+    await send("Page.navigate", { url: want }, session);
+    let reading = null;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await new Promise((r) => setTimeout(r, 1500));
+      const out = await send("Runtime.evaluate", { expression: EXTRACT, returnByValue: true }, session);
+      // The relay nests the CDP result: out.result.result.value.
+      const exception = out.result && out.result.exceptionDetails;
+      if (out.error || exception) {
+        // The navigation swapped the renderer: attach again and retry.
+        const reattach = await send("Target.attachToTarget", { targetId: targetId, flatten: true });
+        session = (reattach.result && reattach.result.sessionId) || session;
+        continue;
+      }
+      const value = out.result && out.result.result && out.result.result.value;
+      if (typeof value !== "string" || value === "") continue;
+      reading = JSON.parse(value);
+      if (reading.used) break;
+      // A sign-in page will not fix itself: report it.
+      if (String(reading.error || "").indexOf("sign-in") >= 0) break;
+    }
+    if (!reading) {
+      process.stdout.write(JSON.stringify({ error: "could not read the console page" }));
+      process.exit(1);
+    }
+    process.stdout.write(JSON.stringify(reading));
+  } finally {
+    try { await send("Target.closeTarget", { targetId: targetId }); } catch (e) {}
+    ws.close();
+  }
+})().catch((e) => {
+  process.stdout.write(JSON.stringify({ error: String(e).slice(0, 120) }));
+  process.exit(1);
+});
+EOF
+)
+
+nodebin=
+for candidate in node nodejs "$HOME/.local/share/mise/shims/node" /usr/bin/node /usr/local/bin/node; do
+	if command -v "$candidate" >/dev/null 2>&1; then nodebin=$(command -v "$candidate"); break; fi
+done
+if [ -z "$nodebin" ]; then
+	echo "hngh-quota-refresh: node not found" >&2
+	exit 5
+fi
+
+# Focus guard: even with a background tab, capture the focused window before
+# the check and restore it after, so a raised Chrome window can never leave the
+# operator's focus moved (wayland-spike pattern; 2026-10-28 operator complaint).
+focus_before=""
+if command -v hyprctl >/dev/null 2>&1 && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+	focus_before=$(hyprctl -j activewindow 2>/dev/null | jq -r '.address // empty' 2>/dev/null)
+fi
+
+console_url="https://platform.xiaomimimo.com/console/plan-manage"
+ports=${XIAOMI_RELAY_PORTS:-"9224 9225"}
+out=""
+for port in $ports; do
+	out=$("$nodebin" -e "$JS" "$port" "$console_url" 2>/dev/null)
+	[ -z "$out" ] && continue
+	# A relay without the extension, or without the console open, is not a
+	# reading: try the next port before giving up.
+	if printf '%s' "$out" | jq -e '.used != null' >/dev/null 2>&1; then
+		break
+	fi
+done
+
+if command -v hyprctl >/dev/null 2>&1 && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -n "$focus_before" ]; then
+	focus_now=$(hyprctl -j activewindow 2>/dev/null | jq -r '.address // empty' 2>/dev/null)
+	if [ -n "$focus_now" ] && [ "$focus_now" != "$focus_before" ]; then
+		hyprctl --quiet dispatch "hl.dsp.focus({window=\"address:$focus_before\"})" >/dev/null 2>&1 || true
+	fi
+fi
+if [ -z "$out" ]; then
+	echo "hngh-quota-refresh: no relay answered (ports: $ports)" >&2
+	exit 3
+fi
+
+error=$(printf '%s' "$out" | jq -r '.error // empty')
+if [ -n "$error" ]; then
+	if [ "$as_json" = "1" ]; then
+		printf '%s\n' "$out"
+	else
+		echo "hngh-quota-refresh: $error" >&2
+	fi
+	exit 1
+fi
+
+used=$(printf '%s' "$out" | jq -r '.used')
+total=$(printf '%s' "$out" | jq -r '.total')
+percent=$(printf '%s' "$out" | jq -r '.percent // empty')
+plan=$(printf '%s' "$out" | jq -r '.plan // empty')
+
+if [ "$append" = "1" ] && [ -f "$HOME/Projects/hngh/bin/hngh-quota-note" ]; then
+	args=(--service "$service" --used "$used" --total "$total" --source browser-relay --unit credits)
+	[ -n "$percent" ] && args+=(--percent "$percent")
+	[ -n "$plan" ] && args+=(--plan "$plan")
+	HNGH_QUOTAS_DIR=${HNGH_QUOTAS_DIR:-$HOME/.local/state/hngh/quotas} \
+		bash "$HOME/Projects/hngh/bin/hngh-quota-note" "${args[@]}" >/dev/null
+fi
+
+if [ "$as_json" = "1" ]; then
+	printf '%s\n' "$out"
+else
+	printf '%s: %s/%s credits (%.1f%% used, %s)\n' "$service" "$used" "$total" \
+		"$(printf '%s' "$out" | jq -r '(.used / .total) * 100')" "${plan:-plan unknown}"
+fi
+exit 0

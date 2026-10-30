@@ -1,0 +1,83 @@
+#!/bin/bash
+# hngh-agents-selfcheck — assert the observer against a synthetic sessions tree.
+# Sandbox: HNGH_AGENTS_ROOTS points at a temp tree; real sessions untouched.
+# Contract: SELF-CHECK GREEN (exit 0) or SELF-CHECK: <n> failure(s) (exit 1).
+set -u
+AG="$(dirname "$(readlink -f "$0")")/hngh-agents"
+fails=0
+ck() { local desc=$1; shift
+	if "$@" >/dev/null 2>&1; then echo "ok: $desc"
+	else echo "FAIL: $desc"; fails=$((fails + 1)); fi; }
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+slug="$tmp/sessions/-test-proj"
+sid="2026-10-26T10-00-00-000Z_01aabbcc-1122-3344-5566-778899aabbcc"
+mkdir -p "$slug/$sid"
+
+# parent transcript: title record + messages; fresh mtime (now)
+python3 - "$slug/$sid.jsonl" <<'EOF'
+import json, sys
+recs = [
+	{"type": "title", "title": "TEST: build the observer", "updatedAt": "x", "v": 1},
+	{"type": "message", "timestamp": "2026-10-26T10:00:01Z", "message": {"role": "user", "content": "go build it"}},
+	{"type": "message", "timestamp": "2026-10-26T10:00:02Z", "message": {"role": "assistant", "content": [{"type": "text", "text": "spawning scouts"}]}},
+]
+with open(sys.argv[1], "w") as f:
+	for r in recs:
+		f.write(json.dumps(r) + "\n")
+EOF
+
+# subagent transcript inside the sidecar dir, slightly older mtime
+printf '%s\n' '{"type":"title","title":""}' \
+	'{"type":"message","timestamp":"2026-10-26T10:00:03Z","message":{"role":"assistant","content":"scout report done"}}' \
+	> "$slug/$sid/ScoutX.jsonl"
+touch -d '2 minutes ago' "$slug/$sid/ScoutX.jsonl"
+
+# an old transcript outside the 24h window
+printf '%s\n' '{"type":"title","title":"old"}' > "$slug/2026-10-01T00-00-00-000Z_01aold0000-1122-3344-5566-778899aabbcc.jsonl"
+touch -d '20 days ago' "$slug/2026-10-01T00-00-00-000Z_01aold0000-1122-3344-5566-778899aabbcc.jsonl"
+
+# a malformed trailing line must not break the scan
+printf 'garbage\n' >> "$slug/$sid.jsonl"
+
+export HNGH_AGENTS_ROOTS="$tmp/sessions"
+
+# 1. enumeration + classification
+ck "scan: finds parent + sub, excludes 20-day-old file" \
+	test "$(printf '%s' "$("$AG" --json)" | jq 'length')" = 2
+# internal subagents (__-prefixed) hidden unless --all
+printf '%s\n' '{"type":"title","title":""}' > "$slug/$sid/__advisor.jsonl"
+ck "internal: __-stem hidden by default" \
+	test "$(printf '%s' "$("$AG" --json)" | jq 'length')" = 2
+ck "internal: shown with --all" \
+	test "$(printf '%s' "$("$AG" --all --json)" | jq 'length')" = 3
+ck "scan: parent classified and titled" \
+	test "$(printf '%s' "$("$AG" --json | jq -r '.[] | select(.kind=="parent") | .id')" )" = "778899aabbcc TEST: build the observer"
+ck "scan: subagent classified by stem" \
+	test "$(printf '%s' "$("$AG" --json | jq -r '.[] | select(.kind=="sub") | .id')" )" = "ScoutX"
+ck "scan: freshest sorted first" \
+	test "$(printf '%s' "$("$AG" --json | jq -r '.[0].kind')" )" = "parent"
+
+# 2. table mode renders and reports ACTIVE rows
+"$AG" | grep -q "ACTIVE" && echo "ok: table: ACTIVE state shown" || { echo "FAIL: ACTIVE state"; fails=$((fails + 1)); }
+
+# 3. --active narrow view
+ck "active view: fresh parent in, 2-minute-old sub out" \
+	test "$(printf '%s' "$("$AG" --active 1 --json | jq -r '.[].kind' | sort -u | tr '\n' ' ')" )" = "parent "
+
+# 4. tail: extracts role + text snippet from array content
+out=$("$AG" tail "TEST" 2)
+printf '%s' "$out" | grep -q "assistant" && printf '%s' "$out" | grep -q "spawning scouts" \
+	&& echo "ok: tail: role + array-content text extracted" || { echo "FAIL: tail extraction"; fails=$((fails + 1)); }
+printf '%s' "$out" | head -1 | grep -q "^#" && echo "ok: tail: header names the transcript" || { echo "FAIL: tail header"; fails=$((fails + 1)); }
+ck "tail: id substring match picks newest" test "$(printf '%s' "$("$AG" tail scoutx 2 | head -1)" | grep -c ScoutX)" = 1
+ck "tail: no match is a clean report" test -n "$("$AG" tail zzz-not-there)"
+
+# 5. reader on missing roots is a clean report, exit 0
+HNGH_AGENTS_ROOTS="$tmp/none" out2=$("$AG" 2>&1); rc=$?
+[[ $rc == 0 && -n "$out2" ]] && echo "ok: missing roots: clean report, exit 0" || { echo "FAIL: missing roots"; fails=$((fails + 1)); }
+
+if (( fails == 0 )); then echo "SELF-CHECK GREEN"; exit 0; fi
+echo "SELF-CHECK: $fails failure(s)"
+exit 1

@@ -1,0 +1,52 @@
+#!/bin/bash
+# hngh-dashboard-feed — append one item to the hngh dashboard feed.
+# Usage: hngh-dashboard-feed <namespace> <json>
+#   <json>: object with required "writer" (non-empty string) and "item" (string);
+#           optional "severity" in info|warn|crit (default info), optional "ts".
+# Exit: 0 stored | 1 malformed JSON or schema violation | 2 bad namespace or usage
+set -u
+
+usage() { echo "usage: hngh-dashboard-feed <namespace> <json>" >&2; exit 2; }
+
+[[ $# == 2 ]] || usage
+ns=$1
+[[ $ns =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || {
+  echo "hngh-dashboard-feed: bad namespace: $ns" >&2
+  exit 2
+}
+json=$2
+
+dir=${HNGH_DASHBOARD_DIR:-"$HOME/.local/state/hngh/dashboard"}
+
+# Validate and pull the raw ts ("" when absent).
+raw_ts=$(printf '%s' "$json" | jq -er '
+  if type != "object" then error("payload must be a JSON object")
+  elif ((.writer|type) != "string") or ((.writer|length) == 0) then error("writer must be a non-empty string")
+  elif ((.item|type) != "string") then error("item must be a string")
+  elif (has("severity") and (((.severity|type) != "string") or ((.severity|IN("info","warn","crit")) | not))) then error("severity must be info|warn|crit")
+  elif (has("ts") and (((.ts|type) != "string") or ((.ts|length) == 0))) then error("ts must be a non-empty string")
+  else (.ts // "") end' 2>/dev/null) || {
+  echo "hngh-dashboard-feed: rejected (malformed JSON or schema violation): $json" >&2
+  exit 1
+}
+
+if [[ -z $raw_ts ]]; then
+  ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+else
+  ts=$(date -u -d "$raw_ts" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null) || {
+    echo "hngh-dashboard-feed: rejected (unparseable ts): $raw_ts" >&2
+    exit 1
+  }
+fi
+
+line=$(printf '%s' "$json" | jq -c --arg ns "$ns" --arg ts "$ts" \
+  '{ts:$ts, writer:.writer, namespace:$ns, item:.item, severity:(if has("severity") then .severity else "info" end)}') || {
+  echo "hngh-dashboard-feed: rejected (malformed JSON or schema violation): $json" >&2
+  exit 1
+}
+
+mkdir -p "$dir"
+exec {fd}>>"$dir/$ns.jsonl"
+flock -x "$fd"
+printf '%s\n' "$line" >&"$fd"
+printf '%s\n' "$line"

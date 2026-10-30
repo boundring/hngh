@@ -1,0 +1,67 @@
+#!/bin/bash
+# hngh-agent-spawn-selfcheck — dry-run assertions for the spawner.
+# Contract: SELF-CHECK GREEN (exit 0) or SELF-CHECK: <n> failure(s) (exit 1).
+set -u
+SPAWN="$(dirname "$(readlink -f "$0")")/hngh-agent-spawn"
+fails=0
+ck() { local desc=$1; shift
+	if "$@" >/dev/null 2>&1; then echo "ok: $desc"
+	else echo "FAIL: $desc"; fails=$((fails + 1)); fi; }
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/roles"
+cat > "$tmp/roles/smoke-probe.yml" <<'EOF'
+role: smoke-probe
+models: {task: zai/glm-5.3-flash}
+lines: [hngh]
+consent_ceiling: Confirm
+add_dirs: []
+primes: {briefs: [briefs/00-always.md]}
+recall: ""
+constraints: ["no writes outside workspace"]
+owns: ['<ws>/**']
+EOF
+export HNGH_ROLES_DIR="$tmp/roles"
+export HNGH_SPAWN_SKIP_PREFLIGHT=1
+
+out=$("$SPAWN" smoke-probe ckslug --task "prove rendering" --dry-run 2>&1); rc=$?
+[[ $rc == 0 ]] && echo "ok: dry-run exits 0" || { echo "FAIL: dry-run rc=$rc: $out"; fails=$((fails + 1)); }
+printf '%s' "$out" | grep -q "CHARTER.md" && printf '%s' "$out" | grep -q "agentModelOverrides" \
+	&& echo "ok: dry-run renders charter + overlay" || { echo "FAIL: render"; fails=$((fails + 1)); }
+printf '%s' "$out" | grep -q "no writes outside workspace" \
+	&& echo "ok: charter carries constraints" || { echo "FAIL: constraints"; fails=$((fails + 1)); }
+printf '%s' "$out" | grep -q "hngh-session-note ckslug" \
+	&& echo "ok: charter carries ledger contract" || { echo "FAIL: ledger contract"; fails=$((fails + 1)); }
+printf '%s' "$out" | grep -q "hngh-job-note --job ckslug --event started --tier Confirm" \
+	&& echo "ok: dry-run carries the job registry contract" || { echo "FAIL: job registry contract"; fails=$((fails + 1)); }
+printf '%s' "$out" | grep -q "hngh-job-note --job ckslug --event started|gate|outcome" \
+	&& echo "ok: charter tells the agent the exact job command" || { echo "FAIL: charter job command"; fails=$((fails + 1)); }
+printf '%s' "$out" | grep -q "omp-overlay.yml" && ! printf '%s' "$out" | grep -q "fallbackChains" \
+	&& echo "ok: empty fallbacks omit retry block" || { echo "FAIL: fallback omission"; fails=$((fails + 1)); }
+ck "dry-run creates no workspace" test ! -d "$HOME/Work/sessions/$(date +%F)-ckslug"
+
+printf '%s' "$out" | grep -q "## Orientation snapshot" \
+	&& echo "ok: charter carries the orientation snapshot" || { echo "FAIL: orientation snapshot"; fails=$((fails + 1)); }
+cat > "$tmp/roles/deadprime.yml" <<'EOF'
+role: deadprime
+primes: {briefs: [briefs/does-not-exist.md]}
+EOF
+out=$("$SPAWN" deadprime deadslug --dry-run 2>&1); rc=$?
+[[ $rc == 2 ]] && printf '%s' "$out" | grep -q "does-not-exist.md" \
+	&& echo "ok: missing prime exits 2 naming the path" || { echo "FAIL: missing prime rc=$rc: $out"; fails=$((fails + 1)); }
+
+"$SPAWN" no-such-role x --dry-run >/dev/null 2>&1; [[ $? == 2 ]] \
+	&& echo "ok: missing role exits 2" || { echo "FAIL: missing role"; fails=$((fails + 1)); }
+"$SPAWN" smoke-probe 'bad slug' --dry-run >/dev/null 2>&1; [[ $? == 2 ]] \
+	&& echo "ok: bad slug exits 2" || { echo "FAIL: bad slug"; fails=$((fails + 1)); }
+"$SPAWN" smoke-probe ok --task T --dry-run >/dev/null 2>&1   # role-name mismatch probe
+cat > "$tmp/roles/mismatch.yml" <<'EOF'
+role: something-else
+EOF
+"$SPAWN" mismatch x --dry-run >/dev/null 2>&1; [[ $? == 2 ]] \
+	&& echo "ok: role/name mismatch exits 2" || { echo "FAIL: mismatch"; fails=$((fails + 1)); }
+
+if (( fails == 0 )); then echo "SELF-CHECK GREEN"; exit 0; fi
+echo "SELF-CHECK: $fails failure(s)"
+exit 1

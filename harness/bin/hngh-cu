@@ -1,0 +1,356 @@
+#!/bin/bash
+# hngh-cu — human/agent-facing computer-use entry point
+# (design: 2026-10-28-cu-stack-design.md §4).
+#
+# This script PLANS and DELEGATES. Every actuation is executed by hngh-act,
+# so the ~/AGENTS.md §11 tier gate and the audit log always apply. hngh-cu
+# never synthesizes input, never calls hngh-pointer or hngh-grim itself, and
+# has no daemon, no loop, and no unattended mode.
+#
+# Exit codes: 0 always for a gate refusal or runtime error (the refusal line
+# carries hngh-act's exit code) · 3 for usage errors.
+set -u
+
+repo_bin="${HNGH_REPO_BIN:-$HOME/Projects/hngh/bin}"
+
+usage() {
+  cat <<'EOF'
+hngh-cu — computer-use entry point (plans + delegates; hngh-act is the only writer)
+
+Usage:
+  hngh-cu look "<question>" [--lane local|ocr|cloud] [--consent] [--monitor <name>]
+  hngh-cu click --at X,Y
+  hngh-cu double-click --at X,Y
+  hngh-cu right-click --at X,Y
+  hngh-cu move --to X,Y
+  hngh-cu scroll --delta N [--at X,Y]
+  hngh-cu type --text "..."
+  hngh-cu key --keysym K
+
+Subcommands and tiers (~/AGENTS.md §11):
+  look          Confirm  — screen.capture through hngh-act (Confirm gate,
+                           satisfied by the per-invocation --yes this
+                           command sends, per design §4 Loop 1), then
+                           hngh-look grounding (Silent). Lanes: local is the
+                           default (unsloth :8888, pixels never leave the
+                           box), ocr is the fast fallback, cloud needs
+                           explicit per-call consent (--consent).
+  click         Presence-gated — pointer click at X,Y
+  double-click  Presence-gated — pointer double click at X,Y
+  right-click   Presence-gated — pointer right click at X,Y
+  move          Presence-gated — pointer move to X,Y
+  scroll        Presence-gated — pointer scroll (delta N)
+  type          Presence-gated — synthetic typing
+  key           Presence-gated — synthetic key press
+
+  Every pointer act is Presence-gated: it runs only in an idle window
+  (session locked) or with an explicit --go, and hngh-act additionally
+  asserts the target window class AND address twice before emitting.
+  Without --go in a busy session the act is refused and reported verbatim.
+
+Flags:
+  --json          machine-readable output (one JSON object)
+  --dry-run       print the planned command chain; execute nothing
+  --go            explicit per-action go for Presence-gated acts
+  --consent       per-call consent for the cloud grounding lane
+  --lane local|ocr|cloud   grounding lane (default: local; cloud needs --consent)
+  --monitor NAME  monitor for the capture (look)
+  --label SLUG    filename slug for the captured shot (look)
+  --window CLASS  target window class (default: the active window)
+  --address 0x..  target window address (default: the active window)
+  --at X,Y        coordinates (click/double-click/right-click/scroll)
+  --to X,Y        coordinates (move)
+  --delta N       scroll delta (scroll)
+  --text "..."    text to type (type)
+  --keysym K      keysym to press (key)
+
+Exit codes: 0 (including gate refusals — the refusal line carries hngh-act's
+exit code) · 3 (usage error). In --json output, exit_code is hngh-act's exit
+code (2 = gate refused); hngh-cu's own exit code is 0 unless it is a usage
+error.
+EOF
+}
+
+die_usage() { echo "hngh-cu: $*" >&2; exit 3; }
+
+# resolve a sibling tool: explicit override > PATH (sandbox stubs shadow) > repo
+tool() {
+  local override="$1" name="$2" p
+  if [[ -n $override ]]; then printf '%s\n' "$override"; return; fi
+  p="$(command -v "$name" 2>/dev/null)" && { printf '%s\n' "$p"; return; }
+  printf '%s\n' "$repo_bin/$name"
+}
+
+cmd="${1:-}"
+[[ $# -gt 0 ]] && shift
+case "$cmd" in
+  ""|help|-h|--help) usage; exit 0 ;;
+esac
+
+question=""
+case "$cmd" in
+  look|click|double-click|right-click|move|scroll|type|key) ;;
+  *) die_usage "unknown subcommand '$cmd' (look|click|double-click|right-click|move|scroll|type|key)" ;;
+esac
+
+as_json=0; dry=0; go=0; consent=0
+lane=local; at=""; to=""; delta=""; text=""; keysym=""
+win_class=""; win_addr=""; monitor=""; label=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --json) as_json=1; shift ;;
+    --dry-run) dry=1; shift ;;
+    --go) go=1; shift ;;
+    --consent) consent=1; shift ;;
+    --lane) lane="${2:-}"; shift 2 ;;
+    --monitor) monitor="${2:-}"; shift 2 ;;
+    --label) label="${2:-}"; shift 2 ;;
+    --window) win_class="${2:-}"; shift 2 ;;
+    --address) win_addr="${2:-}"; shift 2 ;;
+    --at) at="${2:-}"; shift 2 ;;
+    --to) to="${2:-}"; shift 2 ;;
+    --delta) delta="${2:-}"; shift 2 ;;
+    --text) text="${2:-}"; shift 2 ;;
+    --keysym) keysym="${2:-}"; shift 2 ;;
+    -*) die_usage "unknown flag '$1'" ;;
+    *)
+      if [[ $cmd == look && -z $question ]]; then
+        question="$1"; shift
+      else
+        die_usage "unexpected argument '$1'"
+      fi
+      ;;
+  esac
+done
+
+# ---- target window (default: the active window) --------------------------
+payload_safe() { # payload_safe <text> — hngh-act strips these words from
+  # its argument line, so a payload equal to one of them would be eaten.
+  case "$1" in
+    --yes|--dry-run|--go|--allow-forbidden|-h|--help|help) return 1 ;;
+  esac
+  return 0
+}
+
+resolve_target() { # resolve_target [noaddr] -> wclass/waddr, TARGET_OK
+  local need_addr=1
+  [[ ${1:-} == noaddr ]] && need_addr=0
+  wclass=""; waddr=""; TARGET_OK=0
+  local j c a
+  if [[ -n $win_class ]]; then
+    wclass="$win_class"
+    waddr="$win_addr"
+    if [[ -z $waddr && $need_addr = 1 ]]; then
+      j="$(hyprctl -j activewindow 2>/dev/null)" || { TARGET_OK=0; return; }
+      read -r c a < <(printf '%s' "$j" | jq -r '[.class // "", .address // ""] | @tsv' 2>/dev/null)
+      waddr="$a"
+      [[ -n $waddr ]] || { TARGET_OK=0; return; }
+      [[ "$c" == "$wclass" ]] || { TARGET_OK=0; return; }
+    fi
+  else
+    j="$(hyprctl -j activewindow 2>/dev/null)" || { TARGET_OK=0; return; }
+    read -r c a < <(printf '%s' "$j" | jq -r '[.class // "", .address // ""] | @tsv' 2>/dev/null)
+    wclass="$c"; waddr="$a"
+  fi
+  [[ -n $wclass ]] || { TARGET_OK=0; return; }
+  if [[ $need_addr = 1 && -z $waddr ]]; then TARGET_OK=0; return; fi
+  TARGET_OK=1
+}
+
+PLAN=()
+
+emit() { # emit <ok> <refused> <exit_code> <summary> [json-details]
+  local ok="$1" refused="$2" rc="$3" summary="$4"; shift 4
+  if [[ $as_json = 1 ]]; then
+    local detail="${1:-}"
+    local plan_json=""
+    [[ ${#PLAN[@]} -gt 0 ]] && plan_json="$(printf '%s\n' "${PLAN[@]}" | python3 -c 'import json,sys; print(json.dumps([l.rstrip("\n") for l in sys.stdin]))')"
+    python3 - "$ok" "$refused" "$rc" "$summary" "$detail" "$plan_json" <<'PY'
+import json, sys
+ok, refused, rc, summary = sys.argv[1:5]
+extra = json.loads(sys.argv[5]) if sys.argv[5] else {}
+out = {"ok": ok == "true", "refused": refused == "true",
+       "exit_code": int(rc), "summary": summary}
+out.update(extra)
+plan = json.loads(sys.argv[6]) if len(sys.argv) > 6 and sys.argv[6] else []
+if plan:
+    out["plan"] = plan
+print(json.dumps(out))
+PY
+  else
+    printf '%s\n' "$summary"
+  fi
+}
+
+run_act() { # run_act <action> <args...> -> ACT_RC, ACT_OUT (stdout), ACT_ERR (stderr)
+  local action="$1"; shift
+  ACT_CMD=("$(tool "${HNGH_ACT_CMD:-}" hngh-act)" "$action")
+  [[ $go = 1 ]] && ACT_CMD+=(--go)
+  ACT_CMD+=("$@")
+  ACT_OUT="$("${ACT_CMD[@]}" 2>"$ACT_ERR_FILE")"
+  ACT_RC=$?
+  ACT_ALL="$( { cat "$ACT_ERR_FILE"; [[ -n $ACT_OUT ]] && printf '%s\n' "$ACT_OUT"; } )"
+}
+
+act_text() { # both streams, verbatim
+  [[ -n $ACT_ALL ]] && printf '%s\n' "$ACT_ALL"
+  return 0
+}
+
+show_act_out() { # verbatim hngh-act output (text mode only; JSON carries it)
+  [[ $as_json = 1 ]] && return 0
+  act_text
+}
+
+print_plan() { # print_plan <line>...
+  local l
+  for l in "$@"; do
+    PLAN+=("$l")
+    [[ $as_json = 1 ]] || printf 'dry-run: %s\n' "$l"
+  done
+}
+
+ACT_BIN="$(tool "${HNGH_ACT_CMD:-}" hngh-act)"
+LOOK_BIN="$(tool "${HNGH_LOOK_CMD:-}" hngh-look)"
+ACT_ERR_FILE="$(mktemp "${TMPDIR:-/tmp}/hngh-cu-err-XXXXXX")"
+trap 'rm -f "$ACT_ERR_FILE"' EXIT
+
+# ---- subcommands ----------------------------------------------------------
+case "$cmd" in
+  look)
+    [[ -n $question ]] || die_usage "look needs a question: hngh-cu look \"<question>\""
+    case "$lane" in
+      local|ocr) ;;
+      cloud)
+        # per-capture cloud consent: refused locally, before any capture.
+        if [[ $consent != 1 ]]; then
+          emit false true 0 "refused: cloud grounding lane needs explicit per-call consent (--consent); nothing was captured." \
+            "{\"command\":\"look\",\"lane\":\"cloud\",\"consent\":false}"
+          exit 0
+        fi
+        ;;
+      *) die_usage "unknown lane '$lane' (local|ocr|cloud)" ;;
+    esac
+    if [[ $dry = 1 ]]; then
+      look_extra=""
+      [[ $consent = 1 ]] && look_extra=" --yes"
+      print_plan "$ACT_BIN screen.capture --yes${monitor:+ --monitor $monitor}${label:+ --output $label}" \
+                  "$LOOK_BIN <captured-png> \"$question\" --lane $lane --lines 40$look_extra"
+      emit true false 0 "dry-run: capture + ground (\"$question\")" \
+        "{\"command\":\"look\",\"lane\":\"$lane\",\"dry_run\":true}"
+      exit 0
+    fi
+    cap=(screen.capture --yes)
+    [[ -n $monitor ]] && cap+=(--monitor "$monitor")
+    [[ -n $label ]] && cap+=(--output "$label")
+    run_act "${cap[@]}"
+    if [[ $ACT_RC != 0 ]]; then
+      show_act_out
+      emit false true "$ACT_RC" "refused: screen capture declined by hngh-act (exit $ACT_RC)" \
+        "{\"command\":\"look\",\"stage\":\"capture\",\"act_exit_code\":$ACT_RC,\"act_output\":$(printf '%s' "$ACT_ALL" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}"
+      exit 0
+    fi
+    png="$(printf '%s' "$ACT_OUT" | awk 'NR==1{print $1}')"
+    sha="$(printf '%s' "$ACT_OUT" | awk 'NR==1{print $2}')"
+    look_args=("$png" "$question" --lane "$lane" --lines 40)
+    [[ $consent = 1 ]] && look_args+=(--yes)
+    LOOK_OUT="$("$LOOK_BIN" "${look_args[@]}" 2>&1)"; LOOK_RC=$?
+    if [[ $as_json = 1 ]]; then
+      python3 - "$png" "$sha" "$lane" "$LOOK_OUT" "$LOOK_RC" <<'PY'
+import json, sys
+png, sha, lane, out, rc = sys.argv[1:6]
+print(json.dumps({"ok": int(rc) == 0, "refused": False, "exit_code": int(rc),
+                  "summary": "looked: %s" % lane, "command": "look",
+                  "tier": "Confirm (capture) + Silent (grounding)",
+                  "lane": lane, "png": png, "sha256": sha, "answer": out}))
+PY
+    else
+      printf '%s\n' "$LOOK_OUT"
+      [[ -n $sha ]] && printf '(grounded in shot sha256:%s)\n' "${sha:0:12}"
+    fi
+    exit 0
+    ;;
+
+  click|double-click|right-click|move|scroll)
+    case "$cmd" in
+      click) act=pointer.click ;;
+      double-click) act=pointer.double_click ;;
+      right-click) act=pointer.right_click ;;
+      move) act=pointer.move ;;
+      scroll) act=pointer.scroll ;;
+    esac
+    case "$cmd" in
+      move) coords="$to"; [[ -n $coords ]] || die_usage "move needs --to X,Y" ;;
+      scroll) coords="$at" ;;
+      *) coords="$at"; [[ -n $coords ]] || die_usage "$cmd needs --at X,Y" ;;
+    esac
+    [[ -z $coords || "$coords" =~ ^-?[0-9]+,-?[0-9]+$ ]] || die_usage "coordinates must be X,Y (got '$coords')"
+    if [[ $cmd == scroll && ! "$delta" =~ ^-?[0-9]+$ ]]; then
+      die_usage "scroll needs --delta <n>"
+    fi
+    resolve_target
+    if [[ $TARGET_OK != 1 ]]; then
+      emit false false 0 "refused: cannot resolve the target window (hyprctl activewindow); pass --window/--address." \
+        "{\"command\":\"$cmd\",\"stage\":\"resolve\"}"
+      exit 0
+    fi
+    args=("$act" --window "$wclass" --address "$waddr")
+    [[ -n $coords ]] && args+=(--at "$coords")
+    [[ $cmd == scroll ]] && args+=(--delta "$delta")
+    where="at $coords"
+    [[ -z $coords ]] && where="at the current pointer position"
+    if [[ $dry = 1 ]]; then
+      print_plan "$ACT_BIN ${args[*]}"
+      emit true false 0 "dry-run: $act $where (Presence-gated)" \
+        "{\"command\":\"$cmd\",\"action\":\"$act\",\"tier\":\"Presence-gated\",\"at\":\"$coords\",\"dry_run\":true}"
+      exit 0
+    fi
+    run_act "${args[@]}"
+    if [[ $ACT_RC != 0 ]]; then
+      show_act_out
+      emit false true "$ACT_RC" "refused: $act declined by hngh-act (exit $ACT_RC)" \
+        "{\"command\":\"$cmd\",\"action\":\"$act\",\"tier\":\"Presence-gated\",\"at\":\"$coords\",\"act_exit_code\":$ACT_RC,\"act_output\":$(printf '%s' "$ACT_ALL" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}"
+      exit 0
+    fi
+    show_act_out
+    emit true false "$ACT_RC" "acted: $act $where (Presence-gated)" \
+      "{\"command\":\"$cmd\",\"action\":\"$act\",\"tier\":\"Presence-gated\",\"at\":\"$coords\",\"window\":\"$wclass\",\"address\":\"$waddr\"}"
+    exit 0
+    ;;
+
+  type|key)
+    if [[ $cmd == type ]]; then
+      [[ -n $text ]] || die_usage "type needs --text \"...\""
+      act=type_text; payload="$text"
+    else
+      [[ -n $keysym ]] || die_usage "key needs --keysym K"
+      act=key; payload="$keysym"
+    fi
+    payload_safe "$payload" || die_usage "payload '$payload' contains an hngh-act flag word; hngh-cu cannot pass it through"
+    resolve_target noaddr
+    if [[ $TARGET_OK != 1 ]]; then
+      emit false false 0 "refused: cannot resolve the target window (hyprctl activewindow); pass --window." \
+        "{\"command\":\"$cmd\",\"stage\":\"resolve\"}"
+      exit 0
+    fi
+    args=("$act" --window "$wclass" -- "$payload")
+    if [[ $dry = 1 ]]; then
+      print_plan "$ACT_BIN ${args[*]}"
+      emit true false 0 "dry-run: $act (Presence-gated)" \
+        "{\"command\":\"$cmd\",\"action\":\"$act\",\"tier\":\"Presence-gated\",\"dry_run\":true}"
+      exit 0
+    fi
+    run_act "${args[@]}"
+    if [[ $ACT_RC != 0 ]]; then
+      show_act_out
+      emit false true "$ACT_RC" "refused: $act declined by hngh-act (exit $ACT_RC)" \
+        "{\"command\":\"$cmd\",\"action\":\"$act\",\"tier\":\"Presence-gated\",\"act_exit_code\":$ACT_RC,\"act_output\":$(printf '%s' "$ACT_ALL" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}"
+      exit 0
+    fi
+    show_act_out
+    emit true false "$ACT_RC" "acted: $act (Presence-gated)" \
+      "{\"command\":\"$cmd\",\"action\":\"$act\",\"tier\":\"Presence-gated\",\"window\":\"$wclass\"}"
+    exit 0
+    ;;
+esac

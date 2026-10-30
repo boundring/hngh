@@ -1,0 +1,13 @@
+#!/bin/bash
+# hngh-watch-slot — live view of the most recently active slot transcript.
+set -u
+while :; do
+	f=$(ls -t "$HOME"/Work/sessions/*/sessions/*.jsonl 2>/dev/null | head -1)
+	clear
+	echo "== $f"
+	[ -n "$f" ] && tail -n 30 "$f" 2>/dev/null | jq -r '
+		select(.message.role) |
+		[(.timestamp // "")[11:19], .message.role,
+		 ((.message.content | if type == "array" then (map(.text // "") | join(" ")) else (.text // "") end) // "" | gsub("\n"; " ") | .[0:150])] | @tsv' 2>/dev/null
+	sleep 5
+done

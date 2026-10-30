@@ -1,0 +1,88 @@
+#!/bin/bash
+# hngh-digest-selfcheck — assert the digest ledger pair.
+# Sandbox: HNGH_DIGESTS_DIR is overridden to a temp dir; the real ledger is untouched.
+set -u
+HERE="$(dirname "$(readlink -f "$0")")"
+NOTE="$HERE/hngh-digest-note"
+READ="$HERE/hngh-digest"
+fails=0
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+ckf() { # ckf <desc> <actual> <expected>
+	if [[ "$2" == "$3" ]]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1 (got: $2, want: $3)"; fails=$((fails + 1))
+	fi
+}
+
+# 1. reader on missing ledger: clean report, exit 0
+export HNGH_DIGESTS_DIR="$tmp/missing"
+out=$("$READ" 2>&1); rc=$?
+[[ $rc == 0 && -n "$out" ]] && echo "ok: reader: missing ledger exits 0 with report" || { echo "FAIL: missing ledger"; fails=$((fails + 1)); }
+
+# 2. empty ledger: same
+mkdir -p "$tmp/empty"
+HNGH_DIGESTS_DIR="$tmp/empty" out=$("$READ" 2>&1); rc=$?
+[[ $rc == 0 && -n "$out" ]] && echo "ok: reader: empty ledger exits 0 with report" || { echo "FAIL: empty ledger"; fails=$((fails + 1)); }
+
+# 3. writer rejects: bad usage (exit 2), non-integer (exit 1)
+export HNGH_DIGESTS_DIR="$tmp/data"
+"$NOTE" >/dev/null 2>&1; [[ $? == 2 ]] \
+	&& echo "ok: note: usage error exits 2" || { echo "FAIL: note: usage error exits 2"; fails=$((fails + 1)); }
+"$NOTE" --sessions 1 >/dev/null 2>&1; [[ $? == 2 ]] \
+	&& echo "ok: note: missing agents/active exits 2" || { echo "FAIL: note: missing agents/active exits 2"; fails=$((fails + 1)); }
+"$NOTE" --sessions abc --agents 1 --active-agents 0 >/dev/null 2>&1; [[ $? == 1 ]] \
+	&& echo "ok: note: non-integer sessions exits 1" || { echo "FAIL: note: non-integer sessions exits 1"; fails=$((fails + 1)); }
+
+# 4. round trip: two records in different minute buckets (written straight to
+# the ledger; server-side stamping would put two live notes in one bucket)
+ledger="$tmp/data/digests.jsonl"
+mkdir -p "$tmp/data"
+printf '{"at":"2026-10-28T01:00:00Z","sessions":3,"agents":5,"active_agents":1,"summary":"first"}\n' >>"$ledger"
+printf '{"at":"2026-10-28T02:00:00Z","sessions":4,"agents":6,"active_agents":2,"summary":"second"}\n' >>"$ledger"
+ckf "note: two minutes stored" "$("$READ" --json | jq 'length')" 2
+ckf "note: values preserved" "$("$READ" --json | jq -r '.[] | select(.at=="2026-10-28T01:00:00Z") | .summary')" "first"
+
+# 5. live writer round trip (same-minute records fold to one)
+"$NOTE" --sessions 7 --agents 9 --active-agents 3 --summary "live note" >/dev/null
+ckf "note: live record stored" "$("$READ" --json | jq '[.[] | select(.summary=="live note")] | length')" 1
+
+# 6. fold order: second line for same minute bucket wins (last physical line, not max-ts)
+"$NOTE" --sessions 8 --agents 9 --active-agents 3 --summary "live note" >/dev/null
+ckf "fold: last line wins for same minute" "$("$READ" --json | jq '[.[] | select(.summary=="live note")][0].sessions')" 8
+# backdated-ts pair written straight to the ledger proves file order wins, never max-ts
+printf '{"at":"2026-10-28T03:00:00Z","sessions":1,"agents":1,"active_agents":0}\n' >>"$ledger"
+printf '{"at":"2026-10-28T03:00:00Z","sessions":2,"agents":2,"active_agents":1}\n' >>"$ledger"
+ckf "fold: file order wins — backdated line is latest despite old ts" \
+	"$("$READ" --json | jq '[.[] | select(.at=="2026-10-28T03:00:00Z")][0].sessions')" 2
+
+# 7. malformed line skipped and counted
+printf 'not json at all\n' >>"$ledger"
+ckf "robust: malformed line skipped" "$("$READ" --json | jq 'length')" 4
+"$READ" >/dev/null 2>"$tmp/err"
+grep -q "malformed" "$tmp/err" && echo "ok: robust: malformed counted on stderr" || { echo "FAIL: malformed counted"; fails=$((fails + 1)); }
+
+# 8. --since polarity: a real filter on `at`
+ckf "filter: --since far future excludes all" "$("$READ" --json --since 2099-01-01T00:00:00Z | jq 'length')" 0
+ckf "filter: --since far past includes all" "$("$READ" --json --since 2000-01-01T00:00:00Z | jq 'length')" 4
+# The boundary cases are asserted per record, never as a whole list: the
+# ledger also holds a record this selfcheck writes with the live clock, so a
+# list comparison would depend on the hour of the day.
+ckf "filter: --since boundary includes the equal stamp" \
+	"$("$READ" --json --since 2026-10-28T02:00:00Z | jq '[.[].at] | index("2026-10-28T02:00:00Z") != null')" "true"
+ckf "filter: --since boundary excludes an older stamp" \
+	"$("$READ" --json --since 2026-10-28T02:00:01Z | jq '[.[].at] | index("2026-10-28T02:00:00Z") == null')" "true"
+
+# 9. reader bad flags: still exit 0
+"$READ" --no-such-flag >/dev/null 2>&1; [[ $? == 0 ]] \
+	&& echo "ok: reader: bad flag still exits 0" || { echo "FAIL: reader: bad flag exit"; fails=$((fails + 1)); }
+
+if (( fails == 0 )); then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK: $fails failure(s)"
+exit 1

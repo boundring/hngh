@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""hngh-status: consolidated hngh status writer.
+
+Folds sessions (hngh-sessions --json), agents (hngh-agents --json), the last 20
+dashboard feed rows across namespaces, and a system posture snapshot into
+~/.local/state/hngh/status.json (atomic tmp+rename, 2s min interval).
+
+Usage: hngh-status [--once]
+Without --once, loops forever (meant to run under hngh-status.timer every 10s).
+"""
+import glob
+import json
+import os
+import subprocess
+import sys
+import time
+
+OUT = os.path.expanduser("~/.local/state/hngh/status.json")
+DASHBOARD_DIR = os.path.expanduser("~/.local/state/hngh/dashboard")
+BIN = os.path.expanduser("~/Projects/hngh/bin")
+MIN_INTERVAL = 2.0
+
+
+def run_json(cmd, cwd=None):
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=10, cwd=cwd)
+        return json.loads(p.stdout) if p.stdout.strip() else []
+    except Exception:
+        return []
+
+
+def sessions():
+    return run_json([os.path.join(BIN, "hngh-sessions"), "--json"])
+
+
+def agents():
+    return run_json([os.path.join(BIN, "hngh-agents"), "--json"])
+
+
+def events(last=20):
+    rows = []
+    for path in glob.glob(os.path.join(DASHBOARD_DIR, "*.jsonl")):
+        ns = os.path.basename(path)[:-6]
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                lines = [l for l in f.read().splitlines() if l.strip()]
+        except OSError:
+            continue
+        for line in lines[-last:]:  # last physical line wins; take tail then fold order
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not rec.get("item"):
+                continue
+            rec.setdefault("namespace", ns)
+            rows.append(rec)
+    rows.sort(key=lambda r: r.get("ts") or "")
+    return rows[-last:]
+
+
+def posture():
+    st = {}
+    try:
+        with open("/proc/loadavg") as f:
+            parts = f.read().split()
+        st["load"] = [float(x) for x in parts[:3]]
+    except (OSError, ValueError):
+        st["load"] = []
+    try:
+        with open("/proc/meminfo") as f:
+            mi = {}
+            for line in f:
+                k, _, v = line.partition(":")
+                mi[k] = int(v.strip().split()[0])
+        total, avail = mi.get("MemTotal", 0), mi.get("MemAvailable", 0)
+        st["mem_total_mb"] = total // 1024
+        st["mem_used_pct"] = round(100 * (total - avail) / total, 1) if total else None
+    except (OSError, ValueError):
+        st["mem_total_mb"] = st["mem_used_pct"] = None
+    vram = {"total_mb": None, "used_pct": None}
+    for card in sorted(glob.glob("/sys/class/drm/card*/device")):
+        try:
+            with open(os.path.join(card, "mem_info_vram_total")) as f:
+                total = int(f.read()) // (1024 * 1024)
+            with open(os.path.join(card, "mem_info_vram_used")) as f:
+                used = int(f.read()) // (1024 * 1024)
+            if total:
+                vram = {"total_mb": total, "used_pct": round(100 * used / total, 1)}
+                break
+        except (OSError, ValueError):
+            continue
+    st["vram"] = vram
+    try:
+        p = subprocess.run(["df", "-PBM", os.path.expanduser("~")], capture_output=True, text=True, timeout=5)
+        line = p.stdout.strip().splitlines()[-1].split()
+        st["disk_total_mb"], st["disk_used_pct"] = int(line[1].rstrip("MG")), float(line[4].rstrip("%"))
+    except (IndexError, ValueError, subprocess.SubprocessError):
+        st["disk_total_mb"] = st["disk_used_pct"] = None
+    return st
+
+
+def build():
+    return {
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "sessions": sessions(),
+        "agents": agents(),
+        "events": events(),
+        "posture": posture(),
+    }
+
+
+def write_once():
+    data = build()
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    tmp = OUT + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+    os.replace(tmp, OUT)
+    return data
+
+
+def main():
+    if "--once" in sys.argv[1:]:
+        write_once()
+        return
+    while True:
+        t0 = time.monotonic()
+        try:
+            write_once()
+        except Exception as e:
+            print(f"hngh-status: {e}", file=sys.stderr)
+        time.sleep(max(MIN_INTERVAL, 10.0 - (time.monotonic() - t0)))
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except BrokenPipeError:
+        pass

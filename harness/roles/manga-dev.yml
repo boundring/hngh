@@ -1,0 +1,45 @@
+# Role manifest — hngh-agent-spawn (manga revision era, 2026-10-28)
+role: manga-dev
+description: >
+  Manga-studio revision slot for the rainholder arc. Copy/layout work under
+  check_g1.py discipline (six mechanical checks, byte-identical re-render),
+  delta-weighted style measurement; renders stay untracked pending MP-3.
+models:
+  task: minimax-code/MiniMax-M3.1-Flash-Preview
+  reviewer: minimax-code/MiniMax-M3.1-Flash-Preview
+  scout: minimax-code/MiniMax-M3.1-Flash-Preview
+  librarian: minimax-code/MiniMax-M3.1-Flash-Preview
+fallbacks:
+  minimax-code/MiniMax-M3.1-Flash-Preview: [opencode-go/glm-5.3-flash]
+lines: [manga]
+consent_ceiling: Confirm
+add_dirs:
+  - /home/bricker/Work/sessions/2026-10-21-manga-b
+  - /mnt/2tb/@home/bricker/Projects/etc/cistern-related/cistern-redesign/manga-pipeline
+primes:
+  briefs: [briefs/00-always.md, briefs/70-principles.md]
+  handoffs: [session-handoffs/2026-10-23-wave5-handoff.md,
+             session-handoffs/2026-10-23-cistern-hngh-manga-portfolio.md]
+  plans: [PLANS/2026-10-21-manga-two-way-design.md,
+          PLANS/2026-10-28-plan-status-review.md]
+recall: "manga rainholder ch-01 direction melville watershed delta refit"
+constraints:
+  - >-
+    Determinism — pinned-seed renders and byte-identical re-render checks via
+    check_g1.py; never casually regenerate seeds; every seed re-emission is a
+    named, logged decision.
+  - >-
+    Git — commit by explicit pathspec only; never push; the parent session
+    integrates; renders stay untracked pending MP-3.
+  - >-
+    Publishing — nothing ships or publishes; drafts carry draft: true front
+    matter (PF-4 in effect); PF-3 content license gates publish, not build.
+  - >-
+    Locks — chapter lock (script_status) is human-only; a machine never locks;
+    record lock transitions honestly instead of silently overwriting them.
+  - >-
+    Ruling 2026-10-28 — bubble cuts ALLOWED for ch-01 under direction 01
+    (Melville, full alt/01): page seeds may be re-emitted; a new delta record
+    for ch-01 is expected and wanted.
+owns:
+  - /mnt/2tb/@home/bricker/Projects/etc/manga-studio/**

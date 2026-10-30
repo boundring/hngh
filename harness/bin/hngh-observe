@@ -1,0 +1,27 @@
+#!/bin/bash
+# hngh-observe — open the observation tabs (agents, slot transcript,
+# ledger+dashboard) in the Tern window.
+# Usage: hngh-observe [workspace=4] — the workspace argument is accepted for
+# CLI compatibility; Tern tabs live in the running window, not a workspace.
+# Tern is single-instance: tabs attach to the running window, never new windows.
+set -u
+
+prev=$(tern ls --json 2>/dev/null | jq -r '[.sessions[] | .tabs[] | .blocks[] | select(.focused == true) | .id] | .[0] // empty')
+
+term() { # term <tab name> <command>
+	# Replace any earlier tab with this name: a crashed watcher leaves a
+	# keep-open block behind, and duplicates would pile up in the tab strip.
+	for id in $(tern ls --json 2>/dev/null | jq -r --arg n "$1" '[.sessions[] | .tabs[] | select(.name == $n) | .blocks[] | .id] | .[]'); do
+		tern close "$id" >/dev/null 2>&1
+	done
+	bid=$(tern new tab --keep-open --json -- bash -lc "$2" 2>/dev/null | jq -r '.block // empty')
+	[ -n "$bid" ] && tern rename "$bid" "$1" >/dev/null 2>&1
+}
+
+term hngh-agents 'hngh-watch-agents'
+term slot-transcript 'hngh-watch-slot'
+term ledger+dashboard 'hngh-watch-ledger'
+
+# Hand focus back to the block the operator was on.
+[ -n "$prev" ] && tern focus "$prev" >/dev/null 2>&1
+echo "hngh-observe: observation tabs open in the Tern window (hngh-agents, slot-transcript, ledger+dashboard); focus restored"

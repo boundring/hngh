@@ -1,0 +1,169 @@
+#!/bin/bash
+# hngh-pointer-selfcheck — asserts the pointer slice of the hngh computer-use
+# stack (design: ~/Projects/omp-work/PLANS/2026-10-28-cu-stack-design.md §3
+# option c' and §5):
+#   hngh-pointer  argument parsing + the exact dry-run event plan
+#   hngh-act      the executable pointer.* rows behind the class+address
+#                 assertion, audited in act.log
+# Sandboxed: a stub pointer binary and a stub hyprctl live on a private PATH;
+# the state dir and the presence probe are set per invocation with env (never
+# exported). /dev/uinput is NEVER opened — the real binary runs only with
+# --dry-run, and hngh-act only ever talks to the stub binary.
+set -u
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(dirname "$HERE")"
+PTR="$HERE/hngh-pointer"
+ACT="$HERE/hngh-act"
+SB="$(mktemp -d)"
+trap 'rm -rf "$SB"' EXIT
+mkdir -p "$SB/bin" "$SB/fixtures" "$SB/state"
+
+fails=0
+ok() { if [[ $1 == 0 ]]; then echo "PASS $2"; else echo "FAIL $2"; fails=$((fails+1)); fi; }
+ck() { # ck <name> <expected-rc> <cmd...>
+  local name="$1" want="$2" got=0; shift 2
+  "$@" >/dev/null 2>&1 || got=$?
+  if [[ $got == "$want" ]]; then echo "PASS $name (exit $got)"
+  else echo "FAIL $name: exit $got, want $want"; fails=$((fails+1)); fi
+}
+
+# --- sandbox fixtures ------------------------------------------------------
+cat > "$SB/bin/hngh-pointer" <<EOF
+#!/bin/bash
+printf '%s\n' "\$*" >> "$SB/pointer-calls.log"
+case "\$1" in
+  move) shift
+    while [[ \$# -gt 0 ]]; do
+      case "\$1" in
+        --abs) printf 'abs %s\n' "\$2" >> "$SB/pos.log"; shift 2 ;;
+        --rel) printf 'rel %s\n' "\$2" >> "$SB/pos.log"; shift 2 ;;
+        *) shift ;;
+      esac
+    done ;;
+esac
+exit 0
+EOF
+cat > "$SB/bin/hyprctl" <<EOF
+#!/bin/bash
+case "\$1" in
+  -j) case "\$2" in
+        activewindow) cat "$SB/fixtures/activewindow.json" ;;
+        monitors)     cat "$SB/fixtures/monitors.json" ;;
+      esac ;;
+  cursorpos)
+    # a tiny compositor model: start at 0,0; --abs sets the position (unless
+    # the sandbox ignores it, simulating a compositor that drops ABS events);
+    # --rel adds a delta.
+    awk -v ign="$SB/ignore-abs" '
+      BEGIN { x = 0; y = 0 }
+      /^abs / {
+        if (ign != "") next
+        split(\$2, a, ","); x = a[1] + 0; y = a[2] + 0; next
+      }
+      /^rel / {
+        split(\$2, a, ","); x += a[1] + 0; y += a[2] + 0; next
+      }
+      END { printf "%d, %d\n", x, y }' "$SB/pos.log" ;;
+  dispatch)  : ;;
+esac
+exit 0
+EOF
+chmod +x "$SB/bin/hngh-pointer" "$SB/bin/hyprctl"
+
+printf '{"class":"hngh-selfcheck","address":"0xabc123"}\n' > "$SB/fixtures/activewindow.json"
+printf '[{"id":0,"name":"hngh-fake","width":1920,"height":1080,"x":0,"y":0,"scale":1}]\n' > "$SB/fixtures/monitors.json"
+: > "$SB/pointer-calls.log"
+: > "$SB/pos.log"
+
+# The real binary is exercised for argument parsing and the dry-run plan only.
+if [[ ! -x $PTR ]]; then
+  make -s -C "$REPO" bin/hngh-pointer >/dev/null 2>&1 || true
+fi
+[[ -x $PTR ]] || { echo "FAIL hngh-pointer binary missing (make bin/hngh-pointer)"; echo "SELF-CHECK: 1 failure(s)"; exit 1; }
+
+# --- 1. dry-run plans (no device opened) ----------------------------------
+out=$("$PTR" --dry-run move --abs 100,200 --range 0,0,1919,1079)
+[[ $out == *"EV_ABS ABS_X=100"* && $out == *"EV_ABS ABS_Y=200"* && $out == *"EV_SYN SYN_REPORT=0"* && $out == *"(not opened)"* ]]
+ok $? "dry-run move plan: ABS_X/ABS_Y/SYN, device not opened"
+
+out=$("$PTR" --dry-run click --button left --count 1)
+[[ $out == *"EV_KEY BTN_LEFT=1"* && $out == *"EV_KEY BTN_LEFT=0"* ]]
+ok $? "dry-run click plan: BTN_LEFT press/release"
+
+out=$("$PTR" --dry-run click --button right --count 2)
+[[ $(grep -c "EV_KEY BTN_RIGHT=1" <<<"$out") == 2 && $(grep -c "EV_KEY BTN_RIGHT=0" <<<"$out") == 2 ]]
+ok $? "dry-run double-click plan: two BTN_RIGHT press/release cycles"
+
+out=$("$PTR" --dry-run scroll --delta -3)
+[[ $out == *"EV_REL REL_WHEEL=-3"* ]]
+ok $? "dry-run scroll plan: REL_WHEEL delta"
+
+# --- 2. malformed arguments -------------------------------------------------
+ck "malformed --abs exits non-zero" 3 "$PTR" --dry-run move --abs bogus
+ck "malformed --button exits non-zero" 3 "$PTR" --dry-run click --button sideways
+ck "unknown op exits non-zero" 3 "$PTR" --dry-run teleport
+ck "move without a target exits non-zero" 3 "$PTR" --dry-run move
+
+# --- 3. hngh-act pointer rows (stub pointer, stub hyprctl) -----------------
+run_act() { # run_act <args...> — sandboxed env, per invocation, never exported
+  env PATH="$SB/bin:$PATH" \
+      HNGH_STATE_DIR="$SB/state" \
+      HNGH_PRESENCE_PROBE=false \
+      HYPRLAND_INSTANCE_SIGNATURE=hngh-selfcheck \
+      "$ACT" "$@"
+}
+
+# gate: Presence-gated refuses without --go while the session is unlocked
+ck "pointer.click refused without --go" 2 run_act pointer.click --window hngh-selfcheck --address 0xabc123 --at 100,200
+[[ ! -s "$SB/pointer-calls.log" ]]
+ok $? "refused pointer.click never called the pointer binary"
+
+# gate passes with --go: the pointer binary is invoked with the plan
+ck "pointer.click allowed with --go" 0 run_act pointer.click --window hngh-selfcheck --address 0xabc123 --at 100,200 --go
+grep -q "move --abs 100,200" "$SB/pointer-calls.log"
+ok $? "pointer.click moved to the requested coordinates"
+grep -q "click --button left --count 1" "$SB/pointer-calls.log"
+ok $? "pointer.click pressed and released the left button"
+
+# the class+address assertion blocks a mismatched active window
+before=$(wc -l < "$SB/pointer-calls.log")
+printf '{"class":"some-other-window","address":"0x999999"}\n' > "$SB/fixtures/activewindow.json"
+ck "pointer.click refused on active-window mismatch" 2 run_act pointer.click --window hngh-selfcheck --address 0xabc123 --at 100,200 --go
+after=$(wc -l < "$SB/pointer-calls.log")
+[[ $before == "$after" ]]
+ok $? "mismatched active window emitted no pointer events"
+printf '{"class":"hngh-selfcheck","address":"0xabc123"}\n' > "$SB/fixtures/activewindow.json"
+
+# pointer.move and pointer.scroll rows
+: > "$SB/pointer-calls.log"
+ck "pointer.move allowed with --go" 0 run_act pointer.move --window hngh-selfcheck --address 0xabc123 --at 100,200 --go
+grep -q "move --abs 100,200" "$SB/pointer-calls.log"
+ok $? "pointer.move emitted the absolute move"
+ck "pointer.scroll allowed with --go" 0 run_act pointer.scroll --window hngh-selfcheck --address 0xabc123 --at 100,200 --delta 3 --go
+grep -q "scroll --delta 3" "$SB/pointer-calls.log"
+ok $? "pointer.scroll emitted the wheel delta"
+
+# compositor drops the ABS event -> the broker falls back to relative moves
+: > "$SB/pointer-calls.log"; : > "$SB/pos.log"; touch "$SB/ignore-abs"
+ck "pointer.move converges when the compositor drops ABS events" 0 run_act pointer.move --window hngh-selfcheck --address 0xabc123 --at 300,400 --go
+grep -q "move --rel" "$SB/pointer-calls.log"
+ok $? "pointer.move fell back to a relative correction"
+rm -f "$SB/ignore-abs"
+
+# validate still adjudicates the executable rows (future Fara driver interface)
+ck "validate refuses pointer.click without --go" 2 run_act validate '{"action":"pointer.click"}'
+ck "validate grants pointer.click with --go" 0 run_act validate '{"action":"pointer.click"}' --go
+
+# --- 4. audit trail ---------------------------------------------------------
+grep -q "action=pointer.click result=ok" "$SB/state/act.log"
+ok $? "act.log records the acted pointer.click"
+grep -q "action=pointer.click result=refused-assert-mismatch" "$SB/state/act.log"
+ok $? "act.log records the assert-mismatch refusal"
+
+# --- 5. /dev/uinput was never touched ---------------------------------------
+! grep -q "hngh-pointer" /proc/bus/input/devices 2>/dev/null
+ok $? "no hngh-pointer uinput device exists (never opened /dev/uinput)"
+
+echo
+if [[ $fails == 0 ]]; then echo "SELF-CHECK GREEN"; exit 0
+else echo "SELF-CHECK: $fails failure(s)"; exit 1; fi

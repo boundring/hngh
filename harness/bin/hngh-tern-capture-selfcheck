@@ -1,0 +1,68 @@
+#!/bin/bash
+# hngh-tern-capture-selfcheck — sandboxed checks for the pane capture reader.
+# A stub `tern` on PATH stands in for the daemon, so nothing real is read.
+set -u
+
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+stub="$sandbox/bin"
+mkdir -p "$stub"
+
+# Stub: "capture <block> --json" prints a fixture; anything else is empty.
+cat > "$stub/tern" <<'STUB'
+#!/bin/bash
+if [ "$1" = "capture" ] && [ "$2" = "fixture" ]; then
+	printf '%s' '{"block":42,"text":"line one\nline two\nline three"}'
+fi
+exit 0
+STUB
+chmod +x "$stub/tern"
+export PATH="$stub:$PATH"
+
+out=$(bash /home/bricker/Projects/hngh/bin/hngh-tern-capture fixture 2>/dev/null)
+if [ "$(printf '%s\n' "$out" | wc -l)" = "3" ] && printf '%s' "$out" | grep -q 'line two'; then
+	echo "ok: reads a block's text"
+else
+	echo "FAIL: reads a block's text" >&2
+	failures=$((failures + 1))
+fi
+
+out=$(bash /home/bricker/Projects/hngh/bin/hngh-tern-capture fixture --lines 1 2>/dev/null)
+if [ "$out" = "line three" ]; then
+	echo "ok: --lines keeps the tail"
+else
+	echo "FAIL: --lines keeps the tail (got: $out)" >&2
+	failures=$((failures + 1))
+fi
+
+out=$(bash /home/bricker/Projects/hngh/bin/hngh-tern-capture fixture --json 2>/dev/null)
+if printf '%s' "$out" | jq -e '.block == 42' >/dev/null 2>&1; then
+	echo "ok: --json prints the daemon's JSON"
+else
+	echo "FAIL: --json prints the daemon's JSON" >&2
+	failures=$((failures + 1))
+fi
+
+bash /home/bricker/Projects/hngh/bin/hngh-tern-capture nosuchblock >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+	echo "ok: a missing block still exits 0"
+else
+	echo "FAIL: a missing block still exits 0" >&2
+	failures=$((failures + 1))
+fi
+
+out=$(bash /home/bricker/Projects/hngh/bin/hngh-tern-capture fixture --lines 0 2>/dev/null | wc -l)
+if [ "$out" = "3" ]; then
+	echo "ok: --lines 0 keeps everything"
+else
+	echo "FAIL: --lines 0 keeps everything (got $out lines)" >&2
+	failures=$((failures + 1))
+fi
+
+if [ "$failures" = "0" ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK: $failures failure(s)" >&2
+exit 1

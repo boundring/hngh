@@ -1,0 +1,88 @@
+#!/bin/bash
+# hngh-job-selfcheck — assert the job registry pair (hngh-job-note / hngh-job).
+# Sandbox: HNGH_JOBS_DIR is overridden to a temp dir; the real ledger is untouched.
+set -u
+HERE="$(dirname "$(readlink -f "$0")")"
+NOTE="$HERE/hngh-job-note"
+READ="$HERE/hngh-job"
+fails=0
+
+ckf() { # ckf <desc> <actual> <expected>
+	if [[ "$2" == "$3" ]]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1 (got: $2, want: $3)"; fails=$((fails + 1))
+	fi
+}
+ckrc() { # ckrc <desc> <expected-rc> <cmd...>
+	local desc=$1 want=$2 rc=0
+	shift 2
+	"$@" >/dev/null 2>&1 || rc=$?
+	ckf "$desc" "$rc" "$want"
+}
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+# 1. reader on missing ledger: clean report, exit 0
+out=$(HNGH_JOBS_DIR="$tmp/missing" "$READ" 2>&1); rc=$?
+[[ $rc == 0 && -n "$out" ]] && echo "ok: reader: missing ledger exits 0 with report" || { echo "FAIL: missing ledger"; fails=$((fails + 1)); }
+
+# 2. empty ledger: same
+mkdir -p "$tmp/empty"
+out=$(HNGH_JOBS_DIR="$tmp/empty" "$READ" 2>&1); rc=$?
+[[ $rc == 0 && -n "$out" ]] && echo "ok: reader: empty ledger exits 0 with report" || { echo "FAIL: empty ledger"; fails=$((fails + 1)); }
+
+# 3. writer exit-code contract: 0 stored | 1 bad event | 2 usage
+export HNGH_JOBS_DIR="$tmp/data"
+ckrc "note: no args exits 2" 2 "$NOTE"
+ckrc "note: --event alone exits 2" 2 "$NOTE" --event started
+ckrc "note: --job alone exits 2" 2 "$NOTE" --job j1
+ckrc "note: unknown flag exits 2" 2 "$NOTE" --job j1 --event started --bogus
+ckrc "note: bad event exits 1" 1 "$NOTE" --job j1 --event launch
+"$NOTE" --job j1 --event started --tier Silent --source selfcheck >/dev/null 2>&1; [[ $? == 0 ]] \
+	&& echo "ok: note: valid record exits 0" || { echo "FAIL: note: valid record exits 0"; fails=$((fails + 1)); }
+
+# 4. round trip: three events for one job
+"$NOTE" --job alpha --event started --tier Silent >/dev/null
+"$NOTE" --job alpha --event gate --tier Confirm --outcome "awaiting operator" >/dev/null
+"$NOTE" --job alpha --event outcome --outcome "done: 3 files" >/dev/null
+ckf "round: alpha folded to one row" "$("$READ" --json --job alpha | jq 'length')" 1
+ckf "round: alpha has 3 events" "$("$READ" --json | jq -r '.[0] | .event')" "outcome"
+ckf "round: alpha outcome preserved" "$("$READ" --json | jq -r '.[0].outcome')" "done: 3 files"
+"$READ" --job alpha | grep -qE " 3  " && echo "ok: round: table shows 3 events" || { echo "FAIL: table event count"; fails=$((fails + 1)); }
+
+# 5. second job → two rows; --job narrows to one
+"$NOTE" --job beta --event started --tier Presence-gated >/dev/null
+ckf "round: three jobs known (j1, alpha, beta)" "$("$READ" --json | jq 'length')" 3
+ckf "filter: --job alpha excludes beta" "$("$READ" --json --job alpha | jq -r '[.[].job] | join(",")')" "alpha"
+ckf "filter: --job nomatch is empty" "$("$READ" --json --job nomatch | jq 'length')" 0
+
+# 6. fold order: backdated-ts pair proves file order wins, never max-ts
+"$NOTE" --job alpha --event gate --tier Confirm --outcome "second wave" >/dev/null
+ckf "fold: last line wins for same job" "$("$READ" --json --job alpha | jq -r '.[0].outcome')" "second wave"
+printf '{"at":"2026-10-20T00:00:00Z","job":"alpha","event":"outcome","outcome":"backdated A"}\n' >>"$tmp/data/jobs.jsonl"
+printf '{"at":"2026-10-20T00:00:00Z","job":"alpha","event":"outcome","outcome":"backdated B"}\n' >>"$tmp/data/jobs.jsonl"
+ckf "fold: file order wins — backdated line is latest despite old ts" \
+	"$("$READ" --json --job alpha | jq -r '.[0].outcome')" "backdated B"
+
+# 7. malformed line skipped and counted
+printf 'not json at all\n' >>"$tmp/data/jobs.jsonl"
+ckf "robust: malformed line skipped" "$("$READ" --json | jq 'length')" 3
+"$READ" >/dev/null 2>"$tmp/err"
+grep -q "malformed" "$tmp/err" && echo "ok: robust: malformed counted on stderr" || { echo "FAIL: malformed counted"; fails=$((fails + 1)); }
+
+# 8. --since polarity: filters on the latest record's at
+ckf "since: far past excludes current-era records" "$("$READ" --json --since 2027-01-01T00:00:00Z | jq 'length')" 0
+ckf "since: past cutoff keeps all current jobs" "$("$READ" --json --since 2026-01-01T00:00:00Z | jq 'length')" 3
+
+# 9. reader bad flags: still exit 0
+"$READ" --no-such-flag >/dev/null 2>&1; [[ $? == 0 ]] \
+	&& echo "ok: reader: bad flag still exits 0" || { echo "FAIL: reader: bad flag exit"; fails=$((fails + 1)); }
+
+if (( fails == 0 )); then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK: $fails failure(s)"
+exit 1

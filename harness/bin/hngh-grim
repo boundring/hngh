@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# hngh-grim — hngh vision producer (design: 2026-10-28-cu-stack-design.md §1).
+# An IMPLEMENT: never called around the gate — the sanctioned entry is
+# `hngh-act screen.capture [...]`, which runs the Confirm gate then executes us.
+# One capture -> PNG under the shots store + `<path> <sha256>` on stdout,
+# a geometry sidecar JSON next to the shot, one line in index.jsonl.
+# Exit codes: 0 captured · 1 runtime (grim/hyprctl failed) · 3 usage.
+
+set -u
+
+SHOTS="${HNGH_SHOTS_DIR:-$HOME/.local/state/hngh/shots}"
+
+usage() {
+  cat <<'EOF'
+hngh-grim — hngh screen-capture producer (gated entry: hngh-act screen.capture)
+
+Usage:
+  hngh-grim [--output NAME] [--monitor <name|all|focused>] [--region <WxH+X+Y>]
+
+  --output NAME    filename slug (default: cap)
+  --monitor        grim -o <name>; focused resolved via hyprctl; all = bare grim
+  --region         grim -g, agent-composed crop (global coords); overrides --monitor
+EOF
+}
+usage_exit() { echo "hngh-grim: $*" >&2; usage >&2; exit 3; }
+die() { echo "hngh-grim: $*" >&2; exit 1; }
+
+monitor="focused"; region=""; label="cap"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --output|--label) label="${2:-}"; shift 2 ;;
+    --monitor) monitor="${2:-}"; shift 2 ;;
+    --region) region="${2:-}"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage_exit "unknown argument '$1'" ;;
+  esac
+done
+[[ -n $label ]] || usage_exit "--output needs a name"
+[[ $label =~ ^[A-Za-z0-9._-]+$ ]] || usage_exit "label must be a slug ([A-Za-z0-9._-]): '$label'"
+
+# Region: agent grammar WxH+X+Y, or pass through the design grammar "X,Y WxH".
+gregion=""
+tok="$monitor"
+if [[ -n $region ]]; then
+  if [[ $region =~ ^(-?[0-9]+)x(-?[0-9]+)\+(-?[0-9]+)\+(-?[0-9]+)$ ]]; then
+    gregion="${BASH_REMATCH[3]},${BASH_REMATCH[4]} ${BASH_REMATCH[1]}x${BASH_REMATCH[2]}"
+  elif [[ $region =~ ^-?[0-9]+,-?[0-9]+\ [0-9]+x[0-9]+$ ]]; then
+    gregion="$region"
+  else
+    usage_exit "--region wants WxH+X+Y (got '$region')"
+  fi
+  tok="region"
+else
+  case "$monitor" in
+    all) : ;;
+    focused)
+      name="$(hyprctl -j monitors 2>/dev/null | jq -r '.[] | select(.focused==true) | .name' | head -1)" \
+        || die "cannot resolve focused monitor: hyprctl failed"
+      [[ -n ${name:-} ]] || die "cannot resolve focused monitor: no monitor reports focused"
+      monitor="$name" ;;
+    *)
+      hyprctl -j monitors 2>/dev/null | jq -e --arg m "$monitor" 'any(.[]; .name == $m)' >/dev/null \
+        || die "unknown monitor '$monitor' (see hyprctl monitors)"
+      ;;
+  esac
+fi
+
+day="$(date -u +%Y-%m-%d)"
+ts="$(date -u +%Y%m%dT%H%M%SZ)"
+mkdir -p "$SHOTS/$day" || die "cannot create $SHOTS/$day"
+chmod 700 "$SHOTS" "$SHOTS/$day"
+png="$SHOTS/$day/shot-$ts-$tok-$label.png"
+
+if [[ -n $gregion ]]; then
+  grim -g "$gregion" "$png" || { rm -f "$png"; die "grim -g '$gregion' failed"; }
+elif [[ $tok == all ]]; then
+  grim "$png" || { rm -f "$png"; die "grim (all outputs) failed"; }
+else
+  grim -o "$monitor" "$png" || { rm -f "$png"; die "grim -o '$monitor' failed"; }
+fi
+[[ -s $png ]] || { rm -f "$png"; die "grim produced no output"; }
+
+sha="$(sha256sum "$png")"; sha="${sha%% *}"
+bytes="$(stat -c %s "$png")"
+
+# Grounding bundle: window/monitor snapshot so a VLM can ground pixels to
+# addresses. Fold to null when hyprctl is unavailable (sandbox/headless).
+snap() { hyprctl -j "$1" 2>/dev/null | jq "$2" 2>/dev/null || echo null; }
+monitors="$(snap monitors '[.[] | {name, focused}]')"
+windows="$(snap clients '[.[] | {class, title, address, at, size, focused}]')"
+jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg path "$png" --arg sha "$sha" \
+  --arg monitor "$monitor" --arg region "$gregion" --argjson bytes "$bytes" \
+  --argjson monitors "$monitors" --argjson windows "$windows" \
+  '{ts:$ts, path:$path, sha256:$sha, monitor:$monitor, region:$region,
+    bytes:$bytes, monitors:$monitors, windows:$windows}' > "$png.json" \
+  || die "cannot write sidecar $png.json"
+
+jq -cn --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg path "$png" --arg sha "$sha" \
+  --arg monitor "$monitor" --arg region "$gregion" --argjson bytes "$bytes" \
+  --arg asker "${HNGH_ASKER:-cli}" \
+  '{ts:$ts, path:$path, sha256:$sha, monitor:$monitor, region:$region,
+    bytes:$bytes, asker:$asker}' >> "$SHOTS/index.jsonl" \
+  || die "cannot append $SHOTS/index.jsonl"
+
+printf '%s %s\n' "$png" "$sha"

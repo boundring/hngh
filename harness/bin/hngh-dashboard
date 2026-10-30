@@ -1,0 +1,73 @@
+#!/bin/bash
+# hngh-dashboard — render hngh dashboard feeds, newest first.
+# Usage: hngh-dashboard [--follow] [--namespace <ns>]
+# Exit: 0 normal (incl. empty registry) | 2 bad namespace or usage
+set -u
+
+usage() { echo "usage: hngh-dashboard [--follow] [--namespace <ns>]" >&2; exit 2; }
+badns() { echo "hngh-dashboard: bad namespace: $1" >&2; exit 2; }
+
+follow=0
+sel=""
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --follow) follow=1; shift ;;
+    --namespace)
+      [[ $# -ge 2 ]] || usage
+      sel=$2
+      [[ $sel =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || badns "$sel"
+      shift 2 ;;
+    *) usage ;;
+  esac
+done
+
+dir=${HNGH_DASHBOARD_DIR:-"$HOME/.local/state/hngh/dashboard"}
+
+files=()
+if [[ -n $sel ]]; then
+  [[ -e "$dir/$sel.jsonl" ]] && files=("$dir/$sel.jsonl")
+else
+  for f in "$dir"/*.jsonl; do
+    [[ -e $f ]] && files+=("$f")
+  done
+fi
+[[ ${#files[@]} -eq 0 ]] && exit 0
+
+# Validates one feed line and emits "ts<TAB>ns<TAB>lineno<TAB>rendered", or nothing
+# when the line is malformed. Item whitespace is flattened so one item is one line.
+PROG='if (type=="object")
+  and ((.ts|type)=="string") and (.ts|test("^[^\t\r\n]+$"))
+  and ((.namespace|type)=="string") and (.namespace|test("^[A-Za-z0-9][A-Za-z0-9._-]*$"))
+  and ((.writer|type)=="string") and ((.writer|length)>0)
+  and ((.item|type)=="string")
+  and ((.severity=="info") or (.severity=="warn") or (.severity=="crit"))
+then "\(.ts)\t\(.namespace)\t\($n)\t\(.ts) \(.severity) [\(.namespace)] \(.writer): \(.item | gsub("[\r\n]"; " "))"
+else empty end'
+
+render() { # render <lineno> — reads a raw feed line on stdin
+  jq -r --argjson n "$1" "$PROG" 2>/dev/null
+}
+
+if [[ $follow == 1 ]]; then
+  # shortcut: only files selected at startup are followed; a namespace whose
+  # .jsonl is created later is picked up on the next invocation.
+  tail -F -n +1 -q "${files[@]}" | while IFS= read -r line; do
+    out=$(printf '%s\n' "$line" | render 0) || out=""
+    [[ -n $out ]] && printf '%s\n' "$out" | cut -f4-
+  done
+  exit 0
+fi
+
+skipped=0
+{
+  for f in "${files[@]}"; do
+    n=0
+    while IFS= read -r line || [[ -n $line ]]; do
+      n=$((n+1))
+      out=$(printf '%s\n' "$line" | render "$n") || out=""
+      if [[ -z $out ]]; then skipped=$((skipped+1)); continue; fi
+      printf '%s\n' "$out"
+    done < "$f"
+  done
+  [[ $skipped -gt 0 ]] && echo "hngh-dashboard: skipped $skipped malformed line(s)" >&2
+} | LC_ALL=C sort -t$'\t' -k1,1r -k2,2r -k3,3nr | cut -f4-

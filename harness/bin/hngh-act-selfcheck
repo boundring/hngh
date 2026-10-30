@@ -1,0 +1,77 @@
+#!/bin/bash
+# hngh-act-selfcheck — deterministic asserts for the hngh-act tier gate.
+# Sandboxed: state goes to a temp HNGH_STATE_DIR, the presence probe is pinned,
+# and the only synthetic-input attempt targets a window class that cannot exist,
+# so the §2.3 assertion aborts before any input is synthesized. No sleeps.
+set -u
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ACT="$HERE/hngh-act"
+SB="$(mktemp -d)"
+trap 'rm -rf "$SB"' EXIT
+export HNGH_STATE_DIR="$SB/state"
+export HNGH_PRESENCE_PROBE=false
+
+fails=0
+ck() { # ck <name> <expected-rc> <cmd...>
+  local name="$1" want="$2" got=0; shift 2
+  "$@" >/dev/null 2>&1 || got=$?
+  if [[ $got == "$want" ]]; then echo "PASS $name (exit $got)"
+  else echo "FAIL $name: exit $got, want $want"; fails=$((fails+1)); fi
+}
+ok() { if [[ $1 == 0 ]]; then echo "PASS $2"; else echo "FAIL $2"; fails=$((fails+1)); fi }
+
+# 1. Forbidden refuses without the full override (and logs the refusal)
+ck "Forbidden refuses without override" 2 "$ACT" pkg.update
+grep -q "action=pkg.update result=refused:override-only" "$HNGH_STATE_DIR/act.log"
+ok $? "Forbidden refusal logged"
+
+# 2. Confirm refuses without --yes; nothing flips
+ck "Confirm refuses without --yes" 2 "$ACT" presence.mode.toggle
+[[ ! -e "$HNGH_STATE_DIR/toggles/presence-mode" ]]
+ok $? "Confirm refusal left no side effect"
+
+# 3. Confirm passes with explicit --yes
+ck "Confirm passes with --yes" 0 "$ACT" presence.mode.toggle --yes
+[[ -e "$HNGH_STATE_DIR/toggles/presence-mode" ]]
+ok $? "Confirm --yes acted"
+
+# 4. manifest emits the pending-action manifest from a fixed posture blob
+printf '{"generated_at":"fixed","session_locked":false}' | "$ACT" manifest > "$SB/manifest.json" 2>"$SB/manifest.err"
+ok $? "manifest exits 0 on fixed blob"
+jq -e '.actions | length >= 10' "$SB/manifest.json" >/dev/null
+ok $? "manifest lists all actions"
+jq -e 'all(.actions[]; (.action|type=="string") and (.tier|type=="string") and (.target|type=="string") and (.gate.verdict|type=="string") and (.gate.reason|type=="string"))' "$SB/manifest.json" >/dev/null
+ok $? "manifest fields present (action/tier/target/gate verdict)"
+[[ $(jq -r '.actions[] | select(.action=="left_click") | .gate.verdict' "$SB/manifest.json") == refused ]]
+ok $? "manifest: left_click refused while session unlocked"
+[[ $(jq -r '.actions[] | select(.action=="pkg.update") | .gate.verdict' "$SB/manifest.json") == override-only ]]
+ok $? "manifest: pkg.update override-only"
+
+# 5. Silent passthrough acts without asking
+ck "Silent passthrough (posture.refresh)" 0 "$ACT" posture.refresh
+[[ -s "$HNGH_STATE_DIR/posture.json" ]]
+ok $? "Silent action wrote posture.json"
+
+# 6. Presence-gated: pinned locked probe passes the gate, but the §2.3 window
+#    assertion aborts BEFORE typing (class 'no-such-hngh-window' cannot exist)
+HNGH_PRESENCE_PROBE=true "$ACT" type_text --window no-such-hngh-window -- hngh-selfcheck-marker >/dev/null 2>&1
+[[ $? == 2 ]]
+ok $? "type_text aborts on window-assert mismatch (nothing typed)"
+
+# 7. validate adjudicates requester JSON (Fara driver shape)
+v=$(echo '{"action":"left_click","coords":[10,20]}' | "$ACT" validate); rc=$?
+[[ $rc == 2 && $(jq -r .verdict <<<"$v") == refused ]]
+ok $? "validate: left_click refused while unlocked (exit 2)"
+v=$(echo '{"action":"left_click","coords":[10,20]}' | HNGH_PRESENCE_PROBE=true "$ACT" validate --go); rc=$?
+[[ $rc == 0 && $(jq -r .verdict <<<"$v") == granted ]]
+ok $? "validate: left_click granted under lock + --go (exit 0)"
+echo 'not json' | "$ACT" validate >/dev/null 2>&1; [[ $? == 3 ]]
+ok $? "validate: bad JSON is usage (exit 3)"
+
+# 8. Not-in-manifest refuses
+"$ACT" rm.rf.everything >/dev/null 2>&1; [[ $? == 2 ]]
+ok $? "not-in-manifest refused (exit 2)"
+
+echo
+if [[ $fails == 0 ]]; then echo "SELF-CHECK GREEN"; exit 0
+else echo "SELF-CHECK: $fails failure(s)"; exit 1; fi

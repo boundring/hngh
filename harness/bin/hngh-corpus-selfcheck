@@ -1,0 +1,291 @@
+#!/bin/bash
+# hngh-corpus-selfcheck — sandboxed contract check for hngh-corpus.
+# Sandbox: HNGH_CORPUS_DIR / HNGH_CORPUS_INDEX_DB / HNGH_CORPUS_OUT /
+#          HNGH_CORPUS_ENVCONF_DIR -> mktemp -d.
+# Nothing real is read or written; the real corpus is never touched.
+# Contract: `ok:` per assertion, ends SELF-CHECK GREEN (exit 0)
+# or SELF-CHECK: <n> failure(s) (exit 1).
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+export HNGH_CORPUS_DIR="$sandbox/corpus"
+export HNGH_CORPUS_INDEX_DB="$sandbox/index/sessions.db"
+export HNGH_CORPUS_OUT="$sandbox/corpus/qa-pairs.jsonl"
+export HNGH_CORPUS_REFUSED="$sandbox/corpus/refused.jsonl"
+export HNGH_CORPUS_ENVCONF_DIR="$sandbox/environment.d"
+
+check() { # check <name> <condition-result>
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+corpus="$selfcheck_dir/hngh-corpus"
+
+# --- fixtures: tiny synthetic transcripts + a fake environment.d ------------
+mkdir -p "$sandbox/sessions" "$sandbox/index" "$sandbox/environment.d"
+
+python3 - "$sandbox" <<'PY'
+import json, os, sqlite3, sys
+sandbox = sys.argv[1]
+sess = os.path.join(sandbox, "sessions")
+
+FAKE_API_KEY = "sk-test-0123456789abcdef0123456789"
+FAKE_BEARER = "Bearer abcdef0123456789abcdef0123456789"
+FAKE_CONF = "FixtureConfValue0123456789abc"
+
+def row(obj):
+    return json.dumps(obj, ensure_ascii=False)
+
+def user(text):
+    return {"type": "message", "message": {"role": "user", "timestamp": "2026-10-29T10:00:00.000Z",
+            "content": [{"type": "text", "text": text}]}}
+
+def assistant(text, stop="stop"):
+    return {"type": "message", "message": {"role": "assistant", "timestamp": "2026-10-29T10:05:00.000Z",
+            "stopReason": stop, "content": [{"type": "text", "text": text}]}}
+
+long_reply = ("This is the deliverable body. " * 12).strip()   # > 200 chars
+
+def write(name, rows):
+    with open(os.path.join(sess, name), "w") as fh:
+        for r in rows:
+            fh.write(row(r) + "\n")
+
+write("good.jsonl", [
+    {"type": "session", "id": "s-good", "timestamp": "2026-10-29T10:00:00.000Z"},
+    user("What is the answer?"),
+    assistant(long_reply),
+])
+write("short.jsonl", [user("Short please"), assistant("Too short.")])
+write("noprompt.jsonl", [assistant(long_reply)])
+write("truncated.jsonl", [user("Cut me"), assistant(long_reply, stop="length")])
+# secret fixtures — one per refusal class
+write("apikey.jsonl", [user("Configure FAKE_API_KEY=" + FAKE_API_KEY), assistant(long_reply)])
+write("bearer.jsonl", [user("Use this header"),
+                       assistant("Authorization: " + FAKE_BEARER + "\n" + long_reply)])
+write("confvalue.jsonl", [user("The configured value is " + FAKE_CONF), assistant(long_reply)])
+
+# fake environment.d with the seeded value
+with open(os.path.join(sandbox, "environment.d", "90-fixture.conf"), "w") as fh:
+    fh.write("# fixture\nFIXTURE_TEST_VALUE=%s\n" % FAKE_CONF)
+
+con = sqlite3.connect(os.path.join(sandbox, "index", "sessions.db"))
+con.execute("""CREATE TABLE agent_session (id INTEGER PRIMARY KEY, path TEXT NOT NULL UNIQUE,
+  session_id TEXT, cwd TEXT, title TEXT, agent_version TEXT, started_at TEXT, last_activity_at TEXT,
+  message_count INTEGER NOT NULL DEFAULT 0, input_tokens INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0, cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+  cache_write_tokens INTEGER NOT NULL DEFAULT 0, total_tokens INTEGER NOT NULL DEFAULT 0,
+  models TEXT)""")
+fixtures = [
+    ("good.jsonl", "s-good", "2026-10-29T10:00:00.000Z", "2026-10-29T10:05:00.000Z"),
+    ("short.jsonl", "s-short", "2026-10-29T09:00:00.000Z", "2026-10-29T09:05:00.000Z"),
+    ("noprompt.jsonl", "s-noprompt", "2026-10-29T08:00:00.000Z", "2026-10-29T08:05:00.000Z"),
+    ("truncated.jsonl", "s-truncated", "2026-10-29T07:00:00.000Z", "2026-10-29T07:05:00.000Z"),
+    ("apikey.jsonl", "s-apikey", "2026-10-29T06:00:00.000Z", "2026-10-29T06:05:00.000Z"),
+    ("bearer.jsonl", "s-bearer", "2026-10-29T05:00:00.000Z", "2026-10-29T05:05:00.000Z"),
+    ("confvalue.jsonl", "s-confvalue", "2026-10-29T04:00:00.000Z", "2026-10-29T04:05:00.000Z"),
+]
+for i, (name, sid, st, la) in enumerate(fixtures, 1):
+    con.execute("INSERT INTO agent_session (id, path, session_id, started_at, last_activity_at)"
+                " VALUES (?,?,?,?,?)", (i, os.path.join(sess, name), sid, st, la))
+con.commit()
+con.close()
+PY
+
+# --- 1. build produces one record per clean transcript ----------------------
+out=$(python3 "$corpus" build --json 2>&1)
+pairs=$(printf '%s' "$out" | python3 -c 'import json,sys; print(json.load(sys.stdin)["pairs"])' 2>/dev/null)
+[ "$pairs" = 4 ]
+check "build emits one pair per clean indexed transcript (4 of 7)" $?
+
+# --- 2. pair extraction: first user prompt + last long assistant message ----
+python3 - "$HNGH_CORPUS_OUT" <<'PY' >/dev/null 2>&1
+import json, sys
+recs = {r["id"]: r for r in map(json.loads, open(sys.argv[1]))}
+g = recs["s-good"]
+assert g["prompt"] == "What is the answer?", g["prompt"]
+assert g["response"].startswith("This is the deliverable body.")
+assert g["prompt_chars"] == len(g["prompt"]) and g["response_chars"] == len(g["response"])
+assert g["quality_flags"] == [], g["quality_flags"]
+PY
+check "pair extraction: first user prompt + last >=200-char assistant message" $?
+
+# --- 3. provenance fields present and correct -------------------------------
+python3 - "$HNGH_CORPUS_OUT" <<'PY' >/dev/null 2>&1
+import json, os, sys
+recs = {r["id"]: r for r in map(json.loads, open(sys.argv[1]))}
+p = recs["s-good"]["provenance"]
+for k in ("session_id", "source_path", "line_count", "bytes", "first_ts", "last_ts",
+          "prompt_line", "response_line", "line_span"):
+    assert k in p, k
+assert p["session_id"] == "s-good"
+assert p["source_path"].endswith("good.jsonl")
+assert p["line_count"] == 3, p["line_count"]
+assert p["bytes"] == os.path.getsize(p["source_path"])
+assert p["first_ts"] == "2026-10-29T10:00:00.000Z"
+assert p["last_ts"] == "2026-10-29T10:05:00.000Z"
+assert p["prompt_line"] == 2 and p["response_line"] == 3, p
+assert p["line_span"] == {"start": 2, "end": 3}, p["line_span"]
+PY
+check "provenance carries source path, line counts and the source line span" $?
+
+# --- 4. quality flags annotate without excluding ---------------------------
+python3 - "$HNGH_CORPUS_OUT" <<'PY' >/dev/null 2>&1
+import json, sys
+recs = {r["id"]: r for r in map(json.loads, open(sys.argv[1]))}
+assert len(recs) == 4, "flagged records must stay in the corpus"
+assert "short_response" in recs["s-short"]["quality_flags"], recs["s-short"]["quality_flags"]
+assert "no_user_prompt" in recs["s-noprompt"]["quality_flags"], recs["s-noprompt"]["quality_flags"]
+assert "truncated" in recs["s-truncated"]["quality_flags"], recs["s-truncated"]["quality_flags"]
+PY
+check "quality flags annotate records, they do not exclude them" $?
+
+# --- 5. rebuild is idempotent (byte-identical output) ----------------------
+before=$(sha256sum "$HNGH_CORPUS_OUT" | cut -d' ' -f1)
+python3 "$corpus" build >/dev/null 2>&1
+after=$(sha256sum "$HNGH_CORPUS_OUT" | cut -d' ' -f1)
+[ "$before" = "$after" ]
+check "rebuild is idempotent (identical bytes on rebuild)" $?
+
+# --- 6. --limit caps the number of pairs -----------------------------------
+out=$(python3 "$corpus" build --limit 2 --json 2>&1)
+pairs=$(printf '%s' "$out" | python3 -c 'import json,sys; print(json.load(sys.stdin)["pairs"])' 2>/dev/null)
+[ "$pairs" = 2 ]
+check "--limit caps the built pair count" $?
+
+python3 "$corpus" build >/dev/null 2>&1
+
+# --- 7. stats counts are right and print no transcript content ------------
+stats=$(python3 "$corpus" stats --json 2>&1)
+echo "$stats" | python3 -c '
+import json,sys
+s=json.load(sys.stdin)
+assert s["pairs"]==4, s["pairs"]
+assert s["total_prompt_chars"]>0 and s["total_response_chars"]>0
+assert s["median_response_chars"]>0
+assert s["provenance_span"]["earliest_first_ts"] and s["provenance_span"]["latest_last_ts"]
+assert s["refused_secret_pairs"]>=3, s["refused_secret_pairs"]
+' 2>/dev/null
+check "stats reports counts, medians, provenance span and redacted_secrets" $?
+
+leak=0
+for txt in "$stats" "$(python3 "$corpus" stats 2>&1)"; do
+	printf '%s' "$txt" | grep -q 'What is the answer' && leak=1
+	printf '%s' "$txt" | grep -q 'deliverable body' && leak=1
+done
+[ "$leak" = 0 ]
+check "stats never prints transcript content" $?
+
+# --- 8. verify is clean on an intact corpus --------------------------------
+vout=$(python3 "$corpus" verify --json 2>&1)
+echo "$vout" | python3 -c '
+import json,sys
+v=json.load(sys.stdin)
+assert v["records"]==4 and v["checked"]==4 and v["drift"]==[], v
+' 2>/dev/null
+check "verify reports no drift on an intact corpus" $?
+
+# --- 9. verify detects a deleted source ------------------------------------
+rm -f "$sandbox/sessions/good.jsonl"
+vout=$(python3 "$corpus" verify --json 2>&1)
+echo "$vout" | python3 -c '
+import json,sys
+v=json.load(sys.stdin)
+assert len(v["drift"])==1, v
+assert v["drift"][0]["reason"]=="missing_source", v["drift"][0]
+' 2>/dev/null
+check "verify detects a deleted source (missing_source drift)" $?
+
+# --- 10. verify detects a changed line count -------------------------------
+printf '{"type":"message","message":{"role":"user","content":"late line"}}\n' >> "$sandbox/sessions/short.jsonl"
+vout=$(python3 "$corpus" verify --json 2>&1)
+echo "$vout" | python3 -c '
+import json,sys
+v=json.load(sys.stdin)
+reasons=[d["reason"] for d in v["drift"]]
+assert "line_count_mismatch" in reasons, v["drift"]
+' 2>/dev/null
+check "verify detects a line-count drift" $?
+
+# --- 11. missing source in the index does not abort the build --------------
+python3 - "$sandbox" <<'PY'
+import os, sqlite3, sys
+sandbox = sys.argv[1]
+con = sqlite3.connect(os.path.join(sandbox, "index", "sessions.db"))
+con.execute("INSERT INTO agent_session (id, path, session_id, started_at, last_activity_at)"
+            " VALUES (9, ?, 's-gone', '2026-10-29T03:00:00.000Z', '2026-10-29T03:05:00.000Z')",
+            (os.path.join(sandbox, "sessions", "gone.jsonl"),))
+con.commit()
+con.close()
+PY
+out=$(python3 "$corpus" build --json 2>&1)
+echo "$out" | python3 -c '
+import json,sys
+s=json.load(sys.stdin)
+assert s["pairs"]==3, s          # good.jsonl was deleted in assertion 9
+assert s["missing_sources"]==2, s  # good.jsonl + the never-present gone.jsonl
+assert s["refused_secret_pairs"]>=3, s
+' 2>/dev/null
+check "build skips an indexed but missing source and reports it" $?
+
+# --- 12. secret fixtures never reach qa-pairs.jsonl -------------------------
+leak=0
+for secret in 'sk-test-0123456789abcdef0123456789' 'abcdef0123456789abcdef0123456789' \
+              'FixtureConfValue0123456789abc'; do
+	grep -q "$secret" "$HNGH_CORPUS_OUT" && leak=1
+	grep -q "$secret" "$HNGH_CORPUS_REFUSED" && leak=1
+done
+[ "$leak" = 0 ]
+check "no secret fixture text appears in the corpus or the refused log" $?
+
+# --- 13. refusals are logged with a pattern class and no secret text -------
+python3 - "$HNGH_CORPUS_REFUSED" <<'PY' >/dev/null 2>&1
+import json, sys
+recs = [json.loads(l) for l in open(sys.argv[1])]
+classes = {r["pattern_class"] for r in recs}
+assert "api_key_assignment" in classes, classes
+assert "bearer_token" in classes, classes
+assert "env_conf_value" in classes, classes
+for r in recs:
+    assert set(r) == {"id", "pattern_class", "source_path"}, r
+    assert r["source_path"].endswith(".jsonl")
+PY
+check "refused.jsonl logs {id, pattern_class, source_path} with the right classes" $?
+
+# --- 14. the conf-value matcher catches a value seeded into environment.d ---
+python3 - "$HNGH_CORPUS_REFUSED" <<'PY' >/dev/null 2>&1
+import json, sys
+recs = [json.loads(l) for l in open(sys.argv[1])]
+hit = [r for r in recs if r["id"] == "s-confvalue"]
+assert len(hit) == 1 and hit[0]["pattern_class"] == "env_conf_value", recs
+PY
+check "environment.d conf value is refused as env_conf_value" $?
+
+# --- 15. every written record is marked private_local_only -----------------
+python3 - "$HNGH_CORPUS_OUT" <<'PY' >/dev/null 2>&1
+import json, sys
+for r in map(json.loads, open(sys.argv[1])):
+    assert r.get("private_local_only") is True, r["id"]
+    assert r["provenance"].get("source_path")
+PY
+check "every written record carries private_local_only and full provenance" $?
+
+# --- 16. the corpus file is mode 600 ---------------------------------------
+mode=$(stat -c '%a' "$HNGH_CORPUS_OUT")
+[ "$mode" = "600" ]
+check "qa-pairs.jsonl is written mode 600" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK: $failures failure(s)" >&2
+exit 1

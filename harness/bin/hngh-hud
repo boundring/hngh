@@ -1,0 +1,401 @@
+#!/usr/bin/env python3
+"""hngh-hud — game-style operations HUD terminal view for the hngh harness.
+
+Single ANSI frame, redrawn every --interval seconds (default 2). Panels:
+POSTURE (load/mem/VRAM/2TB/bili), SESSIONS roster, EVENT FEED (severity
+colors), LINES strip, QUESTS (open decisions). Missing sources render `—`,
+never crash. Always exits 0 (reader convention).
+
+Env overrides (for selfcheck/sandbox — per-invocation `env VAR=…` only):
+  HNGH_HUD_SESSIONS_CMD  default: ~/.local/bin/hngh-sessions --json
+  HNGH_HUD_AGENTS_CMD    default: ~/.local/bin/hngh-agents --json
+  HNGH_HUD_AGENTS_JSON   file holding hngh-agents --json output (wins over CMD)
+  HNGH_HUD_SENSE_CMD     default: ~/.local/bin/hngh-sense --json
+  HNGH_HUD_FEED_DIR      default: ~/.local/state/hngh/dashboard
+  HNGH_HUD_DF_FILE       file holding `df -P` output (else runs df -P /mnt/2tb)
+  HNGH_HUD_VRAM_USED     default: /sys/class/drm/card1/device/mem_info_vram_used
+  HNGH_HUD_VRAM_TOTAL    default: /sys/class/drm/card1/device/mem_info_vram_total
+  HNGH_HUD_QUESTS        default: ~/Projects/omp-work/PLANS/2026-10-26-storage-rust-decision.md
+  HNGH_HUD_BILI_CMD      default: command -v bili >/dev/null && echo yes
+"""
+import argparse
+import glob
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+W = 100
+LEFT_W = 58
+LEFT_IN = 57   # inner cols left of the mid bar (bar at col 58)
+RIGHT_IN = 40  # inner cols right of the mid bar
+CRIT_DISK = 90  # percent — 2TB chunk-exhaustion blocker flashes crit here
+
+C = {"crit": "\033[31m", "warn": "\033[33m", "green": "\033[32m",
+     "dim": "\033[2m", "bold": "\033[1m", "reset": "\033[0m"}
+
+def envkey(k, d):
+    return os.environ.get(k, d)
+
+def run(cmd, timeout=15):
+    try:
+        p = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+        return p.stdout if p.returncode == 0 else None
+    except Exception:
+        return None
+
+def jload(out):
+    if not out:
+        return None
+    try:
+        return json.loads(out)
+    except Exception:
+        return None
+
+# ---- sources -----------------------------------------------------------
+
+def src_sessions():
+    d = jload(run(envkey("HNGH_HUD_SESSIONS_CMD",
+                         os.path.expanduser("~/.local/bin/hngh-sessions --json"))))
+    return d if isinstance(d, list) else None
+
+def src_agents():
+    p = os.environ.get("HNGH_HUD_AGENTS_JSON")
+    if p:
+        try:
+            with open(p, encoding="utf-8", errors="replace") as fh:
+                out = fh.read()
+        except OSError:
+            return None
+    else:
+        out = run(envkey("HNGH_HUD_AGENTS_CMD",
+                         os.path.expanduser("~/.local/bin/hngh-agents --json")))
+    d = jload(out)
+    return d if isinstance(d, list) else None
+
+def src_sense():
+    d = jload(run(envkey("HNGH_HUD_SENSE_CMD",
+                         os.path.expanduser("~/.local/bin/hngh-sense --json"))))
+    return d if isinstance(d, dict) else None
+
+def src_feed():
+    out = []
+    try:
+        for f in sorted(glob.glob(os.path.join(envkey("HNGH_HUD_FEED_DIR",
+                        os.path.expanduser("~/.local/state/hngh/dashboard")), "*.jsonl"))):
+            with open(f, encoding="utf-8", errors="replace") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        r = json.loads(line)
+                    except Exception:
+                        continue
+                    if isinstance(r, dict):
+                        out.append(r)
+    except OSError:
+        return None
+    return out or None
+
+def src_df():
+    txt = None
+    p = os.environ.get("HNGH_HUD_DF_FILE")
+    if p:
+        try:
+            with open(p, encoding="utf-8", errors="replace") as fh:
+                txt = fh.read()
+        except OSError:
+            return None
+    else:
+        txt = run("df -P /mnt/2tb")
+    if not txt:
+        return None
+    lines = [l for l in txt.splitlines() if l.strip()]
+    if len(lines) < 2:
+        return None
+    m = re.search(r"(\d+)%\s+\S+$", lines[-1])
+    return int(m.group(1)) if m else None
+
+def read_int(path):
+    try:
+        with open(path) as fh:
+            return int(fh.readline().strip())
+    except (OSError, ValueError):
+        return None
+
+def src_quests():
+    p = envkey("HNGH_HUD_QUESTS",
+               os.path.expanduser("~/Projects/omp-work/PLANS/2026-10-26-storage-rust-decision.md"))
+    quests = []
+    try:
+        with open(p, encoding="utf-8", errors="replace") as fh:
+            in_q = False
+            for line in fh:
+                if "Decision / slice" in line:
+                    in_q = True
+                    continue
+                if in_q:
+                    if not line.startswith("|"):
+                        break
+                    cells = [c.strip() for c in line.strip().strip("|").split("|")]
+                    if cells and cells[0] and not cells[0].startswith("-"):
+                        quests.append(cells[0])
+    except OSError:
+        return None
+    return quests or None
+
+def src_decisions():
+    p = os.path.join(envkey("HNGH_HUD_FEED_DIR",
+                            os.path.expanduser("~/.local/state/hngh/dashboard")),
+                     "decisions.jsonl")
+    rows = []
+    try:
+        with open(p, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    r = json.loads(line)
+                except Exception:
+                    continue
+                if isinstance(r, dict) and r.get("item"):
+                    rows.append(r)
+    except OSError:
+        return None
+    return rows or None
+
+# ---- render helpers ----------------------------------------------------
+
+def vis(s):
+    return len(re.sub(r"\033\[[0-9;]*m", "", s))
+
+def trunc(s, w):
+    s = s.replace("\n", " ")
+    return s if len(s) <= w else s[: max(0, w - 1)] + "…"
+
+def pad(s, w):
+    return s + " " * max(0, w - vis(s))
+
+def bar(frac, n=10):
+    if frac is None:
+        return "—".ljust(n)
+    frac = max(0.0, min(1.0, frac))
+    k = round(frac * n)
+    return "█" * k + "░" * (n - k)
+
+def state_mark(age_min):
+    if age_min is None:
+        return (C["dim"], "·?", "—")
+    if age_min < 15:
+        return (C["green"], "●ACTIVE", "active")
+    if age_min < 120:
+        return (C["warn"], "●warm", "warm")
+    return (C["dim"], "○idle", "idle")
+
+def agent_mark(a):
+    # live agent dot from mtime age (age_min), same thresholds as sessions
+    age = None
+    if isinstance(a, dict):
+        try:
+            age = float(a.get("age_min"))
+        except (TypeError, ValueError):
+            age = None
+    return state_mark(age)
+
+def hcell(t):
+    return C["bold"] + " " + t + C["reset"]
+
+def top(t):
+    return "┌" + pad(" " + t + " " + "─" * max(0, 94 - vis(t)), W - 2) + "┐"
+
+def midl(lt, rt):
+    return "├" + pad(" " + lt + " " + "─" * max(0, LEFT_IN - 3 - vis(lt)), LEFT_IN) + "┬" \
+         + pad(" " + rt + " " + "─" * max(0, RIGHT_IN - 3 - vis(rt)), RIGHT_IN) + "┤"
+
+def midr():
+    return "├" + "─" * LEFT_IN + "┴" + "─" * RIGHT_IN + "┤"
+
+def bot():
+    return "└" + "─" * (W - 2) + "┘"
+
+def row_l(t):
+    return "│" + pad(" " + t, W - 2) + "│"
+
+def rows_pair(l, r):
+    return "│" + pad(" " + l, LEFT_IN) + "│" + pad(" " + r, RIGHT_IN) + "│"
+
+# ---- frame -------------------------------------------------------------
+
+def frame():
+    t0 = time.time()
+    sessions = src_sessions()
+    agents = src_agents()
+    sense = src_sense()
+    feed = src_feed()
+    dfp = src_df()
+    decisions = src_decisions()
+    quests = src_quests()
+
+    # POSTURE
+    load1 = None
+    try:
+        load1 = os.getloadavg()[0]
+    except OSError:
+        pass
+    mems = None
+    if sense and isinstance(sense.get("system_stats"), str):
+        m = re.search(r"memory\s+([\d.]+)GB\s*/\s*(\d+)GB", sense["system_stats"])
+        if m:
+            mems = (float(m.group(1)), int(m.group(2)))
+    vu = read_int(envkey("HNGH_HUD_VRAM_USED", "/sys/class/drm/card1/device/mem_info_vram_used"))
+    vt = read_int(envkey("HNGH_HUD_VRAM_TOTAL", "/sys/class/drm/card1/device/mem_info_vram_total"))
+
+    load_s = f"{load1:.2f}" if load1 is not None else "—"
+    mem_s = f"mem {mems[0]:.0f}/{mems[1]}G" if mems else "mem —"
+    if vu is not None and vt:
+        vfrac = vu / vt
+        vram = f"VRAM {bar(vfrac)} {vu/2**30:.1f}/{vt/2**30:.0f}G"
+    else:
+        vram = f"VRAM {bar(None)} —"
+    if dfp is None:
+        disk = "2TB —"
+    elif dfp >= CRIT_DISK:
+        disk = C["crit"] + C["bold"] + f"2TB {dfp}% ▲CRIT" + C["reset"]
+    else:
+        disk = f"2TB {dfp}%"
+    bili = "bili ✓" if run(envkey("HNGH_HUD_BILI_CMD", "command -v bili >/dev/null && echo yes")) is not None else "bili —"
+    posture = f" load {load_s} │ {mem_s} │ {vram} │ {disk} │ {bili} "
+
+    lines = [top("POSTURE"), row_l(posture)]
+
+    # SESSIONS (left) / EVENT FEED (right)
+    lines.append(midl("SESSIONS", "EVENT FEED"))
+    lines.append(rows_pair(hcell("STATE  ROLE/ID           AGE  EVENT"),
+                           hcell("TIME  SEV  EVENT")))
+    srows = []
+    if sessions:
+        for r in sessions[:9]:
+            if not isinstance(r, dict):
+                continue
+            col, mark, _ = state_mark(r.get("age_minutes"))
+            mkpad = mark + " " * max(0, 8 - len(mark))
+            srows.append(
+                f"{col}{mkpad}{C['reset']} {trunc(str(r.get('role','?'))+'/'+str(r.get('session','?')), 19):<19} "
+                f"{fmt_age(r.get('age_minutes')):<4} {trunc(str(r.get('event','?')), 16)}")
+    if agents:
+        for a in agents:
+            if len(srows) >= 9:
+                break
+            if not isinstance(a, dict):
+                continue
+            col, mark, _ = agent_mark(a)
+            srows.append(f"{col}{mark}{C['reset']} {trunc(str(a.get('id', '?')), 28)}")
+    arows = []
+    if feed:
+        for r in sorted(feed, key=lambda x: str(x.get("ts", "")), reverse=True)[:9]:
+            sev = str(r.get("severity", "info"))
+            col = C.get(sev, "")
+            ts = str(r.get("ts", ""))[11:16] or "—:—"
+            item = trunc(str(r.get("writer", "?")) + ": " + str(r.get("item", "?")), 26)
+            arows.append((ts, col, sev, item))
+    n = max(len(srows), len(arows), 1)
+    for i in range(n):
+        l = srows[i] if i < len(srows) else " ".ljust(LEFT_W - 3) if srows or sessions is not None else "—"
+        if i < len(arows):
+            ts, col, sev, item = arows[i]
+            r = f"{C['dim']}{ts}{C['reset']} {col}{trunc(sev,4):<4}{C['reset']} {item}"
+        else:
+            r = ""
+        if isinstance(l, str) and i >= len(srows):
+            l = ""
+        lines.append(rows_pair(l, r))
+    lines.append(midr())
+
+    # LINES strip — aggregate ledger by project line
+    if sessions:
+        per = {}
+        for r in sessions:
+            if not isinstance(r, dict):
+                continue
+            for ln in r.get("lines") or []:
+                d = per.setdefault(str(ln), [1e9, 0])
+                d[0] = min(d[0], r.get("age_minutes") or 0)
+                d[1] += 1
+        cells = []
+        for ln, (age, cnt) in sorted(per.items()):
+            col, _, word = state_mark(age)
+            cells.append(f"{col}●{C['reset']} {ln} {word} {fmt_age(age)} ({cnt})")
+        lines.append(row_l(hcell("LINES") + "  " + trunc(" │ ".join(cells), W - 12)))
+    else:
+        lines.append(row_l(hcell("LINES") + "  —"))
+
+    # QUESTS
+    if decisions:
+        qrows = []
+        for r in decisions[:6]:
+            item = str(r.get("item", "?"))
+            sev = str(r.get("severity", "info"))
+            if sev == "crit":
+                qrows.append(C["crit"] + trunc(item, 84) + C["reset"])
+            elif item.startswith("RULED —"):
+                qrows.append(C["dim"] + "\033[9m" + trunc(item, 84) + "\033[0m" + C["reset"])
+            elif item.startswith("OPEN —"):
+                qrows.append(C["warn"] + trunc(item, 84) + C["reset"])
+            else:
+                qrows.append(trunc(item, 84))
+        lines.append(row_l(hcell("QUESTS") + "  " + qrows[0]))
+        for q in qrows[1:4]:
+            lines.append(row_l("        " + q))
+    elif quests:
+        lines.append(row_l(hcell("QUESTS") + "  " + trunc(" · ".join(quests), W - 12)))
+    else:
+        lines.append(row_l(hcell("QUESTS") + "  —"))
+
+    while len(lines) < 23:
+        lines.append(row_l(""))
+    lines.append(bot())
+    lines.append(C["dim"] + f" hngh-hud · {time.strftime('%H:%M:%S')} · {time.time()-t0:.2f}s build" + C["reset"])
+    return "\n".join(lines)
+
+def fmt_age(m):
+    if m is None:
+        return "—"
+    if m < 60:
+        return f"{int(m)}m"
+    if m < 2880:
+        return f"{int(m // 60)}h"
+    return f"{int(m // 1440)}d"
+
+def main():
+    ap = argparse.ArgumentParser(add_help=True)
+    ap.add_argument("--interval", type=float, default=2.0)
+    ap.add_argument("--once", action="store_true")
+    try:
+        args = ap.parse_args()
+    except SystemExit:
+        raise SystemExit(0)
+    while True:
+        out = frame()
+        if args.once:
+            sys.stdout.write(out + "\n")
+        else:
+            sys.stdout.write("\033[2J\033[H" + out + "\n")
+        sys.stdout.flush()
+        if args.once:
+            return
+        try:
+            time.sleep(max(0.5, args.interval))
+        except KeyboardInterrupt:
+            return
+
+if __name__ == "__main__":
+    try:
+        main()
+    except BrokenPipeError:
+        raise SystemExit(0)
+    except Exception:
+        raise SystemExit(0)  # reader convention: never crash the frame

@@ -1,0 +1,296 @@
+#!/bin/bash
+# hngh-look — grounding reader for a screenshot PNG (cu-stack design §2).
+#
+# Lanes (measured 2026-10-28): local — unsloth Ornith-1.5-9B vision, on-box,
+# no egress; ocr — tesseract text-only, fastest; cloud — gemini-3.8-flash
+# behind the per-capture consent gate (zai/minimax are bili-routed and answer
+# agentic tool_calls, not usable for grounding). Fara is out of scope by
+# operator ruling (not re-armed).
+#
+# Usage: hngh-look <png> ["question"] [--lane local|ocr|cloud] [--lines N] [--json] [--yes]
+# Exit: 0 always (a degraded read is reported, not an error — house reader
+# pattern). Never prints credential values.
+# Cloud egress is gated per operator ruling 2026-10-28 ("cloud allowed,
+# per-capture gate"): --lane cloud requires either an explicit --yes on this
+# call or a capture that was taken through the gated hngh-act screen.capture
+# action (its index entry names the asker). Anything else is refused locally.
+set -u
+
+state_dir=${HNGH_STATE_DIR:-$HOME/.local/state/hngh}
+env_dir=${HNGH_ENV_DIR:-$HOME/.config/environment.d}
+shots_dir=${HNGH_SHOTS_DIR:-$state_dir/shots}
+lanes_file=$state_dir/look/lanes.json
+lane=ocr
+lines=60
+as_json=0
+yes_flag=0
+png=
+question=
+
+usage() {
+	echo "usage: hngh-look <png> [\"question\"] [--lane ocr|cloud] [--lines N] [--json] [--yes]" >&2
+	exit 0
+}
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--lane) lane=${2:?}; shift 2 ;;
+		--lines) lines=${2:?}; shift 2 ;;
+		--json) as_json=1; shift ;;
+		--yes) yes_flag=1; shift ;;
+		-h | --help) usage ;;
+		-*) usage ;;
+		*) if [ -z "$png" ]; then png=$1; else question=$1; fi; shift ;;
+	esac
+done
+[[ $lines =~ ^[0-9]+$ ]] || lines=60
+
+# one-line JSON string via python (keeps control chars out of output)
+jstr() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
+
+json_out() { # json_out <lane> <ok> <text> <note>
+	printf '{"lane":"%s","ok":%s,"text":%s,"note":%s}\n' "$1" "$2" "$(jstr "$3")" "$(jstr "$4")"
+}
+
+if [ -z "$png" ]; then
+	echo "usage: hngh-look <png> [\"question\"] [--lane local|ocr|cloud] [--lines N] [--json] [--yes]" >&2
+	[ $as_json = 1 ] && json_out "$lane" false "" "no image given"
+	exit 0
+fi
+
+if [ ! -f "$png" ]; then
+	echo "hngh-look: no such file: $png"
+	[ $as_json = 1 ] && json_out "$lane" false "" "no such file: $png"
+	exit 0
+fi
+
+case "$lane" in
+local)
+	# Lane A' — local multimodal via the unsloth server (verified 2026-10-28:
+	# Ornith-1.5-9B describes real screenshots; pixels never leave the box)
+	local_model=${HNGH_LOOK_LOCAL_MODEL:-mradermacher/Ornith-1.5-9B-uncensored-GGUF}
+	local_url=${HNGH_LOOK_LOCAL_URL:-http://127.0.0.1:8888/v1/chat/completions}
+	env_u=${HNGH_ENV_DIR:-$HOME/.config/environment.d}/70-unsloth.conf
+	if [ ! -f "$env_u" ]; then
+		note="(local lane unavailable — no $env_u)"
+		[ $as_json = 1 ] && json_out local false "" "$note" || printf '%s\n' "$note"
+		exit 0
+	fi
+	ukey=$(set -a; . "$env_u"; eval 'printf %s "$UNSLOTH_API_KEY"')
+	# downscale large frames: the local server is size-sensitive and a 2 MB PNG
+	# is slow to ingest; 1600px wide is ample for grounding
+	local_src=$png
+	small_file=
+	if command -v convert >/dev/null 2>&1; then
+		small_file=$(mktemp /tmp/hngh-look-small-XXXXXX.png)
+		if convert "$png" -resize '1600x>' -strip "$small_file" 2>/dev/null && [ -s "$small_file" ]; then
+			local_src=$small_file
+		fi
+	fi
+	b64=$(base64 -w0 "$local_src" 2>/dev/null)
+	b64_file=$(mktemp /tmp/hngh-look-b64-XXXXXX)
+	printf '%s' "$b64" > "$b64_file"
+	payload_file=$(mktemp /tmp/hngh-look-payload-XXXXXX)
+	MODEL="$local_model" B64FILE="$b64_file" QUESTION="$question" python3 - <<'PY' > "$payload_file"
+import json, os
+b64 = open(os.environ["B64FILE"]).read()
+print(json.dumps({"model": os.environ["MODEL"], "max_tokens": 3000, "messages": [
+    {"role": "user", "content": [
+        {"type": "image_url", "image_url": {"url": "data:image/png;base64," + b64}},
+        {"type": "text", "text": os.environ.get("QUESTION") or "Describe this image: what is shown, and transcribe any visible text exactly."},
+    ]}]}))
+PY
+	body_file=$(mktemp /tmp/hngh-look-body-XXXXXX)
+	status=$(curl -sS --max-time 180 -o "$body_file" -w '%{http_code}' \
+		-H "Authorization: Bearer $ukey" -H 'Content-Type: application/json' \
+		--data-binary "@$payload_file" "$local_url" 2>/dev/null)
+	rm -f "$payload_file" "$b64_file"
+	answer=$(python3 -c 'import json,sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print(d["choices"][0]["message"]["content"].strip())
+except Exception:
+    pass' "$body_file")
+	# a cold local model can answer 200 with an empty completion: retry once
+	if [ -z "$answer" ]; then
+		sleep 2
+		curl -sS --max-time 180 -o "$body_file" \
+			-H "Authorization: Bearer $ukey" -H 'Content-Type: application/json' \
+			--data-binary "@$payload_file" "$local_url" 2>/dev/null
+		answer=$(python3 -c 'import json,sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print(d["choices"][0]["message"]["content"].strip())
+except Exception:
+    pass' "$body_file")
+	fi
+	rm -f "$payload_file" "$b64_file"
+	[ -n "$small_file" ] && rm -f "$small_file"
+	if [ -z "$answer" ]; then
+		answer="(unavailable — local lane http ${status:-000}: $(head -c 120 "$body_file" 2>/dev/null | tr -d '\n' | sed 's/[A-Za-z0-9_-]\{24,\}/<redacted>/g'))"
+	fi
+	rm -f "$body_file"
+	if [ $as_json = 1 ]; then
+		case "$answer" in
+		"(unavailable"*) json_out local false "" "$answer" ;;
+		*) json_out "local/$local_model" true "$answer" "" ;;
+		esac
+	else
+		printf '%s\n' "$answer" | head -n "$lines"
+	fi
+	;;
+ocr)
+	text=$(tesseract "$png" - 2>/dev/null |
+		sed -e 's/[[:space:]]\+$//' -e 's/^[[:space:]]\+//' -e '/^$/d' | head -n "$lines")
+	if [ -z "$text" ]; then
+		text="(unavailable)"
+	fi
+	if [ $as_json = 1 ]; then
+		json_out ocr true "$text" ""
+	else
+		printf '%s\n' "$text"
+	fi
+	;;
+cloud)
+	# per-capture consent gate (operator ruling 2026-10-28)
+	consent_ok=$yes_flag
+	if [ "$consent_ok" != 1 ] && [ -d "$shots_dir" ]; then
+		asker=$(python3 - "$shots_dir" "$png" <<'PY'
+import json, os, sys
+best = None
+for root, _dirs, files in os.walk(sys.argv[1]):
+    if "index.jsonl" not in files:
+        continue
+    try:
+        for line in open(os.path.join(root, "index.jsonl")):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except Exception:
+                continue
+            if rec.get("path") == sys.argv[2]:
+                best = rec
+    except Exception:
+        pass
+print((best or {}).get("asker", ""))
+PY
+)
+		[ "$asker" = "hngh-act" ] && consent_ok=1
+	fi
+	if [ "$consent_ok" != 1 ]; then
+		note="(cloud egress refused — per-capture consent required: pass --yes, or capture via the gated hngh-act screen.capture)"
+		[ $as_json = 1 ] && json_out cloud false "" "$note" || printf '%s\n' "$note"
+		exit 0
+	fi
+	# first cloud lane whose capability test passed (gemini first — verified
+	# vision-capable 2026-10-28; zai/minimax are bili-routed upstreams and are
+	# not reachable by a direct probe from this host)
+	provider=$(python3 - "$lanes_file" <<'PY'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+for name in ("gemini", "zai", "minimax"):
+    if d.get("lanes", {}).get(name, {}).get("ok"):
+        print(name)
+        break
+PY
+) || provider=
+	if [ -z "$provider" ]; then
+		note="(lane B untested — run hngh-look-laneprobe)"
+		if [ $as_json = 1 ]; then
+			json_out cloud false "" "$note"
+		else
+			printf '%s\n' "$note"
+		fi
+		exit 0
+	fi
+
+	model=$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["lanes"][sys.argv[2]].get("model",""))' "$lanes_file" "$provider")
+	base=$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["lanes"][sys.argv[2]].get("baseUrl","").rstrip("/"))' "$lanes_file" "$provider")
+	[ -n "$question" ] || question="Describe this image: what is shown, and transcribe any visible text exactly."
+
+	# credential: source the house env file, use the var, never print it
+	case "$provider" in
+	gemini) env_file=$env_dir/82-gemini.conf; key_var=GEMINI_API_KEY ;;
+	zai) env_file=$env_dir/84-zai.conf; key_var=ZAI_API_KEY ;;
+	minimax) env_file=$env_dir/80-minimax.conf; key_var=MINIMAX_API_KEY ;;
+	esac
+	if [ ! -f "$env_file" ]; then
+		note="(lane B unavailable — no credential file for $provider)"
+		[ $as_json = 1 ] && json_out cloud false "" "$note" || printf '%s\n' "$note"
+		exit 0
+	fi
+	key=$(set -a; . "$env_file"; eval "printf '%s' \"\$$key_var\"")
+	if [ -z "$key" ]; then
+		note="(lane B unavailable — $key_var empty)"
+		[ $as_json = 1 ] && json_out cloud false "" "$note" || printf '%s\n' "$note"
+		exit 0
+	fi
+
+	b64=$(base64 -w0 "$png" 2>/dev/null)
+	# a real screenshot's base64 exceeds ARG_MAX as an argv element: pass a path
+	b64_file=$(mktemp /tmp/hngh-look-b64-XXXXXX)
+	printf '%s' "$b64" > "$b64_file"
+	# MITM-whitelisted upstreams are reachable only through the bili proxy
+	proxy_args=()
+	case "$base" in
+		*api.z.ai*|*api.minimax.io*)
+			bili_port=$(jq -r '.lanes.omp // empty' "$HOME/.local/state/billion-context/port-zone.json" 2>/dev/null)
+			[ -n "$bili_port" ] && proxy_args=(--proxy "http://127.0.0.1:$bili_port" -k)
+			;;
+	esac
+	payload=$(python3 - "$b64_file" "$question" "$model" <<'PY'
+import json, sys
+b64 = open(sys.argv[1]).read()
+body = {
+    "model": sys.argv[3],
+    "max_tokens": 3000,
+    "messages": [{
+        "role": "user",
+        "content": [
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64," + b64}},
+            {"type": "text", "text": sys.argv[2]},
+        ],
+    }],
+}
+print(json.dumps(body))
+PY
+) || payload=
+	rm -f "$b64_file"
+
+	payload_file=$(mktemp /tmp/hngh-look-payload-XXXXXX)
+	printf '%s' "$payload" > "$payload_file"
+	body_file=$(mktemp /tmp/hngh-look-body-XXXXXX)
+	status=$(curl -sS --max-time 120 -o "$body_file" -w '%{http_code}' \
+		-H "Authorization: Bearer $key" -H 'Content-Type: application/json' \
+		"${proxy_args[@]}" --data-binary "@$payload_file" "$base/chat/completions" 2>/dev/null)
+	rm -f "$payload_file"
+	answer=$(python3 -c 'import json,sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print(d["choices"][0]["message"]["content"].strip())
+except Exception:
+    pass' "$body_file")
+	if [ -z "$answer" ]; then
+		answer="(unavailable — http ${status:-000})"
+	fi
+	rm -f "$body_file"
+	if [ $as_json = 1 ]; then
+		case "$answer" in
+		"(unavailable"*) json_out "cloud/$provider" false "" "$answer" ;;
+		*) json_out "cloud/$provider" true "$answer" "" ;;
+		esac
+	else
+		printf '%s\n' "$answer" | head -n "$lines"
+	fi
+	;;
+*)
+	note="unknown lane: $lane (ocr|cloud)"
+	[ $as_json = 1 ] && json_out "$lane" false "" "$note" || printf '%s\n' "$note"
+	;;
+esac
+exit 0

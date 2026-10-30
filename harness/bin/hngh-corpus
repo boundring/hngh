@@ -1,0 +1,560 @@
+#!/usr/bin/env python3
+"""hngh-corpus — transcript -> Q/A training-data builder.
+
+Reads the omp session index (SQLite) and rebuilds trainable question/answer
+pairs from the indexed agent transcripts.
+
+  build [--limit N] [--json]   rebuild qa-pairs.jsonl (newest sessions first)
+  stats [--json]               counts + provenance span over the built corpus
+  verify [--json]              check every record's source still matches
+
+Secret screening is enforced at WRITE time: a pair whose prompt or response
+matches a secret pattern is refused outright (dropped, not masked), counted in
+stats as `redacted_secrets`, and logged to refused.jsonl with {id,
+pattern_class, source_path} only.
+
+Provenance is recorded per record; quality flags annotate, never exclude.
+Readers (stats, verify) never print transcript content — counts and paths only.
+"""
+
+import json
+import os
+import re
+import sqlite3
+import sys
+
+STATE_DIR = os.environ.get("HNGH_CORPUS_DIR", os.path.expanduser("~/.local/state/hngh/corpus"))
+INDEX_DB = os.environ.get(
+    "HNGH_CORPUS_INDEX_DB",
+    os.path.expanduser("~/.local/state/omp-session-index/sessions.db"))
+OUT_FILE = os.environ.get("HNGH_CORPUS_OUT", os.path.join(STATE_DIR, "qa-pairs.jsonl"))
+REFUSED_FILE = os.environ.get(
+    "HNGH_CORPUS_REFUSED", os.path.join(STATE_DIR, "refused.jsonl"))
+ENVCONF_DIR = os.environ.get(
+    "HNGH_CORPUS_ENVCONF_DIR", os.path.expanduser("~/.config/environment.d"))
+
+MIN_RESPONSE_CHARS = 200
+
+# harness-shaped prompts are task assignments, not human questions; flagged so a
+# QA training set can filter to genuine human<->agent exchanges
+_ASSIGNMENT_RE = re.compile(
+    r"Complete assignment thoroughly|@CHARTER\.md|^Charter:|^\s*#\s*Goal\b",
+    re.IGNORECASE)
+
+# Path patterns (regex) whose transcripts must never enter the corpus.
+# Default is empty: the two known-sensitive 2026-10-27 transcripts were redacted
+# in place on 2026-10-28, so nothing needs excluding today, and no heuristic
+# exclusion is applied beyond this explicit list. Matches are reported, never
+# silently dropped. Override with HNGH_CORPUS_SENSITIVE (semicolon separated).
+SENSITIVE_PATTERNS = [
+    p for p in os.environ.get("HNGH_CORPUS_SENSITIVE", "").split(";") if p.strip()
+]
+
+# --- secret screening --------------------------------------------------------
+# Pattern classes, checked in order; the first hit names the refusal class.
+# Value-shape rules keep code and placeholders out: a value must be a single
+# unbroken token, long enough, and not a known placeholder.
+SECRET_PATTERNS = [
+    # *API_KEY= / API_KEY: with a value present
+    ("api_key_assignment", re.compile(
+        r"(?i)\b[A-Za-z0-9_.-]*API[_-]?KEY\b\s*[=:]\s*[\"']?([A-Za-z0-9_.+/=-]{16,})")),
+    # Authorization: Bearer <token>
+    ("bearer_token", re.compile(
+        r"(?i)\bAuthorization\s*:\s*Bearer\s+([A-Za-z0-9._~+/=-]{16,})")),
+]
+
+PLACEHOLDER_RE = re.compile(
+    r"(?i)^(?:undefined|null|none|true|false|changeme|placeholder|dummy|example|test|"
+    r"your[_-]?\w*|xxx+|<[^>]*>|\{\{.*\}\}|\$\{.*\})$")
+
+# Long opaque runs: >= 24 chars of base32/hex/base64url charset. Shape rules
+# keep plain prose, file paths, hyphenated names and UUIDs out — only blobs
+# (hex digests, base64/base32 secrets, no-separator tokens) trip the screen.
+_OPAQUE_RE = re.compile(r"[A-Za-z0-9_-]{24,}")
+_HEX_RE = re.compile(r"\A[a-fA-F0-9]+\Z")
+
+
+def _entropy(run):
+    from math import log2
+    counts = {}
+    for c in run:
+        counts[c] = counts.get(c, 0) + 1
+    n = len(run)
+    return -sum((v / n) * log2(v / n) for v in counts.values())
+
+
+def _opaque_run(text):
+    """Return the first long opaque run in text, or None."""
+    for m in _OPAQUE_RE.finditer(text):
+        run = m.group(0)
+        if len(run) < 24:
+            continue
+        has_digit = any(c.isdigit() for c in run)
+        has_lower = any(c.islower() for c in run)
+        has_upper = any(c.isupper() for c in run)
+        has_sep = any(c in "_-" for c in run)
+        if not has_digit:
+            continue
+        if len(set(run)) < 12:
+            continue
+        if _entropy(run) < 3.5:
+            continue
+        if not has_sep:
+            # uninterrupted token: hex digest or base64/base32 blob
+            return run
+        if has_lower and has_upper and sum(1 for c in run if c in "_-") <= 2 and len(run) >= 28:
+            # base64url blob: mixed case, digits, few separators
+            return run
+        if (has_lower or has_upper) and _HEX_RE.match(run) and len(run) >= 32:
+            # hex digest with dashes/underscores stripped in by the tokenizer
+            return run
+    return None
+
+
+def _envconf_values():
+    """Secret values configured in ~/.config/environment.d/*.conf (never printed)."""
+    values = []
+    try:
+        names = sorted(os.listdir(ENVCONF_DIR))
+    except OSError:
+        return values
+    for name in names:
+        if not name.endswith(".conf"):
+            continue
+        try:
+            with open(os.path.join(ENVCONF_DIR, name), encoding="utf-8", errors="replace") as fh:
+                for raw in fh:
+                    line = raw.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key = line.split("=", 1)[0].strip()
+                    val = line.split("=", 1)[1].strip().strip("\"'")
+                    # path-shaped values (CARGO_TARGET_DIR etc.) are not secrets,
+                    # and account-style names are identifiers, not credentials
+                    if val.startswith(("/", "~")):
+                        continue
+                    secret_named = re.search(
+                        r"(?i)(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)", key)
+                    if len(val) >= 20 or (secret_named and len(val) >= 12):
+                        values.append(val)
+        except OSError:
+            continue
+    return values
+
+
+def screen(prompt, response, env_values):
+    """Return the secret class that refuses this pair, or None."""
+    for name, rx in SECRET_PATTERNS:
+        for text in (prompt, response):
+            for mm in rx.finditer(text):
+                value = mm.group(1).strip().strip("\"'")
+                if len(value) < 16 or PLACEHOLDER_RE.match(value):
+                    continue
+                return name
+    for val in env_values:
+        if val in prompt or val in response:
+            return "env_conf_value"
+    if _opaque_run(prompt) or _opaque_run(response):
+        return "opaque_run"
+    return None
+
+
+def content_text(content):
+    """Flatten a message body to plain text (list/object/str shaped content)."""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        out = []
+        for part in content:
+            if isinstance(part, str):
+                out.append(part)
+            elif isinstance(part, dict):
+                if part.get("type") in (None, "text") and isinstance(part.get("text"), str):
+                    out.append(part["text"])
+        return "\n".join(p for p in out if p)
+    if isinstance(content, dict):
+        if isinstance(content.get("text"), str):
+            return content["text"]
+        if "content" in content:
+            return content_text(content["content"])
+        if "parts" in content:
+            return content_text(content["parts"])
+    return ""
+
+
+def row_message(row):
+    """Return the message dict of a JSONL row (nested or flat shaped)."""
+    if not isinstance(row, dict):
+        return None
+    msg = row.get("message")
+    if isinstance(msg, dict):
+        return msg
+    if "role" in row or "content" in row:
+        return row
+    return None
+
+
+def parse_transcript(path):
+    """Parse a transcript JSONL into messages + provenance."""
+    messages = []
+    line_count = 0
+    malformed = 0
+    last_ts = None
+    first_ts = None
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for lineno, raw in enumerate(fh, 1):
+            line_count = lineno
+            line = raw.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except ValueError:
+                malformed += 1
+                continue
+            msg = row_message(row)
+            if msg is None:
+                continue
+            ts = msg.get("timestamp") or (row.get("timestamp") if isinstance(row, dict) else None)
+            if isinstance(ts, str) and ts:
+                if first_ts is None:
+                    first_ts = ts
+                last_ts = ts
+            messages.append((msg.get("role"), content_text(msg.get("content")), msg, lineno))
+    return messages, {
+        "line_count": line_count,
+        "bytes": os.path.getsize(path),
+        "first_ts": first_ts,
+        "last_ts": last_ts,
+        "malformed_lines": malformed,
+    }
+
+
+def extract_pair(messages, prov):
+    """First user prompt + last assistant message of >= 200 chars."""
+    prompt = ""
+    prompt_role = None
+    prompt_line = None
+    for role, text, _msg, lineno in messages:
+        if role == "user" and text.strip():
+            prompt, prompt_role, prompt_line = text, "user", lineno
+            break
+    if not prompt:
+        for role, text, _msg, lineno in messages:
+            if role == "developer" and text.strip():
+                prompt, prompt_role, prompt_line = text, "developer", lineno
+                break
+
+    response = ""
+    response_line = None
+    last_assistant_text = ""
+    last_assistant_line = None
+    last_stop = None
+    for role, text, msg, lineno in messages:
+        if role != "assistant":
+            continue
+        if text.strip():
+            last_assistant_text = text
+            last_assistant_line = lineno
+        last_stop = msg.get("stopReason") or last_stop
+        if len(text) >= MIN_RESPONSE_CHARS:
+            response, response_line = text, lineno
+    if not response:
+        response, response_line = last_assistant_text, last_assistant_line
+
+    flags = []
+    if not prompt:
+        flags.append("no_user_prompt")
+    elif prompt_role == "developer":
+        flags.append("developer_prompt")
+    elif _ASSIGNMENT_RE.search(prompt):
+        flags.append("assignment_prompt")
+    if not response:
+        flags.append("no_response")
+    elif len(response) < MIN_RESPONSE_CHARS:
+        flags.append("short_response")
+    if prov["malformed_lines"] or last_stop in ("length", "aborted"):
+        flags.append("truncated")
+
+    span = [ln for ln in (prompt_line, response_line) if ln]
+    return prompt, response, flags, prompt_line, response_line, (min(span), max(span)) if span else None
+
+
+def build_record(row, env_values):
+    """Build one corpus record, or a refusal entry when a secret is found."""
+    path = row["path"]
+    messages, prov = parse_transcript(path)
+    prompt, response, flags, pline, rline, span = extract_pair(messages, prov)
+    session_id = row.get("session_id") or os.path.splitext(os.path.basename(path))[0]
+
+    secret_class = screen(prompt, response, env_values)
+    if secret_class:
+        return None, {"id": session_id, "pattern_class": secret_class, "source_path": path}
+
+    return {
+        "id": session_id,
+        "prompt": prompt,
+        "response": response,
+        "prompt_chars": len(prompt),
+        "response_chars": len(response),
+        "private_local_only": True,
+        "provenance": {
+            "session_id": session_id,
+            "source_path": path,
+            "line_count": prov["line_count"],
+            "bytes": prov["bytes"],
+            "first_ts": prov["first_ts"] or row.get("started_at"),
+            "last_ts": prov["last_ts"] or row.get("last_activity_at"),
+            "prompt_line": pline,
+            "response_line": rline,
+            "line_span": {"start": span[0], "end": span[1]} if span else None,
+        },
+        "quality_flags": flags,
+    }, None
+
+
+def index_rows(limit):
+    con = sqlite3.connect(f"file:{INDEX_DB}?mode=ro", uri=True)
+    try:
+        cur = con.execute(
+            "SELECT path, session_id, started_at, last_activity_at FROM agent_session "
+            "ORDER BY COALESCE(last_activity_at, started_at) DESC, id DESC")
+        rows = cur.fetchall()
+    finally:
+        con.close()
+    out = []
+    for path, session_id, started_at, last_activity_at in rows:
+        out.append({"path": path, "session_id": session_id,
+                    "started_at": started_at, "last_activity_at": last_activity_at})
+        if limit and len(out) >= limit:
+            break
+    return out
+
+
+def _atomic_write(path, lines):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        for line in lines:
+            fh.write(line + "\n")
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, path)
+
+
+def cmd_build(argv):
+    limit = 50
+    json_mode = False
+    args = list(argv)
+    while args:
+        a = args.pop(0)
+        if a == "--limit" and args:
+            limit = int(args.pop(0))
+        elif a == "--json":
+            json_mode = True
+        elif a in ("--help", "-h"):
+            print(__doc__.strip())
+            return 0
+        else:
+            print(f"warning: unrecognized argument: {a}", file=sys.stderr)
+
+    env_values = _envconf_values()
+    rows = index_rows(limit)
+    records = []
+    refused = []
+    skipped = []
+    missing = []
+    for row in rows:
+        pat = next((p for p in SENSITIVE_PATTERNS if re.search(p, row["path"])), None)
+        if pat:
+            skipped.append(row["path"])
+            continue
+        if not os.path.isfile(row["path"]):
+            missing.append(row["path"])
+            continue
+        try:
+            rec, refusal = build_record(row, env_values)
+        except OSError:
+            missing.append(row["path"])
+            continue
+        if refusal:
+            refused.append(refusal)
+        else:
+            records.append(rec)
+
+    out_dir = os.path.dirname(OUT_FILE) or "."
+    os.makedirs(out_dir, exist_ok=True)
+    try:
+        os.chmod(out_dir, 0o700)
+    except OSError:
+        pass
+    _atomic_write(OUT_FILE, [json.dumps(r, ensure_ascii=False) for r in records])
+    _atomic_write(REFUSED_FILE, [json.dumps(r, ensure_ascii=False) for r in refused])
+
+    flagged = sum(1 for r in records if r["quality_flags"])
+    assignment_shaped = sum(
+        1 for r in records if "assignment_prompt" in r.get("quality_flags", []))
+    summary = {
+        "pairs": len(records),
+        "flagged": flagged,
+        "refused_secret_pairs": len(refused),
+        "skipped_sensitive": len(skipped),
+        "missing_sources": len(missing),
+        "output": OUT_FILE,
+        "refused_log": REFUSED_FILE,
+        "limit": limit,
+    }
+    if json_mode:
+        print(json.dumps(summary, indent=1))
+    else:
+        print(f"build: {summary['pairs']} pair(s) -> {OUT_FILE} "
+              f"({flagged} flagged, {summary['refused_secret_pairs']} refused as secret, "
+              f"{len(skipped)} sensitive skipped, {len(missing)} missing)")
+        for p in skipped:
+            print(f"SKIPPED (sensitive): {p}")
+        for p in missing:
+            print(f"MISSING: {p}")
+    return 0
+
+
+def read_corpus():
+    records = []
+    if not os.path.isfile(OUT_FILE):
+        return records
+    with open(OUT_FILE, encoding="utf-8", errors="replace") as fh:
+        for raw in fh:
+            line = raw.strip()
+            if not line:
+                continue
+            try:
+                records.append(json.loads(line))
+            except ValueError:
+                continue
+    return records
+
+
+def count_refused():
+    if not os.path.isfile(REFUSED_FILE):
+        return 0
+    n = 0
+    with open(REFUSED_FILE, encoding="utf-8", errors="replace") as fh:
+        for raw in fh:
+            if raw.strip():
+                n += 1
+    return n
+
+
+def median(values):
+    if not values:
+        return 0
+    s = sorted(values)
+    n = len(s)
+    mid = n // 2
+    if n % 2:
+        return s[mid]
+    return (s[mid - 1] + s[mid]) / 2
+
+
+def cmd_stats(argv):
+    json_mode = "--json" in argv
+    records = read_corpus()
+    prompts = [r.get("prompt_chars", 0) for r in records]
+    responses = [r.get("response_chars", 0) for r in records]
+    firsts = [r["provenance"].get("first_ts") for r in records if r.get("provenance")]
+    lasts = [r["provenance"].get("last_ts") for r in records if r.get("provenance")]
+    firsts = [f for f in firsts if f]
+    lasts = [l for l in lasts if l]
+    flag_counts = {}
+    for r in records:
+        for f in r.get("quality_flags", []):
+            flag_counts[f] = flag_counts.get(f, 0) + 1
+    stats = {
+        "pairs": len(records),
+        "total_prompt_chars": sum(prompts),
+        "total_response_chars": sum(responses),
+        "median_prompt_chars": median(prompts),
+        "median_response_chars": median(responses),
+        "refused_secret_pairs": count_refused(),
+        "provenance_span": {
+            "earliest_first_ts": min(firsts) if firsts else None,
+            "latest_last_ts": max(lasts) if lasts else None,
+        },
+        "quality_flags": flag_counts,
+        "output": OUT_FILE,
+    }
+    if json_mode:
+        print(json.dumps(stats, indent=1))
+    else:
+        print(f"stats: {stats['pairs']} pair(s)")
+        print(f"  prompt chars:  total {stats['total_prompt_chars']}  median {stats['median_prompt_chars']}")
+        print(f"  response chars: total {stats['total_response_chars']}  median {stats['median_response_chars']}")
+        print(f"  refused_secret_pairs: {stats['refused_secret_pairs']}")
+        print(f"  provenance span: {stats['provenance_span']['earliest_first_ts']} .. "
+              f"{stats['provenance_span']['latest_last_ts']}")
+        for f, n in sorted(flag_counts.items()):
+            print(f"  flag {f}: {n}")
+    return 0
+
+
+def cmd_verify(argv):
+    json_mode = "--json" in argv
+    records = read_corpus()
+    drift = []
+    checked = 0
+    for rec in records:
+        prov = rec.get("provenance") or {}
+        path = prov.get("source_path")
+        if not path:
+            drift.append({"id": rec.get("id"), "reason": "no_source_path", "path": None})
+            continue
+        if not os.path.isfile(path):
+            drift.append({"id": rec.get("id"), "reason": "missing_source", "path": path})
+            continue
+        checked += 1
+        actual = 0
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for _ in fh:
+                actual += 1
+        if prov.get("line_count") is not None and actual != prov["line_count"]:
+            drift.append({"id": rec.get("id"), "reason": "line_count_mismatch", "path": path,
+                          "expected": prov.get("line_count"), "actual": actual})
+    result = {"records": len(records), "checked": checked, "drift": drift,
+              "redacted_secrets": count_refused()}
+    if json_mode:
+        print(json.dumps(result, indent=1))
+    else:
+        print(f"verify: {len(records)} record(s), {checked} source(s) present, {len(drift)} drift")
+        for d in drift:
+            extra = ""
+            if d["reason"] == "line_count_mismatch":
+                extra = f" (index {d['expected']} != actual {d['actual']})"
+            print(f"DRIFT {d['reason']}: {d.get('path')}{extra}")
+    return 0
+
+
+def main(argv):
+    if not argv:
+        print(__doc__.strip())
+        return 1
+    cmd, rest = argv[0], argv[1:]
+    if cmd == "build":
+        return cmd_build(rest)
+    if cmd == "stats":
+        return cmd_stats(rest)
+    if cmd == "verify":
+        return cmd_verify(rest)
+    if cmd in ("-h", "--help", "help"):
+        print(__doc__.strip())
+        return 0
+    print(f"hngh-corpus: unknown subcommand: {cmd}", file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except BrokenPipeError:
+        sys.exit(0)
+    except Exception as e:
+        print(f"hngh-corpus: {e}", file=sys.stderr)
+        sys.exit(1)

@@ -1,0 +1,80 @@
+#!/bin/bash
+# hngh-quota-selfcheck — assert the quota ledger pair.
+# Sandbox: HNGH_QUOTAS_DIR is overridden to a temp dir; the real ledger is untouched.
+set -u
+NOTE="$(dirname "$(readlink -f "$0")")/hngh-quota-note"
+READ="$(dirname "$(readlink -f "$0")")/hngh-quota"
+fails=0
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+# 1. reader on missing ledger: clean report, exit 0
+export HNGH_QUOTAS_DIR="$tmp/missing"
+out=$("$READ" 2>&1); rc=$?
+[[ $rc == 0 && -n "$out" ]] && echo "ok: reader: missing ledger exits 0 with report" || { echo "FAIL: missing ledger"; fails=$((fails + 1)); }
+
+# 2. empty ledger: same
+mkdir -p "$tmp/empty"
+HNGH_QUOTAS_DIR="$tmp/empty" out=$("$READ" 2>&1); rc=$?
+[[ $rc == 0 && -n "$out" ]] && echo "ok: reader: empty ledger exits 0 with report" || { echo "FAIL: empty ledger"; fails=$((fails + 1)); }
+
+# 3. writer rejects: bad usage (exit 2), non-integer (exit 1)
+export HNGH_QUOTAS_DIR="$tmp/data"
+"$NOTE" >/dev/null 2>&1; [[ $? == 2 ]] \
+	&& echo "ok: note: usage error exits 2" || { echo "FAIL: note: usage error exits 2"; fails=$((fails + 1)); }
+"$NOTE" --service s1 >/dev/null 2>&1; [[ $? == 2 ]] \
+	&& echo "ok: note: missing used/total exits 2" || { echo "FAIL: note: missing used/total exits 2"; fails=$((fails + 1)); }
+"$NOTE" --service s1 --used abc --total 10 >/dev/null 2>&1; [[ $? == 1 ]] \
+	&& echo "ok: note: non-integer used exits 1" || { echo "FAIL: note: non-integer used exits 1"; fails=$((fails + 1)); }
+
+# 4. round trip: store two services
+"$NOTE" --service xiaomi --used 10 --total 20 --plan "Max Monthly" --source selfcheck >/dev/null
+"$NOTE" --service zai --used 75 --total 100 >/dev/null
+ckf() { # ckf <desc> <actual> <expected>
+	if [[ "$2" == "$3" ]]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1 (got: $2, want: $3)"; fails=$((fails + 1))
+	fi
+}
+ckf "note: two services stored" "$("$READ" --json | jq 'length')" 2
+ckf "note: values preserved" "$("$READ" --json | jq -r '.[] | select(.service=="xiaomi") | .used')" 10
+ckf "note: plan/source preserved" "$("$READ" --json | jq -r '.[] | select(.service=="xiaomi") | .plan')" "Max Monthly"
+
+# 5. fold order: second line for same service wins (last physical line, not max-ts)
+"$NOTE" --service xiaomi --used 15 --total 20 >/dev/null
+ckf "fold: last line wins for same service" "$("$READ" --json | jq -r '.[] | select(.service=="xiaomi") | .used')" 15
+# backdated-ts pair written straight to the ledger proves file order wins, never max-ts
+printf '{"at":"2026-10-20T00:00:00Z","service":"xiaomi","used":1,"total":20}\n' >>"$tmp/data/quotas.jsonl"
+printf '{"at":"2026-10-20T00:00:00Z","service":"xiaomi","used":18,"total":20}\n' >>"$tmp/data/quotas.jsonl"
+ckf "fold: file order wins — backdated line is latest despite old ts" \
+	"$("$READ" --json | jq -r '.[] | select(.service=="xiaomi") | .used')" 18
+
+# 6. malformed line skipped and counted
+printf 'not json at all\n' >>"$tmp/data/quotas.jsonl"
+ckf "robust: malformed line skipped" "$("$READ" --json | jq 'length')" 2
+"$READ" >/dev/null 2>"$tmp/err"
+grep -q "malformed" "$tmp/err" && echo "ok: robust: malformed counted on stderr" || { echo "FAIL: malformed counted"; fails=$((fails + 1)); }
+
+# 7. filter polarity: --service zai must exclude xiaomi entirely
+ckf "filter: --service zai excludes xiaomi" "$("$READ" --json --service zai | jq -r '[.[].service] | join(",")')" "zai"
+ckf "filter: --service nomatch is empty" "$("$READ" --json --service nomatch | jq 'length')" 0
+
+# 7b. script mode: one line per requested service, unknown still exit 0
+ckf "script: single-service line shape" "$("$READ" --service xiaomi | wc -l)" 1
+ckf "script: line format" "$("$READ" --service xiaomi | cut -d' ' -f1-2)" "xiaomi 18/20"
+out=$("$READ" --service xiaomi --service nomatch 2>/dev/null); rc=$?
+ckf "script: unknown service no-data line" "$(printf '%s\n' "$out" | sed -n 2p)" "nomatch: no data"
+[[ $rc == 0 ]] && echo "ok: script: unknown service still exits 0" || { echo "FAIL: script exit"; fails=$((fails + 1)); }
+
+# 8. reader bad flags: still exit 0
+"$READ" --no-such-flag >/dev/null 2>&1; [[ $? == 0 ]] \
+	&& echo "ok: reader: bad flag still exits 0" || { echo "FAIL: reader: bad flag exit"; fails=$((fails + 1)); }
+
+if (( fails == 0 )); then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK: $fails failure(s)"
+exit 1

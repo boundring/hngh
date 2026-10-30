@@ -1,0 +1,57 @@
+#!/bin/bash
+# hngh-quota-note — append one quota reading to the hngh quota ledger.
+# Usage: hngh-quota-note --service NAME --used INT --total INT [--percent NUM]
+#                      [--plan TEXT] [--source TEXT] [--unit credits|percent|count]
+#   `at` is stamped server-side (date -u); never taken from the caller.
+#   `unit` says what the numbers count (default: count — the reader then
+#   avoids "left" wording it cannot mean).
+# Exit: 0 stored | 1 malformed/schema | 2 usage
+set -u
+
+usage() { echo "usage: hngh-quota-note --service NAME --used INT --total INT [--percent NUM] [--plan TEXT] [--source TEXT] [--unit credits|percent|count]" >&2; exit 2; }
+
+service=""; used=""; total=""; percent=""; plan=""; source=""; unit="count"
+while (( $# )); do
+	case $1 in
+		--service) [[ $# -ge 2 ]] || usage; service=$2; shift 2 ;;
+		--used)    [[ $# -ge 2 ]] || usage; used=$2; shift 2 ;;
+		--total)   [[ $# -ge 2 ]] || usage; total=$2; shift 2 ;;
+		--percent) [[ $# -ge 2 ]] || usage; percent=$2; shift 2 ;;
+		--plan)    [[ $# -ge 2 ]] || usage; plan=$2; shift 2 ;;
+		--source)  [[ $# -ge 2 ]] || usage; source=$2; shift 2 ;;
+		--unit)    [[ $# -ge 2 ]] || usage; unit=$2; shift 2 ;;
+		*) usage ;;
+	esac
+done
+
+[[ -n $service && -n $used && -n $total ]] || usage
+[[ $used =~ ^-?[0-9]+$ && $total =~ ^-?[0-9]+$ ]] || { echo "hngh-quota-note: --used/--total must be integers" >&2; exit 1; }
+[[ -z $percent || $percent =~ ^-?[0-9]+(\.[0-9]+)?$ ]] || { echo "hngh-quota-note: --percent must be a number" >&2; exit 1; }
+[[ $unit == credits || $unit == percent || $unit == count ]] || { echo "hngh-quota-note: --unit must be credits, percent or count" >&2; exit 1; }
+
+line_args=()
+line_args+=(--argjson percent "${percent:-null}" --arg plan "$plan" --arg source "$source")
+
+line=$(jq -cn \
+	--arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+	--arg service "$service" \
+	--argjson used "$used" \
+	--argjson total "$total" \
+	--arg unit "$unit" \
+	"${line_args[@]}" \
+	'{at:$at, service:$service, used:$used, total:$total, unit:$unit,
+	  percent:(if $percent != null then $percent else null end),
+	  plan:(if $plan != "" then $plan else null end),
+	  source:(if $source != "" then $source else null end)}
+	| with_entries(select(.value != null))') || {
+	echo "hngh-quota-note: rejected (could not build record)" >&2
+	exit 1
+}
+echo "$line" | jq -e . >/dev/null || { echo "hngh-quota-note: rejected (invalid JSON)" >&2; exit 1; }
+
+dir=${HNGH_QUOTAS_DIR:-"$HOME/.local/state/hngh/quotas"}
+mkdir -p "$dir"
+exec {fd}>>"$dir/quotas.jsonl"
+flock -x "$fd"
+printf '%s\n' "$line" >&"$fd"
+printf '%s\n' "$line"

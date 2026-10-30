@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# hngh-hud selfcheck — sandboxed via HNGH_HUD_* env overrides, never touches real state.
+set -u
+HUD="$(dirname "$0")/hngh-hud"
+[[ -x "$HUD" ]] || HUD="$HOME/Projects/hngh/bin/hngh-hud"
+fails=0
+ok()   { echo "ok: $1"; }
+fail() { echo "FAIL: $1"; fails=$((fails + 1)); }
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+# fake feed: sessions ledger via hngh-sessions shim, dashboard jsonl, df >=90%, vram
+cat > "$tmp/sessions.json" <<'EOF'
+[
+ {"session":"fake-alpha","age_minutes":3.0,"event":"phase_done","role":"fake-dev","lines":["fakeline"]},
+ {"session":"fake-old","age_minutes":3000.0,"event":"done","role":"old-dev","lines":["fakeline"]}
+]
+EOF
+cat > "$tmp/df.txt" <<'EOF'
+Filesystem     1024-blocks       Used Available Capacity Mounted on
+/dev/fake       1996105028 1810721488 184840720      91% /mnt/2tb
+EOF
+printf '100\n1000\n' > "$tmp/vram_used"
+printf '1000\n' > "$tmp/vram_total"
+mkdir -p "$tmp/feed"
+cat > "$tmp/feed/fake.jsonl" <<'EOF'
+{"ts":"2026-10-26T18:41:00Z","writer":"fake-writer","namespace":"fake","item":"chunk pressure rising","severity":"warn"}
+{"ts":"2026-10-26T18:20:00Z","writer":"fake-writer","namespace":"fake","item":"spawn ok","severity":"info"}
+{"ts":"2026-10-26T18:50:00Z","writer":"fake-writer","namespace":"fake","item":"disk full","severity":"crit"}
+this line is not json and must be skipped
+EOF
+cat > "$tmp/sessions-cmd" <<SH
+#!/usr/bin/env bash
+cat "$tmp/sessions.json"
+SH
+chmod +x "$tmp/sessions-cmd"
+
+# agents fixture: one active (3m), one warm (60m), one idle (3000m)
+cat > "$tmp/agents.json" <<'EOF'
+[
+ {"kind":"sub","id":"agent-live","project":"fake","age_min":3.0,"state":"ACTIVE"},
+ {"kind":"sub","id":"agent-warm","project":"fake","age_min":60.0,"state":"warm"},
+ {"kind":"sub","id":"agent-idle","project":"fake","age_min":3000.0,"state":"idle"}
+]
+EOF
+
+cat > "$tmp/feed/decisions.jsonl" <<'EOF'
+{"ts":"2026-10-26T19:00:00Z","writer":"fake-writer","namespace":"decisions","item":"OPEN — pick storage backend","severity":"info"}
+{"ts":"2026-10-26T18:30:00Z","writer":"fake-writer","namespace":"decisions","item":"RULED — keep ron tiles","severity":"info"}
+{"ts":"2026-10-26T19:10:00Z","writer":"fake-writer","namespace":"decisions","item":"OPEN — 2TB nearly full","severity":"crit"}
+EOF
+
+run_once() {
+  env HNGH_HUD_SESSIONS_CMD="cat $tmp/sessions.json" \
+      HNGH_HUD_AGENTS_CMD="false" \
+      HNGH_HUD_AGENTS_JSON="$tmp/agents.json" \
+      HNGH_HUD_SENSE_CMD="false" \
+      HNGH_HUD_FEED_DIR="$tmp/feed" \
+      HNGH_HUD_DF_FILE="$tmp/df.txt" \
+      HNGH_HUD_VRAM_USED="$tmp/vram_used" \
+      HNGH_HUD_VRAM_TOTAL="$tmp/vram_total" \
+      HNGH_HUD_BILI_CMD="true" \
+      HNGH_HUD_QUESTS="$tmp/quests.md" \
+      "$@" \
+      "$HUD" --once
+}
+
+# 1. crit disk marker when df mocked >= 90%
+frame="$(run_once)"
+echo "$frame" | grep -q "▲CRIT" && ok "crit disk marker at 91%" || fail "crit disk marker missing"
+echo "$frame" | grep -q "2TB 91%" && ok "df use% parsed (91%)" || fail "df use% not parsed"
+
+# 2. session rows from fake feed
+echo "$frame" | grep -q "fake-alpha" && ok "session row fake-alpha rendered" || fail "fake-alpha missing"
+echo "$frame" | grep -q "phase_done" && ok "session event column rendered" || fail "event column missing"
+
+# 3. severity colors/marks in event feed
+echo "$frame" | grep -q "disk full" && ok "crit feed item rendered" || fail "crit feed item missing"
+echo "$frame" | grep -q $'\033\[33m' && ok "warn color present" || fail "warn color missing"
+
+# 4. bars + bili + lines strip
+echo "$frame" | grep -q "█" && ok "filled bar rendered" || fail "bar missing"
+echo "$frame" | grep -q "bili ✓" && ok "bili probe ok" || fail "bili not ok"
+echo "$frame" | grep -q "fakeline" && ok "lines strip aggregates ledger lines" || fail "lines strip missing"
+
+# 5. quests parse
+printf 'x\n\n| Decision / slice | Options | Notes |\n|---|---|---|\n| Fake quest | a / b | n |\n' > "$tmp/quests.md"
+frame="$(run_once HNGH_HUD_FEED_DIR="$tmp/nofeed")"
+echo "$frame" | grep -q "Fake quest" && ok "quest row parsed from table" || fail "quest row missing"
+frame="$(run_once)"
+
+# 6. missing sources → em-dash, no crash, exit 0
+out="$(env HNGH_HUD_SESSIONS_CMD='false' HNGH_HUD_AGENTS_CMD='false' HNGH_HUD_SENSE_CMD='false' \
+      HNGH_HUD_FEED_DIR="$tmp/empty-dir" HNGH_HUD_DF_FILE="$tmp/nope" \
+      HNGH_HUD_VRAM_USED="$tmp/nope" HNGH_HUD_VRAM_TOTAL="$tmp/nope" \
+      HNGH_HUD_BILI_CMD='false' HNGH_HUD_QUESTS="$tmp/nope" "$HUD" --once 2>/dev/null)"
+rc=$?
+[[ $rc -eq 0 ]] && ok "exit 0 with all sources missing" || fail "exit $rc with sources missing"
+count=$(echo "$out" | grep -c "—")
+[[ $count -ge 3 ]] && ok "missing panels render — ($count cells)" || fail "expected — in empty frame, got $count"
+echo "$out" | grep -q "POSTURE" && ok "frame structure intact when empty" || fail "frame broken when empty"
+
+# 7. malformed feed lines skipped, good lines still render
+echo "$frame" | grep -q "spawn ok" && ok "valid feed lines survive malformed neighbors" || fail "malformed line broke feed"
+
+# 8. --interval accepted, --once default interval fine
+"$HUD" --help >/dev/null 2>&1 && ok "--help/argparse up" || fail "argparse broken"
+
+# 9. agent dots from HNGH_HUD_AGENTS_JSON fixture ages
+frame="$(run_once)"
+echo "$frame" | grep -q "●ACTIVE" && ok "agent active dot (age<15m) rendered" || fail "agent active dot missing"
+echo "$frame" | grep -q "●warm" && ok "agent warm dot (age<120m) rendered" || fail "agent warm dot missing"
+echo "$frame" | grep -q "○idle" && ok "agent idle dot (age>=120m) rendered" || fail "agent idle dot missing"
+echo "$frame" | grep -q "agent-live" && ok "agent id rendered in SESSIONS" || fail "agent id missing"
+
+# 10. decisions QUESTS feed: open/ruled/crit
+echo "$frame" | grep -q "OPEN — pick storage backend" && ok "open decision rendered as quest" || fail "open decision missing"
+echo "$frame" | grep -q $'\033\[9m' && ok "ruled decision struck" || fail "ruled strike missing"
+echo "$frame" | grep -q "RULED — keep ron tiles" && ok "ruled decision rendered" || fail "ruled decision missing"
+echo "$frame" | grep -q "2TB nearly full" && ok "crit decision rendered" || fail "crit decision missing"
+
+# 11. missing decisions.jsonl → no crash, QUESTS falls back to md/—
+out2="$(env HNGH_HUD_SESSIONS_CMD='false' HNGH_HUD_AGENTS_CMD='false' HNGH_HUD_SENSE_CMD='false' \
+      HNGH_HUD_FEED_DIR="$tmp/nofeed" HNGH_HUD_DF_FILE="$tmp/nope" \
+      HNGH_HUD_VRAM_USED="$tmp/nope" HNGH_HUD_VRAM_TOTAL="$tmp/nope" \
+      HNGH_HUD_BILI_CMD='false' HNGH_HUD_QUESTS="$tmp/nope" "$HUD" --once 2>/dev/null)"
+rc2=$?
+[[ $rc2 -eq 0 ]] && ok "exit 0 with missing decisions.jsonl" || fail "exit $rc2 with missing decisions"
+echo "$out2" | grep -q "QUESTS" && ok "QUESTS row present without decisions feed" || fail "QUESTS row missing"
+
+if [[ $fails -eq 0 ]]; then
+  echo "SELF-CHECK GREEN"
+  exit 0
+else
+  echo "SELF-CHECK: $fails failure(s)"
+  exit 1
+fi

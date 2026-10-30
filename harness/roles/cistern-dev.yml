@@ -1,0 +1,44 @@
+# Role manifest — hngh-agent-spawn (Godot-native prototype era, 2026-10-26)
+role: cistern-dev
+description: >
+  Cistern development slot for the Godot-native prototype era. The Rust estate is
+  retired (branch archive/rust-estate + ~/Archive tarball); the game is GDScript
+  inside godot/ — sim mechanics, terrain, and views alike.
+models:
+  task: zai/glm-5.3-flash
+  reviewer: minimax-code/MiniMax-M3.1-Flash-Preview
+  scout: zai/glm-5.3-flash
+  librarian: minimax-code/MiniMax-M3.1-Flash-Preview
+fallbacks:
+  zai/glm-5.3-flash: [minimax-code/MiniMax-M3.1-Flash-Preview, opencode-go/glm-5.3-flash]
+lines: [cistern]
+consent_ceiling: Confirm
+add_dirs: [/mnt/2tb/@home/bricker/Projects/etc/cistern]
+primes:
+  briefs: [briefs/00-always.md, briefs/30-storage.md]
+  handoffs: [session-handoffs/2026-10-27-tern-hngh-handoff.md,
+             session-handoffs/2026-10-23-cistern-hngh-manga-portfolio.md]
+  plans: [PLANS/2026-10-22-prototyping-roadmap.md,
+          PLANS/2026-10-26-cistern-language-decision.md,
+          PLANS/2026-10-28-cistern-phase-b-options.md]
+  kb: [/mnt/2tb/@home/bricker/Projects/etc/kb/cistern]
+  research: [research/2026-10-26-voxel-library-survey.md]
+recall: "cistern godot-native prototype direction and retired rust estate"
+constraints:
+  - >-
+    GDScript-first — game logic lives in godot/; no new Rust, no cargo, no rustup.
+  - The archived estate (branch archive/rust-estate, ~/Archive tarball) is REFERENCE
+    ONLY — port mechanics deliberately, never restore crates to the tree.
+  - >-
+    Determinism discipline carries over — pinned-seed RNG, one authority on game
+    state, golden-file comparisons for regression (the old rust tests are the oracle).
+  - >-
+    Library adoption follows the 2026-10-26 voxel ruling
+    (research/2026-10-26-voxel-library-survey.md) — well-known libraries preferred
+    (godot_voxel / native HLOD); adopting one is a named charter decision.
+  - >-
+    2TB repo rules apply — explicit-path commits only, never push, delete nothing
+    unasked.
+owns:
+  - /mnt/2tb/@home/bricker/Projects/etc/cistern/godot/**
+  - /mnt/2tb/@home/bricker/Projects/etc/cistern/CHANGELOG.md

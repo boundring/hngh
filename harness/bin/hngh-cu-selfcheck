@@ -1,0 +1,213 @@
+#!/bin/bash
+# hngh-cu-selfcheck — sandboxed checks for the computer-use orchestrator.
+# Stubs hngh-act / hngh-grim / hngh-look on PATH stand in for the real tools;
+# the stub PATH is passed PER INVOCATION (never exported), so nothing here can
+# reach the real hngh-act, a real screen capture, or /dev/uinput.
+# Nothing is synthesized: the stubs only record and echo.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+stub="$sandbox/bin"
+mkdir -p "$stub" "$sandbox/shots"
+act_log="$sandbox/act.log"
+look_log="$sandbox/look.log"
+grim_log="$sandbox/grim.log"
+pointer_log="$sandbox/pointer.log"
+shot="$sandbox/shots/shot.png"
+: > "$shot"
+: > "$pointer_log"
+
+# ---- stubs ----------------------------------------------------------------
+cat > "$stub/hngh-act" <<STUB
+#!/bin/bash
+printf '%s\n' "\$*" >> "$act_log"
+for a in "\$@"; do
+  if [ "\$a" = screen.capture ]; then
+    if [ "\${HNGH_STUB_REFUSE:-0}" = 1 ]; then
+      echo "refused: screen.capture [Confirm] — no consent" >&2
+      exit 2
+    fi
+    printf '%s %s\n' "$shot" "deadbeefcafe0123"
+    exit 0
+  fi
+done
+if [ "\${HNGH_STUB_REFUSE:-0}" = 1 ]; then
+  echo "refused: \$1 [Presence-gated] — session not locked and no --go" >&2
+  exit 2
+fi
+echo "stub hngh-act: \$*"
+exit 0
+STUB
+
+cat > "$stub/hngh-look" <<STUB
+#!/bin/bash
+printf '%s\n' "\$*" >> "$look_log"
+echo "GROUNDED ANSWER"
+exit 0
+STUB
+
+cat > "$stub/hngh-grim" <<STUB
+#!/bin/bash
+printf '%s\n' "\$*" >> "$grim_log"
+echo "stub hngh-grim must never be called directly by hngh-cu" >&2
+exit 1
+STUB
+
+cat > "$stub/hngh-pointer" <<STUB
+#!/bin/bash
+printf '%s\n' "\$*" >> "$pointer_log"
+echo "stub hngh-pointer must never be called by hngh-cu" >&2
+exit 1
+STUB
+chmod +x "$stub/hngh-act" "$stub/hngh-look" "$stub/hngh-grim" "$stub/hngh-pointer"
+
+cu() { # cu <args...> — run hngh-cu with the stub PATH, per invocation
+  PATH="$stub:$PATH" HNGH_STUB_REFUSE="${STUB_REFUSE:-0}" \
+  bash "$selfcheck_dir/hngh-cu" "$@"
+}
+
+check() { # check <name> <condition-result>
+  if [ "$2" = 0 ]; then
+    echo "ok: $1"
+  else
+    echo "FAIL: $1" >&2
+    failures=$((failures + 1))
+  fi
+}
+
+: > "$act_log"; : > "$look_log"; : > "$grim_log"
+
+# 1. look: capture through hngh-act first, then ground with hngh-look on the
+#    captured path (chain order + the shot path is passed on).
+out=$(cu look "what is on screen" 2>&1)
+rc=$?
+cat_line="$(grep -c 'screen.capture' "$act_log")"
+look_line="$(grep -c 'GROUNDED' <<<"$out")"
+[ "$cat_line" = 1 ] && [ "$look_line" = 1 ] && grep -q "$shot" "$look_log" && [ $rc = 0 ]
+check "look chains screen.capture -> hngh-look on the captured png" $?
+
+# 1b. the default grounding lane is local (pixels stay in the box)
+grep -q -- '--lane local' "$look_log"
+check "look defaults to the local grounding lane" $?
+
+# 1c. --lane ocr is the explicit fallback
+: > "$look_log"
+out=$(cu look "quick read" --lane ocr 2>&1)
+grep -q -- '--lane ocr' "$look_log"
+check "look honors --lane ocr as the fallback lane" $?
+
+# 2. look never calls hngh-grim directly (the gate owns the producer)
+[ ! -s "$grim_log" ]
+check "look does not call hngh-grim directly" $?
+
+# 3. click delegates to hngh-act pointer.click with the coordinates
+: > "$act_log"
+out=$(cu click --at 120,340 --window kitty --address 0x55d1f0 --go 2>&1)
+rc=$?
+grep -q 'pointer.click' "$act_log" && grep -q -- '--at 120,340' "$act_log" &&
+  grep -q -- '--window kitty' "$act_log" && grep -q -- '--address 0x55d1f0' "$act_log" &&
+  grep -q -- '--go' "$act_log" && [ $rc = 0 ]
+check "click delegates to hngh-act pointer.click with the coordinates" $?
+
+# 4. type delegates to hngh-act type_text with the payload
+: > "$act_log"
+out=$(cu type --text "hello" --window kitty --go 2>&1)
+rc=$?
+grep -q 'type_text' "$act_log" && grep -q -- '--window kitty' "$act_log" &&
+  grep -q -- '-- hello' "$act_log" && [ $rc = 0 ]
+check "type delegates to hngh-act type_text with the payload" $?
+
+# 4b. key delegates to hngh-act key with the keysym
+: > "$act_log"
+out=$(cu key --keysym Return --window kitty --go 2>&1)
+grep -q '^key' "$act_log" && grep -q -- '-- Return' "$act_log"
+check "key delegates to hngh-act key with the keysym" $?
+
+# 5. a refusing hngh-act is surfaced, not swallowed (exit code + text)
+: > "$act_log"
+out=$(STUB_REFUSE=1 cu click --at 10,10 --window kitty --address 0x1 2>&1)
+rc=$?
+printf '%s' "$out" | grep -q 'refused' && printf '%s' "$out" | grep -q 'exit 2' && [ $rc = 0 ]
+check "a refusing hngh-act is reported with its exit code, hngh-cu exits 0" $?
+
+# 5b. the refusal carries the gate's own wording verbatim
+out=$(STUB_REFUSE=1 cu click --at 10,10 --window kitty --address 0x1 2>&1)
+printf '%s' "$out" | grep -q 'Presence-gated'
+check "the gate refusal is reported verbatim" $?
+
+# 6. --dry-run executes nothing
+: > "$act_log"; : > "$look_log"
+out=$(cu click --at 5,6 --window kitty --address 0x1 --dry-run 2>&1)
+rc=$?
+[ ! -s "$act_log" ] && [ ! -s "$look_log" ] && printf '%s' "$out" | grep -q 'pointer.click' && [ $rc = 0 ]
+check "--dry-run prints the plan and executes nothing" $?
+
+# 6b. --dry-run on look prints both steps of the chain and executes nothing
+out=$(cu look "anything" --dry-run 2>&1)
+printf '%s' "$out" | grep -q 'screen.capture' && printf '%s' "$out" | grep -q 'hngh-look' &&
+  [ ! -s "$act_log" ] && [ ! -s "$look_log" ]
+check "--dry-run on look prints the whole chain and executes nothing" $?
+
+# 7. --json shape
+: > "$act_log"
+out=$(cu click --at 7,8 --window kitty --address 0x1 --go --json 2>&1)
+printf '%s' "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["ok"] is True and d["refused"] is False and d["exit_code"]==0 and d["action"]=="pointer.click" and d["tier"]=="Presence-gated"' 2>/dev/null
+check "--json emits ok/refused/exit_code/action/tier" $?
+
+# 7b. --json on a refusal carries the act exit code
+out=$(STUB_REFUSE=1 cu click --at 7,8 --window kitty --address 0x1 --json 2>&1)
+printf '%s' "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["refused"] is True and d["exit_code"]==2 and d["act_exit_code"]==2' 2>/dev/null
+check "--json on a refusal carries the act exit code" $?
+
+# 8. unknown subcommand: message, no execution
+: > "$act_log"
+out=$(cu frobnicate 2>&1)
+rc=$?
+printf '%s' "$out" | grep -q 'unknown subcommand' && [ ! -s "$act_log" ]
+check "unknown subcommand -> message, nothing executed" $?
+
+# 9. no /dev/uinput write is attempted (the orchestrator never emits input)
+! grep -q '/dev/uinput' "$selfcheck_dir/hngh-cu" && [ ! -s "$pointer_log" ]
+check "hngh-cu never references /dev/uinput and never calls hngh-pointer" $?
+
+# 10. the cloud lane needs explicit per-call consent (refused locally, no capture)
+: > "$act_log"; : > "$look_log"
+out=$(cu look "what is this" --lane cloud 2>&1)
+rc=$?
+printf '%s' "$out" | grep -q 'refused' && printf '%s' "$out" | grep -q -- '--consent' &&
+  [ ! -s "$act_log" ] && [ ! -s "$look_log" ] && [ $rc = 0 ]
+check "cloud lane refused locally without --consent; nothing captured" $?
+
+# 10b. with --consent the cloud lane runs
+out=$(cu look "what is this" --lane cloud --consent 2>&1)
+grep -q 'screen.capture' "$act_log" && grep -q -- '--lane cloud' "$look_log"
+check "cloud lane runs with explicit --consent" $?
+
+# 11. --help names the tier of every subcommand and the Presence gate
+out=$(cu --help 2>&1)
+printf '%s' "$out" | grep -q 'Presence-gated' && printf '%s' "$out" | grep -q 'Confirm' &&
+  printf '%s' "$out" | grep -q 'hngh-cu look' && printf '%s' "$out" | grep -q 'hngh-cu click'
+check "--help names the tiers and the subcommands" $?
+
+# 12. no --go is invented: a bare pointer act does not carry one
+: > "$act_log"
+out=$(cu click --at 9,9 --window kitty --address 0x1 2>&1)
+! grep -q -- '--go' "$act_log"
+check "no --go is invented for a pointer act" $?
+
+# 13. a payload colliding with an hngh-act flag word is refused, not mangled
+: > "$act_log"
+out=$(cu type --text "--go" --window kitty 2>&1)
+rc=$?
+printf '%s' "$out" | grep -q 'flag word' && [ ! -s "$act_log" ] && [ $rc = 3 ]
+check "a payload colliding with an hngh-act flag word is refused" $?
+
+if [ $failures = 0 ]; then
+  echo "SELF-CHECK GREEN"
+  exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

@@ -1,0 +1,95 @@
+#!/bin/bash
+# hngh-overview-selfcheck — sandboxed contract check for hngh-overview.
+# Sandbox: HNGH_QUOTAS_DIR / HNGH_DIGESTS_DIR / HNGH_JOBS_DIR -> mktemp -d.
+# Contract: `ok:` per assertion, ends SELF-CHECK GREEN (exit 0)
+# or SELF-CHECK: <n> failure(s) (exit 1).
+
+set -u
+
+OVERVIEW="$(dirname "$0")/hngh-overview"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+mkdir -p "$sandbox/quotas" "$sandbox/digests" "$sandbox/jobs"
+
+fails=0
+ok() { printf 'ok: %s\n' "$1"; }
+fail() { printf 'FAIL: %s\n' "$1"; fails=$((fails + 1)); }
+
+run() { env HNGH_QUOTAS_DIR="$sandbox/quotas" HNGH_DIGESTS_DIR="$sandbox/digests" \
+             HNGH_JOBS_DIR="$sandbox/jobs" python3 "$OVERVIEW" "$@"; }
+
+TODAY=$(date -u +%Y-%m-%d)
+
+# 1. all three sources missing -> clean empty summary, exit 0
+out=$(run 2>"$sandbox/err1"); rc=$?
+if [ $rc -eq 0 ] && ! grep -qi "tightest\|credits left" <<<"$out"; then
+  ok "missing sources: clean empty summary (exit 0)"
+else
+  fail "missing sources (rc=$rc): $out $(cat "$sandbox/err1")"
+fi
+
+# 2. quota ledger: tightest slot is a credit slot, plus a percent slot
+cat > "$sandbox/quotas/quotas.jsonl" <<EOF
+{"service":"openai","used":10,"total":100,"unit":"percent","percent":10.0,"at":"${TODAY}T00:00:00Z","source":"probe"}
+{"service":"zai","used":80,"total":100,"unit":"credits","percent":80.0,"at":"${TODAY}T00:00:00Z","source":"probe"}
+EOF
+out=$(run 2>/dev/null)
+if grep -q "zai.*80%" <<<"$out" && grep -q "20 credits left" <<<"$out"; then
+  ok "quota: tightest credit slot reported with credits left"
+else
+  fail "quota: expected zai 80% + credits left, got: $(grep QUOTA <<<"$out")"
+fi
+# the "left" wording must not attach to the percent slot
+if ! grep -q "openai" <<<"$(grep QUOTA <<<"$out")"; then
+  ok "quota: percent slot not shown as tightest"
+else
+  fail "quota: percent slot wrongly shown"
+fi
+
+# 3. job whose latest event is gate -> waiting, never resolved
+cat > "$sandbox/jobs/jobs.jsonl" <<EOF
+{"job":"rebuild-cache","event":"started","tier":"fast","at":"${TODAY}T01:00:00Z","source":"probe"}
+{"job":"rebuild-cache","event":"gate","tier":"fast","at":"${TODAY}T01:05:00Z","source":"probe"}
+{"job":"ship-note","event":"outcome","outcome":"ok","tier":"fast","at":"${TODAY}T02:00:00Z","source":"probe"}
+EOF
+out=$(run 2>/dev/null)
+if grep -q "today: 2 job" <<<"$out" && grep -q "waiting on human ruling: rebuild-cache" <<<"$out"; then
+  ok "jobs: open gate reported as waiting, today's jobs counted"
+else
+  fail "jobs: got: $(grep JOBS <<<"$out" | tr '\n' ' | ')"
+fi
+
+# 4. digest record -> latest digest shown
+cat > "$sandbox/digests/digests.jsonl" <<EOF
+{"sessions":3,"agents":5,"active_agents":2,"summary":"calm","at":"${TODAY}T09:00:00Z"}
+{"sessions":4,"agents":6,"active_agents":1,"summary":"calm","at":"${TODAY}T09:01:00Z"}
+EOF
+out=$(run 2>/dev/null)
+if grep -q "sessions=4" <<<"$out" && grep -q "09:01:00" <<<"$out"; then
+  ok "digest: latest minute shown (last line wins)"
+else
+  fail "digest: got: $(grep DIGEST <<<"$out")"
+fi
+
+# 5. bad flag -> still exit 0
+out=$(run --bogus-flag 2>"$sandbox/err5"); rc=$?
+if [ $rc -eq 0 ] && grep -qi "bogus" "$sandbox/err5"; then
+  ok "bad flag: exit 0, warning on stderr"
+else
+  fail "bad flag (rc=$rc): $out $(cat "$sandbox/err5")"
+fi
+
+# --json sanity: one parseable object with the four sections
+if run --json 2>/dev/null | jq -e 'has("quota") and has("digest") and has("jobs") and has("posture")' >/dev/null; then
+  ok "--json: one object with four sections"
+else
+  fail "--json: missing sections or unparseable"
+fi
+
+if [ $fails -eq 0 ]; then
+  echo "SELF-CHECK GREEN"
+  exit 0
+else
+  echo "SELF-CHECK: $fails failure(s)"
+  exit 1
+fi

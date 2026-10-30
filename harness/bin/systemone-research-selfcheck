@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""Selfcheck for systemone-research: fake HTTP studio + fake VRAM sysfs, fully sandboxed.
+
+Contract: prints `ok:` per assertion, ends SELF-CHECK GREEN (exit 0) or
+SELF-CHECK: <n> failure(s) (exit 1). Never touches the real studio, ledger, or conf.
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+import urllib.request
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "systemone-research")
+
+failures = 0
+
+
+def ok(name, cond, detail=""):
+    global failures
+    print(f"{'ok' if cond else 'FAIL'}: {name}" + (f" — {detail}" if detail and not cond else ""))
+    if not cond:
+        failures += 1
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    def _json(self, obj, code=200):
+        body = json.dumps(obj).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self):
+        if self.headers.get("Authorization") != "Bearer testkey":
+            self._json({"error": "unauthorized"}, 401)
+            return
+        n = int(self.headers.get("Content-Length", 0))
+        payload = json.loads(self.rfile.read(n) or b"{}")
+        if self.path == "/api/inference/load":
+            if "max_seq_length" in payload:
+                self._json({"error": "unknown field"}, 422)  # probe -> default-ctx
+            else:
+                self._json({"ok": True, "model_path": payload.get("model_path")})
+        elif self.path == "/api/inference/unload":
+            self._json({"ok": True})
+        elif self.path == "/v1/chat/completions":
+            self._json({"choices": [{"message": {"content": "DECISION: PROCEED | balanced"}}]})
+        else:
+            self._json({"error": "not found"}, 404)
+
+    def do_GET(self):
+        self._json({"status": "idle"})
+
+
+def main():
+    tmp = tempfile.mkdtemp(prefix="s1selfcheck.")
+    try:
+        srv = HTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        base = f"http://127.0.0.1:{srv.server_port}"
+
+        ledger = os.path.join(tmp, "ledger.jsonl")
+        vram = os.path.join(tmp, "vram")
+        with open(vram, "w") as f:
+            f.write("6809321472\n")  # 6.34 GiB
+        conf = os.path.join(tmp, "conf")
+        with open(conf, "w") as f:
+            f.write("UNSLOTH_API_KEY=testkey\n")
+
+        matrix = os.path.join(tmp, "matrix.yml")
+        with open(matrix, "w") as f:
+            json.dump({
+                "models": ["fake/tiny-A", "fake/tiny-B"],
+                "prompts": [{"name": "strict", "text": "say the line", "expect": r"^DECISION:\s*(PROCEED|BLOCK|DEFER)\s*\|"},
+                            {"name": "impossible", "text": "say the line", "expect": r"^NOMATCH$"}],
+                "runs_per_cell": 1,
+                "context_hint": 4096,
+            }, f)
+
+        env = dict(os.environ, SYSTEMONE_BASE_URL=base, SYSTEMONE_LEDGER=ledger,
+                   SYSTEMONE_VRAM_PATH=vram, SYSTEMONE_CONF=conf)
+
+        def run(*args):
+            return subprocess.run([sys.executable, RUNNER, *args], env=env,
+                                  capture_output=True, text=True, timeout=120)
+
+        # 1. dry-run plan shape
+        r = run("--matrix", matrix, "--dry-run")
+        ok("dry-run exits 0", r.returncode == 0, r.stderr)
+        ok("dry-run lists all 4 cells",
+           r.stdout.count(" x ") == 4 and "dry-run: plan only" in r.stdout, r.stdout)
+        r2 = run("--matrix", matrix, "--models", "fake/tiny-B", "--dry-run")
+        ok("--models subset filters plan", r2.stdout.count(" x ") == 2 and "tiny-A" not in r2.stdout, r2.stdout)
+        ok("dry-run wrote no ledger", not os.path.exists(ledger))
+
+        # 2. malformed matrix is a clean report
+        bad = os.path.join(tmp, "bad.yml")
+        with open(bad, "w") as f:
+            f.write("models: []\n")
+        r = run("--matrix", bad, "--dry-run")
+        ok("empty matrix: exit 0 + stderr note", r.returncode == 0 and "parse failed" in r.stderr, r.stderr)
+
+        # 3. live fake run: 1 model x 2 prompts, ledger growth, format polarity
+        r = run("--matrix", matrix, "--models", "fake/tiny-A")
+        ok("live fake run exits 0", r.returncode == 0, r.stderr)
+        ok("bearer accepted by fake server", "unauthorized" not in r.stderr, r.stderr)
+        ok("ctx probe rejected -> default-ctx", "default-ctx" in r.stdout, r.stdout)
+        rows = [json.loads(l) for l in open(ledger)]
+        ok("ledger grew to 2 rows", len(rows) == 2, str(len(rows)))
+        strict = next(x for x in rows if x["prompt"] == "strict")
+        impossible = next(x for x in rows if x["prompt"] == "impossible")
+        ok("format-compliant reply ok=true", strict["ok"] is True, json.dumps(strict))
+        ok("non-compliant reply ok=false", impossible["ok"] is False)
+        ok("vram recorded from fake sysfs", strict.get("vram_gib") == 6.34, str(strict.get("vram_gib")))
+        ok("reply snippet captured", strict["reply_snippet"].startswith("DECISION:"))
+        ok("ledger fields present",
+           all(k in strict for k in ("ts", "model", "prompt", "vram_gib", "latency_s", "ok", "reply_snippet")),
+           json.dumps(strict))
+
+        # 4. append/fold: malformed lines skipped-and-counted
+        with open(ledger, "a") as f:
+            f.write("{not json}\n")
+        r = run("--report")
+        ok("report exits 0 with malformed line", r.returncode == 0)
+        ok("report skips and counts malformed", "1 malformed" in r.stderr, r.stderr)
+        ok("report shows model + best cell", "fake/tiny-A" in r.stdout and "strict" in r.stdout, r.stdout)
+
+        # 5. missing ledger = clean report
+        env2 = dict(env, SYSTEMONE_LEDGER=os.path.join(tmp, "missing.jsonl"))
+        r = subprocess.run([sys.executable, RUNNER, "--report"], env=env2,
+                           capture_output=True, text=True)
+        ok("empty ledger: clean report", r.returncode == 0 and "no ledger rows" in r.stdout, r.stdout + r.stderr)
+
+        srv.shutdown()
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    if failures:
+        print(f"SELF-CHECK: {failures} failure(s)")
+        raise SystemExit(1)
+    print("SELF-CHECK GREEN")
+
+
+if __name__ == "__main__":
+    main()

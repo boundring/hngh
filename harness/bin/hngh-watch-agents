@@ -1,0 +1,3 @@
+#!/bin/bash
+# hngh-watch-agents — live agent overview (wrapper for direct terminal use).
+exec hngh-agents --follow

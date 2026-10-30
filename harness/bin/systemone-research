@@ -1,0 +1,263 @@
+#!/usr/bin/env python3
+"""systemone-research: eval-matrix runner for local decision models on unsloth-studio (:8888).
+
+Sequential cells: VRAM before -> load -> chat probe (temp 0) -> VRAM during ->
+latency -> format-compliance -> unload -> VRAM after. Appends one JSONL record
+per cell to the ledger. Always exits 0 (reporting style); errors go to stderr.
+
+Env overrides (selfcheck sandbox):
+  SYSTEMONE_BASE_URL   default http://127.0.0.1:8888
+  SYSTEMONE_LEDGER     default ~/Projects/hngh/data/systemone-research.jsonl
+  SYSTEMONE_VRAM_PATH  default /sys/class/drm/card1/device/mem_info_vram_used
+  SYSTEMONE_CONF       default ~/.config/environment.d/70-unsloth.conf (bearer;
+                       the key is never printed)
+"""
+import json
+import os
+import re
+import sys
+import time
+import urllib.error
+import urllib.request
+
+BASE_URL = os.environ.get("SYSTEMONE_BASE_URL", "http://127.0.0.1:8888").rstrip("/")
+LEDGER = os.environ.get(
+    "SYSTEMONE_LEDGER", os.path.expanduser("~/Projects/hngh/data/systemone-research.jsonl")
+)
+VRAM_PATH = os.environ.get("SYSTEMONE_VRAM_PATH", "/sys/class/drm/card1/device/mem_info_vram_used")
+CONF = os.environ.get("SYSTEMONE_CONF", os.path.expanduser("~/.config/environment.d/70-unsloth.conf"))
+DEFAULT_MATRIX = os.path.expanduser("~/Projects/hngh/systemone-matrix.yml")
+
+
+def err(msg):
+    print(f"systemone-research: {msg}", file=sys.stderr)
+
+
+def bearer():
+    """Read UNSLOTH_API_KEY from the environment.d conf. Never prints it."""
+    try:
+        with open(CONF) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("UNSLOTH_API_KEY="):
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return None
+
+
+def http_json(method, path, payload=None, token=None, timeout=300):
+    req = urllib.request.Request(
+        BASE_URL + path,
+        data=json.dumps(payload).encode() if payload is not None else None,
+        method=method,
+        headers={"Content-Type": "application/json", **({"Authorization": f"Bearer {token}"} if token else {})},
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        body = r.read().decode()
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError:
+        return {"raw": body}
+
+
+def vram_gib():
+    try:
+        with open(VRAM_PATH) as f:
+            return round(int(f.read().strip()) / 2**30, 2)
+    except OSError as e:
+        err(f"vram read failed: {e}")
+        return None
+
+
+def load_matrix(path):
+    with open(path) as f:
+        text = f.read()
+    try:
+        import yaml
+        spec = yaml.safe_load(text)
+    except ImportError:
+        spec = json.loads(text)  # JSON is valid YAML
+    if not isinstance(spec, dict):
+        raise ValueError("matrix must be a mapping")
+    models = spec.get("models") or []
+    prompts = spec.get("prompts") or []
+    if not models or not prompts:
+        raise ValueError("matrix needs non-empty models[] and prompts[]")
+    for p in prompts:
+        for k in ("name", "text", "expect"):
+            if k not in p:
+                raise ValueError(f"prompt missing '{k}': {p}")
+    return {
+        "models": [str(m) for m in models],
+        "prompts": prompts,
+        "runs_per_cell": int(spec.get("runs_per_cell", 1)),
+        "context_hint": spec.get("context_hint"),
+    }
+
+
+def plan(spec, only=None):
+    models = [m for m in spec["models"] if not only or m in only]
+    cells = []
+    for m in models:
+        for p in spec["prompts"]:
+            for run in range(spec["runs_per_cell"]):
+                cells.append((m, p["name"], run))
+    return cells
+
+
+def ctx_label(spec, token):
+    """Probe once whether load accepts max_seq_length; returns hint or 'default-ctx'."""
+    hint = spec.get("context_hint")
+    if not hint:
+        return "default-ctx"
+    probe = {"model_path": spec["models"][0], "max_seq_length": int(hint)}
+    try:
+        http_json("POST", "/api/inference/load", probe, token)
+        http_json("POST", "/api/inference/unload", {"model_path": spec["models"][0]}, token)
+        return str(hint)
+    except Exception as e:
+        err(f"context-hint probe rejected (recording default-ctx): {e}")
+        return "default-ctx"
+
+
+def run_cell(model, prompt_spec, ctx, token):
+    rec = {"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+           "model": model, "prompt": prompt_spec["name"], "ctx": ctx}
+    rec["vram_gib_before"] = vram_gib()
+    load_payload = {"model_path": model}
+    if ctx != "default-ctx":
+        load_payload["max_seq_length"] = int(ctx)
+    t0 = time.monotonic()
+    http_json("POST", "/api/inference/load", load_payload, token, timeout=600)
+    rec["load_s"] = round(time.monotonic() - t0, 2)
+    rec["vram_gib"] = vram_gib()
+    t0 = time.monotonic()
+    chat = http_json("POST", "/v1/chat/completions",
+                     {"model": model, "temperature": 0,
+                      "messages": [{"role": "user", "content": prompt_spec["text"]}]},
+                     token)
+    rec["latency_s"] = round(time.monotonic() - t0, 2)
+    reply = chat["choices"][0]["message"]["content"] if chat.get("choices") else ""
+    rec["reply_snippet"] = (reply or "")[:160]
+    try:
+        rec["ok"] = bool(re.search(prompt_spec["expect"], reply or ""))
+    except re.error as e:
+        err(f"bad expect regex for {prompt_spec['name']}: {e}")
+        rec["ok"] = False
+    finally:
+        t0 = time.monotonic()
+        try:
+            http_json("POST", "/api/inference/unload", {"model_path": model}, token, timeout=600)
+        except Exception as e:
+            err(f"unload failed for {model}: {e}")
+        rec["unload_s"] = round(time.monotonic() - t0, 2)
+    rec["vram_gib_after"] = vram_gib()
+    return rec
+
+
+def append_ledger(rec):
+    os.makedirs(os.path.dirname(LEDGER), exist_ok=True)
+    import fcntl
+    with open(LEDGER, "a") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        f.write(json.dumps(rec) + "\n")
+
+
+def load_ledger():
+    rows = []
+    if not os.path.exists(LEDGER):
+        return rows
+    bad = 0
+    with open(LEDGER) as f:
+        for line in f:
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                bad += 1
+    if bad:
+        err(f"skipped {bad} malformed ledger line(s)")
+    return rows
+
+
+def report(rows):
+    if not rows:
+        print("no ledger rows yet")
+        return
+    best = {}
+    for r in rows:
+        if not r.get("ok"):
+            continue
+        cur = best.get(r["model"])
+        if cur is None or r["latency_s"] < cur["latency_s"]:
+            best[r["model"]] = r
+    print(f"{'model':<58} {'cells':>5} {'ok':>3} {'best_lat_s':>10} {'vram_gib':>9}  best_cell")
+    for m in sorted({r["model"] for r in rows}):
+        mine = [r for r in rows if r["model"] == m]
+        b = best.get(m)
+        print(f"{m:<58} {len(mine):>5} {sum(1 for r in mine if r.get('ok')):>3} "
+              f"{(b['latency_s'] if b else '-'):>10} "
+              f"{(b['vram_gib'] if b else '-'):>9}  {b['prompt'] + ' @ ' + str(b['ts']) if b else '-'}")
+
+
+def main():
+    argv = sys.argv[1:]
+    if argv and argv[0] == "--report":
+        report(load_ledger())
+        return
+    matrix = DEFAULT_MATRIX
+    only = None
+    dry = False
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--matrix":
+            matrix = argv[i + 1]; i += 2
+        elif a == "--models":
+            only = set(argv[i + 1].split(",")); i += 2
+        elif a == "--dry-run":
+            dry = True; i += 1
+        else:
+            err(f"unknown flag {a}"); return
+    try:
+        spec = load_matrix(matrix)
+    except Exception as e:
+        err(f"matrix parse failed: {e}"); return
+    cells = plan(spec, only)
+    if not cells:
+        err("no cells after --models filter"); return
+    print(f"matrix: {matrix}  cells: {len(cells)}  ctx_hint: {spec.get('context_hint') or 'none'}")
+    for m, p, run in cells:
+        print(f"  {m} x {p} (run {run + 1})")
+    if dry:
+        print("dry-run: plan only, no loads")
+        return
+    token = bearer()
+    if not token:
+        err(f"no UNSLOTH_API_KEY in {CONF}; cannot call studio API"); return
+    ctx = ctx_label(spec, token)
+    print(f"context: {ctx}")
+    for m, p, run in cells:
+        pspec = next(x for x in spec["prompts"] if x["name"] == p)
+        try:
+            rec = run_cell(m, pspec, ctx, token)
+        except Exception as e:
+            err(f"cell {m} x {p} failed: {e}")
+            rec = {"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                   "model": m, "prompt": p, "ctx": ctx, "ok": False,
+                   "reply_snippet": f"error: {e}"}
+            try:  # never leave a model resident on a failed cell
+                http_json("POST", "/api/inference/unload", {"model_path": m}, token, timeout=600)
+            except Exception:
+                pass
+        append_ledger(rec)
+        print(f"  {m} x {p}: ok={rec.get('ok')} latency={rec.get('latency_s')}s "
+              f"vram={rec.get('vram_gib')}G -> {LEDGER}")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except BrokenPipeError:
+        pass
+    raise SystemExit(0)

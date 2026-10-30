@@ -1,0 +1,49 @@
+#!/bin/bash
+# hngh-digest-refresh — fold the harness CLIs' --json output into one digest
+# record and append it to the digest ledger via hngh-digest-note.
+#
+# Usage: hngh-digest-refresh
+# Env:   HNGH_DIGESTS_DIR  ledger directory (default ~/.local/state/hngh/digests)
+#
+# Never fails loudly: a missing or empty source folds to zeros.
+set -u
+
+BIN="$HOME/Projects/hngh/bin"
+
+# run <script> — execute with the interpreter its shebang names (the hngh
+# readers are python3 scripts, not bash).
+run() {
+	local interp
+	interp=$(head -1 "$1" 2>/dev/null)
+	case $interp in
+		*python*) python3 "$@" ;;
+		*)        bash "$@" ;;
+	esac
+}
+
+# count <script> — number of records in a source's --json output; 0 on any
+# failure (missing tool, nonzero exit, unparseable or non-array output).
+count() {
+	local out
+	out=$(run "$1" --json 2>/dev/null) || { echo 0; return; }
+	printf '%s' "$out" | jq 'if type == "array" then length else 0 end' 2>/dev/null || echo 0
+}
+
+# active count: agents whose state is not "idle" (ACTIVE/warm both count).
+active_count() {
+	local out
+	out=$(run "$BIN/hngh-agents" --json 2>/dev/null) || { echo 0; return; }
+	printf '%s' "$out" | jq '[.[]? | select(.state != "idle")] | length' 2>/dev/null || echo 0
+}
+
+sessions=$(count "$BIN/hngh-sessions")
+agents=$(count "$BIN/hngh-agents")
+active=$(active_count)
+
+summary=$(printf '%d sessions, %d agents, %d active' "$sessions" "$agents" "$active")
+
+[ -f "$BIN/hngh-digest-note" ] || { echo "hngh-digest-refresh: hngh-digest-note not found" >&2; exit 1; }
+HNGH_DIGESTS_DIR=${HNGH_DIGESTS_DIR:-$HOME/.local/state/hngh/digests} \
+	bash "$BIN/hngh-digest-note" \
+	--sessions "$sessions" --agents "$agents" --active-agents "$active" \
+	--summary "$summary"

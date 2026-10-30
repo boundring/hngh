@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""hngh-digest — read-only fold of the hngh digest ledger.
+
+Ledger: $HNGH_DIGESTS_DIR/digests.jsonl (written by hngh-digest-note)
+Shows the latest record per digest key (the minute bucket of `at`).
+Reporting tool: always exits 0.
+"""
+
+import argparse
+import json
+import os
+import sys
+
+LEDGER = os.path.join(
+    os.environ.get("HNGH_DIGESTS_DIR", os.path.expanduser("~/.local/state/hngh/digests")),
+    "digests.jsonl",
+)
+
+
+def parse_args(argv):
+    p = argparse.ArgumentParser(
+        prog="hngh-digest",
+        description="Harness digest snapshots from the hngh digest ledger (read-only).",
+    )
+    p.add_argument("--since", metavar="ISO", default=None,
+                   help="only records whose `at` is at or after this UTC ISO-8601 stamp")
+    p.add_argument("--json", action="store_true", help="emit folded records as JSON")
+    try:
+        return p.parse_args(argv)
+    except SystemExit:
+        raise SystemExit(0)  # reporting tool: bad flags reported, never a failing exit
+
+
+def key_of(rec):
+    # digest key: the minute bucket of `at`, so a second record for the same
+    # minute folds; file order (last physical line) decides, never max-ts.
+    at = rec.get("at")
+    return at[:16] if isinstance(at, str) and len(at) >= 16 else str(at)
+
+
+def load_folded():
+    if not os.path.exists(LEDGER):
+        return {}, 0
+    folded, malformed = {}, 0
+    with open(LEDGER, encoding="utf-8", errors="replace") as fh:
+        for raw in fh:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                rec = json.loads(raw)
+                assert isinstance(rec.get("at"), str) and rec["at"]
+                assert isinstance(rec.get("sessions"), int)
+            except Exception:
+                malformed += 1
+                continue
+            folded[key_of(rec)] = rec  # append-only ledger; last physical line wins
+    return folded, malformed
+
+
+def main(argv):
+    args = parse_args(argv)
+    folded, malformed = load_folded()
+
+    rows = [(at, rec) for at, rec in folded.items()
+            if args.since is None or rec["at"] >= args.since]
+    rows.sort(key=lambda r: r[0])
+
+    if args.json:
+        print(json.dumps([rec for _, rec in rows], indent=1))
+    else:
+        print(f"hngh digest ledger: {len(folded)} minute(s) known")
+        if not rows:
+            print("no digests match")
+        else:
+            hdr = f"{'at':<17} {'sess':>5} {'agents':>7} {'active':>7}  summary"
+            print(hdr)
+            print("-" * len(hdr))
+            for _, rec in rows:
+                summary = rec.get("summary", "")
+                if len(summary) > 60:
+                    summary = summary[:57] + "..."
+                print(f"{rec['at']:<17} {rec.get('sessions', 0):>5} "
+                      f"{rec.get('agents', 0):>7} {rec.get('active_agents', 0):>7}  {summary}")
+    if malformed:
+        print(f"warning: {malformed} malformed line(s) skipped", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except BrokenPipeError:
+        sys.exit(0)

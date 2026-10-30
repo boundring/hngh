@@ -1,0 +1,312 @@
+#!/usr/bin/env python3
+"""hngh-agent-spawn — spawn a role-primed omp slot (fabric brief §2, option B).
+
+Composes the proven slot mechanics (systemd-run slot + omp wrapper + --config overlay +
+--session-dir) with a role manifest, and registers the session at spawn time in
+the hngh session ledger and the dashboard sessions feed (option B: tracking
+exists before turn 1).
+
+Usage:
+  hngh-agent-spawn <role> <slug> [--task "TASK"] [--dry-run] [--headless]
+
+Exit: 0 spawned/dry-run ok | 1 pre-flight failure | 2 usage/manifest error
+"""
+
+import datetime
+import json
+import os
+import shutil
+import shlex
+import subprocess
+import sys
+
+import yaml
+
+HOME = os.path.expanduser("~")
+ROLES_DIR = os.environ.get("HNGH_ROLES_DIR", f"{HOME}/Projects/hngh/roles")
+WORK_ROOT = f"{HOME}/Work/sessions"
+NOTE = f"{HOME}/Projects/hngh/bin/hngh-session-note"
+FEED = f"{HOME}/Projects/hngh/bin/hngh-dashboard-feed"
+JOB = f"{HOME}/Projects/hngh/bin/hngh-job-note"
+ORIENT = f"{HOME}/Projects/hngh/bin/hngh-orient"
+
+
+def fail(code, msg):
+    print(f"hngh-agent-spawn: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+def run(cmd, **kw):
+    return subprocess.run(cmd, capture_output=True, text=True, **kw)
+
+
+def preflight():
+    if os.environ.get("HNGH_SPAWN_SKIP_PREFLIGHT"):
+        return []
+    issues = []
+    port = "18789"
+    pz = f"{HOME}/.local/state/billion-context/port-zone.json"
+    try:
+        with open(pz) as fh:
+            port = str(json.load(fh).get("lanes", {}).get("omp") or port)
+    except Exception:
+        pass
+    h = run(["curl", "-sm", "3", f"http://127.0.0.1:{port}/__bili/health"])
+    if '"ok":true' not in h.stdout:
+        issues.append(f"bili proxy unhealthy on :{port}")
+    if run(["pgrep", "-cf", "bin/bili start"]).stdout.strip() != "1":
+        issues.append("bili process count != 1 (recursion trap?)")
+    return issues
+
+
+def render(role, slug, ws, task, today):
+    prime_lines = []
+    missing = []
+    for group, items in (role.get("primes") or {}).items():
+        for it in items:
+            path = it if it.startswith("/") else f"{HOME}/Projects/omp-work/{it}"
+            # kb primes are corpus directories, so existence is the contract.
+            if not os.path.exists(path):
+                missing.append(path)
+            prime_lines.append(f"- `{path}`")
+    if missing:
+        fail(2, "role manifest primes do not exist: " + ", ".join(missing))
+    owns = "\n".join(f"| `{o.replace('<date>', today).replace('<slug>', slug)}` | this slot |" for o in role.get("owns") or ["`<ws>` — this workspace"])
+    constraints = "\n".join(f"- {c}" for c in role.get("constraints") or [])
+    orient = orientation_snapshot(ws)
+    return f"""# Charter — {slug} (managed slot, spawned by hngh-agent-spawn)
+
+## Goal
+
+{task or "(task pending — orchestrator will prompt)"}
+
+## Read first (context primes)
+
+{chr(10).join(prime_lines) or "- (none declared)"}
+
+## Orientation snapshot
+
+{orient}
+
+## Hard constraints
+
+- Consent ceiling: **{role.get("consent_ceiling", "Confirm")}** — human gates are presented, never self-authorized.
+{constraints}
+
+## Files and ownership (disjoint — "you own ONLY these")
+
+| Path | Owner |
+|---|---|
+{owns}
+| `{ws}/**` | this slot (workspace, sessions, handoff) |
+
+## Session reporting (hngh ledger)
+
+Report milestones as they happen, not at exit:
+`hngh-session-note {slug} <event> --role {role["role"]} --line {"--line ".join(role.get("lines") or [])}` —
+events: `started|phase_started|phase_done|blocked|awaiting_gate|deliverable|done|aborted`.
+
+## Job registry (what an auditor sees)
+
+This slot is a job: `{slug}`, consent ceiling **{role.get("consent_ceiling", "Confirm")}**.
+Record the events that matter, as they happen:
+`hngh-job-note --job {slug} --event started|gate|outcome [--outcome "what happened"]` —
+`gate` when a human ruling is needed (a gate event is the handover, never the
+ruling itself), `outcome` when the work is done or abandoned.
+
+## Handoff
+
+Keep `{ws}/handoff/{today}-{slug}.md` current (Status / done / NOT verified / next
+concrete action). The handoff, not the terminal, is the state of record.
+"""
+
+
+def orientation_snapshot(ws):
+    """Portfolio orientation folded into the charter, so the slot starts informed."""
+    try:
+        r = run([ORIENT, "--type", "long-work", "--cwd", ws], timeout=60)
+        out = (r.stdout or "").strip()
+    except Exception:
+        out = ""
+    if not out:
+        return "(orientation snapshot unavailable)"
+    return "\n".join(out.splitlines()[:60])
+
+
+def main(argv):
+    if len(argv) < 2 or argv[0] in ("-h", "--help"):
+        print(__doc__)
+        return 2 if len(argv) < 2 else 0
+    role_name, slug = argv[0], argv[1]
+    task, dry = "", "--dry-run" in argv[2:]
+    HEADLESS = "--headless" in argv[2:]
+    rest = argv[2:]
+    if "--task" in rest:
+        i = rest.index("--task")
+        task = rest[i + 1] if len(rest) > i + 1 else ""
+    if not re_ok(slug):
+        fail(2, f"bad slug: {slug!r} (use [A-Za-z0-9-]+)")
+    mpath = os.path.join(ROLES_DIR, f"{role_name}.yml")
+    if not os.path.exists(mpath):
+        fail(2, f"no such role manifest: {mpath}")
+    with open(mpath) as fh:
+        role = yaml.safe_load(fh) or {}
+    if role.get("role") != role_name:
+        fail(2, f"manifest role mismatch: file says {role.get('role')!r}")
+
+    issues = preflight()
+    if issues:
+        for i in issues:
+            print(f"pre-flight FAIL: {i}", file=sys.stderr)
+        return 1
+
+    today = datetime.date.today().isoformat()
+    ws = f"{WORK_ROOT}/{today}-{slug}"
+    if os.path.exists(ws):
+        fail(1, f"workspace already exists: {ws} (two clients on one session-dir is forbidden)")
+
+    charter = render(role, slug, ws, task, today)
+    overlay = yaml.safe_dump(
+        {"task": {"agentModelOverrides": role.get("models") or {}},
+         **({"retry": {"fallbackChains": role["fallbacks"]}} if role.get("fallbacks") else {})},
+        sort_keys=False)
+
+    if dry:
+        print(f"# workspace (not created): {ws}")
+        print("# --- CHARTER.md ---\n" + charter)
+        print("# --- omp-overlay.yml ---\n" + overlay)
+        print("# --- launch ---")
+        print(launch_line(role, slug, ws, task))
+        print("# --- job registry ---")
+        print(f"{JOB} --job {slug} --event started --tier {role.get('consent_ceiling', 'Confirm')}")
+        return 0
+
+    os.makedirs(f"{ws}/handoff", exist_ok=True)
+    with open(f"{ws}/CHARTER.md", "w") as fh:
+        fh.write(charter)
+    with open(f"{ws}/omp-overlay.yml", "w") as fh:
+        fh.write(overlay)
+
+    lines = role.get("lines") or []
+    note_args = [NOTE, slug, "spawned", "--role", role_name]
+    for ln in lines:
+        note_args += ["--line", ln]
+    note_args += ["--detail", (task or "spawned")[:120]]
+    try:
+        run(note_args)
+        run([FEED, "sessions", json.dumps(
+        {"writer": "hngh-agent-spawn",
+             "item": f"spawned {slug} ({role_name}) — {(task or 'no task')[:90]}", "severity": "info"})])
+        # The job registry is the auditable half of 24/7: the slot is a job,
+        # and the ceiling it acts under comes from its role manifest.
+        run([JOB, "--job", slug, "--event", "started",
+             "--tier", role.get("consent_ceiling") or "Confirm",
+             "--source", "hngh-agent-spawn",
+             "--outcome", f"spawned {slug} ({role_name})"])
+    except OSError as exc:
+        print(f"hngh-agent-spawn: registration failed (launch continues): {exc}", file=sys.stderr)
+
+    # Observable by default (operator directive 2026-10-29): the slot runs in a
+    # visible Tern tab. --headless opts into systemd-run for unattended runs.
+    if HEADLESS:
+        err = launch_systemd(role, slug, ws, task)
+    else:
+        err = launch_tern(role, slug, ws, task)
+        if err:
+            print(f"hngh-agent-spawn: tern launch unavailable ({err}); using systemd-run",
+                  file=sys.stderr)
+            err = launch_systemd(role, slug, ws, task)
+    if err:
+        print(f"hngh-agent-spawn: launch failed: {err}", file=sys.stderr)
+        print(f"workspace + registration are in place; manual launch:\n{launch_line(role, slug, ws, task)}",
+              file=sys.stderr)
+        return 1
+    print(f"spawned: {slug} ({role_name}) in {ws}")
+    return 0
+
+
+def re_ok(slug):
+    import re as _re
+    return bool(_re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]*", slug))
+
+
+def omp_argv(role, slug, ws, task):
+    prompt = (f"Charter: read {ws}/CHARTER.md and the context primes listed in it, "
+              f"then execute. Task: {task or '(see charter)'}")
+    cmd = ["omp", "--auto-approve", "--cwd", ws]
+    for d in role.get("add_dirs") or []:
+        cmd += ["--add-dir", d]
+    cmd += ["--session-dir", f"{ws}/sessions", "--config", f"{ws}/omp-overlay.yml", "--", prompt]
+    return cmd
+
+
+def systemd_argv(role, slug, ws, task):
+    """Headless slot launch (herdr was dropped 2026-10-27; systemd-run is the launch path)."""
+    cmd = ["systemd-run", "--user", f"--unit=hngh-slot-{slug}", "--collect", "env",
+           f"PATH={os.environ.get('PATH', '')}"]
+    return cmd + omp_argv(role, slug, ws, task)
+
+
+def launch_systemd(role, slug, ws, task):
+    cmd = systemd_argv(role, slug, ws, task)
+    r = run(cmd)
+    if r.returncode != 0:
+        return r.stderr.strip() or r.stdout.strip()
+    return None
+
+
+def launch_tern(role, slug, ws, task):
+    """Observable slot: a Tern tab running omp (2026-10-29 operator directive:
+    agentic work belongs in terminals the operator can watch). Focus is restored
+    to the previously focused block (hngh-observe pattern). Returns None on
+    success, else the error string (caller falls back to systemd-run)."""
+    tern = shutil.which("tern")
+    if not tern:
+        return "tern not found on PATH"
+    try:
+        prev = ""
+        r = run([tern, "ls", "--json"])
+        if r.returncode == 0:
+            try:
+                tree = json.loads(r.stdout or "{}")
+                prev = next((b["id"] for s in tree.get("sessions", [])
+                             for t in s.get("tabs", []) for b in t.get("blocks", [])
+                             if b.get("focused")), "")
+                prev = str(prev) if prev else ""
+            except Exception:
+                prev = ""
+        r = run([tern, "new", "tab", "--keep-open", "--json", "--"] +
+                omp_argv(role, slug, ws, task))
+        if r.returncode != 0:
+            return r.stderr.strip() or r.stdout.strip() or "tern new tab failed"
+        # from here the agent is LIVE in the tab: rename/focus failures are
+        # cosmetic and must never trigger a second (systemd) launch of the same
+        # workspace — two agents on one session-dir is forbidden
+        try:
+            block = (json.loads(r.stdout or "{}") or {}).get("block", "")
+        except Exception:
+            block = ""
+        if block:
+            try:
+                run([tern, "rename", str(block), slug])
+            except Exception:
+                pass
+        if prev:
+            try:
+                run([tern, "focus", str(prev)])
+            except Exception:
+                pass
+        return None
+    except Exception as exc:
+        # any tern/daemon hiccup must fall back to systemd, never crash the
+        # spawn after the workspace exists (observed 2026-10-29: TypeError
+        # from int block ids crashed post-workspace, no fallback ran)
+        return f"tern launch exception: {exc}"
+
+
+def launch_line(role, slug, ws, task):
+    return " ".join(shlex.quote(c) for c in systemd_argv(role, slug, ws, task))
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
