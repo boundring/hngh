@@ -576,3 +576,10 @@ arc-20261015-dashboard-voice-majority-r5	How should newspaper composition reach 
 synth-2026-10-15-1	steer-vs-die threshold: what concrete rule should govern steer-vs-kill on stalled sessions when no decided rule exists and it is currently judged ad hoc per session?
 synth-2026-10-15-2	fail-20260916-patrol-handoffs R2: what scheduling or resource measurement would establish whether the patrol's check_handoff_deaths threshold is structurally unreachably or merely a symptom-suppression target?
 synth-2026-10-15-3	fail-20261012-beat-parked-2026-09-16-routed-slow-unit-dropin-59-unsloth-observe.sh: what are the four owed verification greps and how can they be discharged on a host with filesystem access?
+question-synth-2026-10-16-1	Does the acceptance evaluator share its state with the router, and if so, what is the shared data surface?
+question-synth-2026-10-16-2	When R1 is executed against 2026-09-13-governed-fleet-consolidation, does the acceptance gate pass at HEAD?
+synth-2026-10-16-3	Where is the BLOCKED-state gap in synth-2026-10-15-1 located, and what kernel integration point does it target?
+arc-20261016-dashboard-voice-majority-r5	How should newspaper composition reach the operator's voice-majority target (>=60% system/operator/research/hngh articles)?
+question-synth-2026-10-16-1	Does the acceptance evaluator share its state with the router, and if so, what is the shared state contract?
+question-synth-2026-10-16-2	What are the four owed verification greps for the slow-unit-dropin-59 incident record, and do they execute against current repo state?
+synth-2026-10-16-3	What is the decided steer-vs-die threshold rule for stalled sessions, replacing the current ad hoc per-session judgment?
