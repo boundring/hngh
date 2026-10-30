@@ -50,3 +50,16 @@ quota-pacing doctrine.
 Fill-funnel item batch (the funnel is the factory): 1) route table + submit,
 2) drain + patient retry, 3) provenance + loaded-models check, 4) selfcheck
 script. Four single-file items, additive, no hidden callers.
+
+## VERIFIED: studio-native decider serving (2026-10-30, live)
+The studio itself serves `POST /v1/systemone` (settings: `/api/settings/systemone`,
+dropdown of 14 catalog models with sizes + llama_cpp_only flags; request schema
+in the studio OpenAPI). Decider duty needs NO manual llama-server flags for the
+catalog models (laya/kev/lev/julia) — the override-kv dance is only for
+StartLux/pplx GGUFs outside the catalog. Live recipe (verified, laya-multilingual
+200 in 1.23 s once loaded, 0.68 GB): choice questions take `criteria` as an
+OBJECT describing each option; score questions take `criteria` as an ARRAY of
+1–10 level strings; strict pydantic rejects extras. Full recipe:
+kb/llm-wiki wiki `syntheses/systemone-decision-models-2026-10.md`.
+hngh-route's decider class = this endpoint; route table: laya-multilingual
+(multilingual/cheap), kev-4b (default), julia-1 (sub-GB, CPU-able).
