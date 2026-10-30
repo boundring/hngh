@@ -63,3 +63,12 @@ margins are the counterweight, not decoration.
 Crystallized 2026-10-30 by scout CanonWisdom from the six annotated files;
 landed by the orchestrator session. Quote rule: Legge only, one short sentence
 per principle in the source distillation; this file paraphrases.
+
+## Postscript — the blast-radius rule, 2026-10-30
+The iGPU move landed (monitor on the motherboard; dGPU inference-only). The
+doctrine it confirms: separate the *authority* to run a thing from the *cost*
+of its failure. Three desktop-killing hangs were needed to buy one replug;
+the Qwen ban stands because the model hangs the GPU itself, but the price of
+that failure dropped from "the operator's whole session" to "one inference
+run". Small blast radius is a property you engineer, then keep verifying
+(after every reboot: display on card0, work on card1).
