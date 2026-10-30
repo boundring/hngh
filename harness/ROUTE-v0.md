@@ -43,7 +43,10 @@ resident and answering.
 
 ## Deliberately not in v0
 No daemon, no priority preemption, no GPU partitioning, no vision routing
-(unmeasured), no remote-lane routing (weekly batched sessions are manual).
+(unmeasured), no remote-lane routing (daily lane sessions are manual, within
+the daily quota allowance; weekly is the retrospective layer — see the
+check-in skill's cadence layers: ~5 min machine probes, hourly progression
+checks during work blocks, daily funnel cycles, weekly review).
 v1 candidates after a week of queue data: class weights, load-balancing
 between two residents of the same class, an admission rule tied to the
 quota-pacing doctrine.
