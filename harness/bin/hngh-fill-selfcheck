@@ -88,6 +88,32 @@ RETRY)
 	fi ;;
 RED) emit 'I am sorry, I cannot produce that patch.' ;;
 DOWN) printf '000'; exit 7 ;;
+BITE) emit '--- hello.txt
++++ hello.txt
+@@ -1,1 +1,2 @@
+ original
++FIXED' ;;
+GROWTH)
+	if [ "$n" = 1 ]; then
+		emit '--- hello.txt
++++ hello.txt
+@@ -1,1 +1,2 @@
+ original
++WRONG'
+	else
+		emit '--- hello.txt
++++ hello.txt
+@@ -1,1 +1,3 @@
+ original
++WRONG
++AND_MUCH_MORE_LONG_LINE_TO_TRIPLE_THE_DIFF_SIZE_FOR_THE_GROWTH_DETECTOR'
+	fi ;;
+LANG) emit '--- script.sh
++++ script.sh
+@@ -1,2 +1,3 @@
+ #!/bin/bash
+ echo hi
++import os' ;;
 *) emit 'no diff' ;;
 esac
 STUB
@@ -208,6 +234,39 @@ for f in "$sandbox/bogus.out"; do grep -q "$FAKE_KEY" "$f" && leak=1; done
 printf '%s' "$out" "$st" "$down_out" | grep -q "$FAKE_KEY" && leak=1
 [ $leak = 0 ]
 check "no output contains the API key" $?
+
+# ---- 9. guards: tests-bite, growth-stop, language lint ------------------------
+# a separate queue so the fixtures above keep their results
+export HNGH_FILL_DIR="$sandbox/queue_guards"
+mkdir -p "$HNGH_FILL_DIR"
+mk_item bite-item BITE 'echo PASS'          # passes on the pre-fill state too
+mk_item growth-item GROWTH 'grep -q FIXED hello.txt && echo PASS || { echo "expected FIXED"; exit 1; }'
+# the language-lint item owns a shell script the model must not patch with python
+d="$HNGH_FILL_DIR/queued/lang-item"
+mkdir -p "$d/tests" "$d/workdir"
+printf '# spec for lang-item\nFIXTURE:LANG\n' > "$d/SPEC.md"
+printf 'assert the script still runs\n' > "$d/tests/test_spec.txt"
+printf '#!/bin/bash\necho hi\n' > "$d/workdir/script.sh"
+printf 'grep -q hi script.sh || exit 1\n' > "$d/workdir/test.sh"
+printf '{"id":"lang-item","test_cmd":"bash test.sh","workdir_rel":"workdir"}\n' > "$d/item.json"
+
+guards_out=$(bash "$fill" drain --attempts 2 2>&1)
+guards_rc=$?
+
+[ $guards_rc = 0 ] && [ -d "$HNGH_FILL_DIR/escalate/bite-item" ] &&
+	grep -q 'tests do not bite' "$HNGH_FILL_DIR/escalate/bite-item/result.json"
+check "tests-bite: a green whose tests already pass on the pre-fill state is rejected and escalates" $?
+
+[ -d "$HNGH_FILL_DIR/escalate/growth-item" ] &&
+	grep -q 'growing, not converging' "$HNGH_FILL_DIR/escalate/growth-item/result.json"
+check "growth-stop: a diff that doubles while the tests stay red escalates" $?
+
+[ -d "$HNGH_FILL_DIR/escalate/lang-item" ] &&
+	grep -q 'language mismatch' "$HNGH_FILL_DIR/escalate/lang-item/result.json" &&
+	! grep -q 'import os' "$HNGH_FILL_DIR/escalate/lang-item/workdir/script.sh"
+check "language lint: a python-flavoured patch for a shell file is rejected before it is applied" $?
+
+export HNGH_FILL_DIR="$sandbox/queue"
 
 if [ $failures = 0 ]; then
 	echo "SELF-CHECK GREEN"

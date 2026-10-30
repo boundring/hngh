@@ -12,6 +12,14 @@
 #
 # The model is the local unsloth coder (text-only, THINKING: max_tokens must be >= 3000; LFM2.5-24B-A2B measured to need ~8k+ or content comes back empty).
 # The key comes from ${HNGH_ENV_DIR:-~/.config/environment.d}/70-unsloth.conf and is NEVER printed.
+#
+# Guards (a green is only trusted if all of them hold):
+#   shrink      the patched file did not lose half its size (no full-file rewrite)
+#   bite        the tests FAIL on the pre-fill state (a green the tests already
+#               produced proves nothing about the patch)
+#   lint        the patch does not add python to an owned shell script
+#   growth      a diff that doubles while the tests stay red escalates instead
+#               of burning the remaining attempts
 set -u
 
 ROOT=${HNGH_FILL_DIR:-$HOME/.local/state/hngh/fill}
@@ -188,8 +196,11 @@ do_drain() {
 		attempts_used=0
 		local failure_out=""
 		local escalated=1
+		local escalate_note=""
+		local last_diff_size=0
 		while [ "$attempts_used" -lt "$attempts" ]; do
 			attempts_used=$((attempts_used + 1))
+			escalate_note=""
 
 			# Bounded pre-load (2026-10-29 GPU-hang incident): the studio's
 			# auto context derivation ignores the desktop's VRAM — it fitted
@@ -351,6 +362,75 @@ sys.stdout.write("\n".join(out).rstrip() + "\n")' "$workdir")
 				# and it is training-shaped data for the next model iteration
 				printf '%s\n' "$content" > "$item/reply-attempt-$attempts_used.txt" 2>/dev/null
 				failure_out="no unified diff in model reply"
+				last_diff_size=0
+				continue
+			fi
+			local diff_size=${#diff}
+
+			# Language lint (fail fast): a patch that adds python markers to
+			# an owned shell file can never satisfy a shell test — bash just
+			# treats them as commands. Reject before touching the workdir.
+			local lint_file lint_out
+			lint_file=$(mktemp)
+			printf '%s\n' "$diff" > "$lint_file"
+			lint_out=$(python3 - "$lint_file" "$workdir" <<'PY'
+import os, re, sys
+path, workdir = sys.argv[1], sys.argv[2]
+lines = open(path, encoding="utf-8", errors="replace").read().splitlines()
+def shell_file(p):
+    try:
+        with open(p, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                s = line.strip()
+                if not s:
+                    continue
+                if s.startswith("#") and not s.startswith("#!"):
+                    continue
+                return s.startswith("#!") and bool(re.search(r"(^|[/\s])(ba)?sh($|\s)", s))
+    except OSError:
+        return False
+    return False
+sections, i = [], 0
+while i < len(lines):
+    l = lines[i]
+    if l.startswith("+++ ") and i > 0 and lines[i - 1].startswith("--- "):
+        plus, j = [], i + 1
+        while j < len(lines) and not lines[j].startswith("--- ") and not lines[j].startswith("diff "):
+            if lines[j].startswith("+"):
+                plus.append(lines[j][1:])
+            j += 1
+        sections.append({"path": l[4:].strip().split("\t")[0], "plus": plus})
+        i = j
+        continue
+    i += 1
+for sec in sections:
+    p = sec["path"]
+    if p[:2] in ("a/", "b/"):
+        p = p[2:]
+    is_shell = p.endswith(".sh")
+    if not is_shell:
+        for cand in (os.path.join(workdir, p), os.path.join(workdir, os.path.basename(p))):
+            if os.path.isfile(cand) and shell_file(cand):
+                is_shell = True
+                break
+    if not is_shell:
+        continue
+    for pl in sec["plus"]:
+        if re.match(r"^(import\s+\w+|from\s+\w+\s+import)\b", pl):
+            print("language mismatch: patch looks Python, owned file is a shell script")
+            sys.exit(0)
+PY
+)
+			rm -f "$lint_file"
+			if [ -n "$lint_out" ]; then
+				echo "hngh-fill: $id attempt $attempts_used: patch REJECTED — $lint_out" >&2
+				printf '%s\n' "$content" > "$item/reply-attempt-$attempts_used.txt" 2>/dev/null
+				if [ -d "$ROOT/.prefill/$id" ]; then
+					find "$workdir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+					cp -a "$ROOT/.prefill/$id"/. "$workdir"/
+				fi
+				failure_out="language mismatch: patch looks Python, owned file is a shell script"
+				escalate_note="language mismatch: patch looks Python, owned file is a shell script"
 				continue
 			fi
 
@@ -367,6 +447,7 @@ sys.stdout.write("\n".join(out).rstrip() + "\n")' "$workdir")
 					cp -a "$ROOT/.prefill/$id"/. "$workdir"/
 				fi
 				failure_out="patch did not apply: $applied"
+				last_diff_size=$diff_size
 				continue
 			fi
 
@@ -393,6 +474,38 @@ for f in os.listdir(pf):
 					failure_out="green rejected: $gutted. Patch the provided content; keep the existing engine."
 					continue
 				fi
+				# Tests-bite guard: the tests must FAIL on the pre-fill
+				# state. A "green" the tests already produced before the
+				# patch proves nothing about the patch.
+				# (no snapshot = additive item: nothing to bite against)
+				if [ -d "$ROOT/.prefill/$id" ] && [ -n "$(ls -A "$ROOT/.prefill/$id" 2>/dev/null)" ]; then
+					local bite_tmp bite_rc=0
+					bite_tmp=$(mktemp -d)
+					# mirror the item so the test sees the PRE-FILL workdir,
+					# not the patched one
+					mkdir -p "$bite_tmp/item"
+					cp -a "$item"/. "$bite_tmp/item"/ 2>/dev/null
+					if [ "$workdir_rel" = "." ] || [ -z "$workdir_rel" ]; then
+						# path-2 item: the workdir IS the item dir
+						find "$bite_tmp/item" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+						cp -a "$ROOT/.prefill/$id"/. "$bite_tmp/item"/ 2>/dev/null
+					else
+						find "$bite_tmp/item/$workdir_rel" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+						cp -a "$ROOT/.prefill/$id"/. "$bite_tmp/item/$workdir_rel"/ 2>/dev/null
+					fi
+					(cd "$bite_tmp/item/$workdir_rel" && HNGH_FILL_ITEM_DIR="$bite_tmp/item" HNGH_FILL_TESTS_DIR="$bite_tmp/item/tests" \
+						bash -c "$test_cmd" >/dev/null 2>&1) || bite_rc=$?
+					rm -rf "$bite_tmp"
+					if [ "$bite_rc" = 0 ]; then
+						echo "hngh-fill: $id attempt $attempts_used: green REJECTED — tests do not bite (they pass on the pre-fill state)" >&2
+						printf '%s\n' "$content" > "$item/reply-attempt-$attempts_used.txt" 2>/dev/null
+						find "$workdir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+						cp -a "$ROOT/.prefill/$id"/. "$workdir"/
+						failure_out="tests do not bite: they pass on the pre-fill state"
+						escalate_note="tests do not bite: they pass on the pre-fill state"
+						continue
+					fi
+				fi
 				echo "hngh-fill: $id green after $attempts_used attempt(s)" >&2
 				mv "$item" "$ROOT/filled/$id" || die "cannot move $id to filled/"
 				write_result "$ROOT/filled/$id" "$id" "$model" "$attempts_used" "filled" "tests green"
@@ -409,12 +522,25 @@ for f in os.listdir(pf):
 				cp -a "$ROOT/.prefill/$id"/. "$workdir"/
 			fi
 			failure_out=$test_out
+			# Growth-stop: a diff that doubles while the tests stay red is
+			# growing, not converging. Escalate instead of burning attempts.
+			local prev_diff_size=$last_diff_size
+			last_diff_size=$diff_size
+			if [ "$attempts_used" -ge 2 ] && [ "$prev_diff_size" -gt 0 ] && \
+				[ "$diff_size" -ge $((prev_diff_size * 2)) ]; then
+				failure_out="growing, not converging: diff grew from $prev_diff_size to $diff_size characters while the tests stayed red"
+				escalate_note="$failure_out"
+				echo "hngh-fill: $id attempt $attempts_used: ESCALATED — $failure_out" >&2
+				break
+			fi
 		done
 
 		if [ "$escalated" = 1 ]; then
 			mv "$item" "$ROOT/escalate/$id" || die "cannot move $id to escalate/"
-			write_result "$ROOT/escalate/$id" "$id" "$model" "$attempts_used" "escalated" "still red after $attempts_used attempt(s)"
-			log_transition "$id" "queued" "escalate" "$attempts_used" "still red after $attempts_used attempt(s)"
+			local esc_note="still red after $attempts_used attempt(s)"
+			[ -n "$escalate_note" ] && esc_note="$escalate_note"
+			write_result "$ROOT/escalate/$id" "$id" "$model" "$attempts_used" "escalated" "$esc_note"
+			log_transition "$id" "queued" "escalate" "$attempts_used" "$esc_note"
 		fi
 	done
 	flock -u 9
