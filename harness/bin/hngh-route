@@ -1,0 +1,278 @@
+#!/usr/bin/env bash
+# hngh-route — duty-routed dispatcher for unsloth-hosted local models (v0).
+# Design: harness/ROUTE-v0.md. Shepherd rules: patient queue, provenance ledger,
+# never error mid-queue, never print the API key.
+#
+# Queue root: ${HNGH_ROUTE_DIR:-~/.local/state/hngh/route}
+#   queue.jsonl      {id, ts, class, model, payload_file, note, status:queued}
+#   results.jsonl    {id, model, latency_s, status}
+#   results/<id>.json  raw response bodies
+#
+# Duty table (fleet sweep 2026-10-30 — override via HNGH_ROUTE_MODEL_<CLASS>):
+#   router|summarizer -> LiquidAI/LFM3-1.7B-GGUF (130 tok/s, best fidelity)
+#   coder             -> unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF (12 GB E4B = fill coder)
+#   decider           -> laya-multilingual (studio /v1/systemone, flag-free)
+#
+# Env: HNGH_ROUTE_URL (default http://127.0.0.1:8888),
+#      HNGH_ROUTE_API_KEY (else UNSLOTH_API_KEY from ${HNGH_ENV_DIR:-~/.config/environment.d}/70-unsloth.conf),
+#      HNGH_ROUTE_TIMEOUT (600s), HNGH_ROUTE_RETRIES (3), HNGH_ROUTE_BACKOFF (30s),
+#      HNGH_ROUTE_VRAM_LIMIT (17 GB), HNGH_SYSTEMONE_MODEL (decider, default laya-multilingual).
+set -u
+
+ROOT=${HNGH_ROUTE_DIR:-$HOME/.local/state/hngh/route}
+URL=${HNGH_ROUTE_URL:-http://127.0.0.1:8888}
+ENV_DIR=${HNGH_ENV_DIR:-$HOME/.config/environment.d}
+TIMEOUT=${HNGH_ROUTE_TIMEOUT:-600}
+RETRIES=${HNGH_ROUTE_RETRIES:-3}
+BACKOFF=${HNGH_ROUTE_BACKOFF:-30}
+VRAM_LIMIT=${HNGH_ROUTE_VRAM_LIMIT:-17000000000}
+
+usage() {
+	cat <<'EOF'
+hngh-route — duty-routed dispatcher for unsloth-hosted models
+
+usage:
+  hngh-route submit <class> <payload-file> [note]   queue a request
+  hngh-route drain [--limit N] [--follow]           process queued items
+  hngh-route status                                 queue + results counts
+  hngh-route loaded-models                          studio residency + ctx check
+  hngh-route selfcheck                              sandboxed end-to-end test
+classes: router | summarizer | coder | decider  (env: HNGH_ROUTE_MODEL_<CLASS>)
+payload-file: the FULL API request body minus "model" (chat messages for
+coder/summarizer; state+questions for decider). The model field is injected
+here from the duty table.
+EOF
+}
+
+die() { echo "hngh-route: $*" >&2; exit 1; }
+
+route_model_for() {
+	local class=$1 var="HNGH_ROUTE_MODEL_${class}"
+	local v="${!var:-}"
+	[ -n "$v" ] && { echo "$v"; return; }
+	case $class in
+		router | summarizer) echo "LiquidAI/LFM3-1.7B-GGUF" ;;
+		coder) echo "unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF" ;;
+		decider) echo "${HNGH_SYSTEMONE_MODEL:-laya-multilingual}" ;;
+		*) die "unknown class '$class' (router|summarizer|coder|decider)" ;;
+	esac
+}
+
+key() {
+	[ -n "${HNGH_ROUTE_API_KEY:-}" ] && { echo "$HNGH_ROUTE_API_KEY"; return; }
+	local f="$ENV_DIR/70-unsloth.conf"
+	[ -f "$f" ] || die "no API key: HNGH_ROUTE_API_KEY unset and $f missing"
+	local k
+	k=$(set -a; . "$f"; eval 'printf %s "${UNSLOTH_API_KEY:-}"')
+	[ -n "$k" ] || die "no UNSLOTH_API_KEY in $f"
+	echo "$k"
+}
+
+# post_with_retries <path> <body-model> <payload-file>
+# Injects "model" into the payload, POSTs to $URL<path>, retries on busy.
+# On success prints the raw body and returns 0; on exhaustion prints a short
+# reason to stderr and returns 1.
+post_with_retries() {
+	local path=$1 body_model=$2 payload=$3
+	local ukey attempt=0 code out tmp
+	ukey=$(key)
+	tmp=$(mktemp)
+	local work
+	work=$(mktemp)
+	cp "$payload" "$work"
+	python3 -c '
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p, encoding="utf-8"))
+d.setdefault("model", sys.argv[2])
+json.dump(d, open(p, "w"), indent=1)
+' "$work" "$body_model" || { rm -f "$tmp" "$work"; echo "hngh-route: payload is not valid JSON: $payload" >&2; return 1; }
+	while :; do
+		attempt=$((attempt + 1))
+		code=$(curl -sS --max-time "$TIMEOUT" -o "$tmp" -w '%{http_code}' \
+			-H "Authorization: Bearer $ukey" -H 'Content-Type: application/json' \
+			--data-binary "@$work" "$URL$path" 2>/dev/null)
+		code=${code:-000}
+		if [ "$code" = "200" ]; then
+			cat "$tmp"
+			rm -f "$tmp" "$work"
+			return 0
+		fi
+		out=$(head -c 160 "$tmp" 2>/dev/null)
+		echo "hngh-route: attempt $attempt: http $code $out" >&2
+		rm -f "$tmp"
+		if [ "$attempt" -gt "$RETRIES" ]; then
+			echo "busy: exhausted $RETRIES retries (last http $code)" >&2
+			rm -f "$work"
+			return 1
+		fi
+		sleep "$BACKOFF"
+	done
+}
+
+qlock_open() { exec 8>>"$ROOT/queue.jsonl" || die "cannot open queue"; flock 8; }
+qlock_close() { flock -u 8; exec 8>&-; }
+
+cmd_submit() {
+	local class=${1:-} payload=${2:-} note=${3:-}
+	[ -n "$class" ] && [ -n "$payload" ] || { usage >&2; exit 2; }
+	[ -f "$payload" ] || die "payload file not found: $payload"
+	local model
+	model=$(route_model_for "$class")
+	mkdir -p "$ROOT"
+	local id ts
+	ts=$(date -u +%Y%m%dT%H%M%S)
+	id="r${ts}-$$-$RANDOM"
+	qlock_open
+	printf '{"id":"%s","ts":"%s","class":"%s","model":"%s","payload_file":"%s","note":"%s","status":"queued"}\n' \
+		"$id" "$ts" "$class" "$model" "$(readlink -f "$payload")" "$note" >&8
+	qlock_close
+	echo "hngh-route: queued $id ($class -> $model)"
+}
+
+cmd_status() {
+	local q r
+	q=0; [ -f "$ROOT/queue.jsonl" ] && q=$(grep -c '"status":"queued"' "$ROOT/queue.jsonl" 2>/dev/null)
+	r=0; [ -f "$ROOT/results.jsonl" ] && r=$(wc -l < "$ROOT/results.jsonl")
+	echo "queued: $q"
+	echo "results: $r"
+	[ -f "$ROOT/results.jsonl" ] && awk -F'"status":"' '{split($2,a,"\""); print "  " a[1]}' "$ROOT/results.jsonl" | sort | uniq -c | sed 's/^/  /'
+	return 0
+}
+
+cmd_loaded_models() {
+	local ukey v
+	ukey=$(key)
+	curl -sS --max-time 15 -H "Authorization: Bearer $ukey" "$URL/api/inference/loaded-models" |
+		python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+for m in d.get("data", []):
+    print("%s ctx=%s (max %s)" % (m.get("id"), m.get("context_length"), m.get("max_context_length")))
+'
+	v=$(cat /sys/class/drm/card1/device/mem_info_vram_used 2>/dev/null || echo 0)
+	awk -v v="$v" -v lim="$VRAM_LIMIT" 'BEGIN { printf "card1 VRAM used: %.1f GB (limit %.0f GB)\n", v/1e9, lim/1e9 }'
+	[ "$v" -le "$VRAM_LIMIT" ] || echo "hngh-route: WARNING cumulative VRAM over limit" >&2
+	return 0
+}
+
+# queue_pop_first: print one queued line (then delete it from the queue).
+queue_pop_first() {
+	local line
+	qlock_open
+	line=$(grep -n '"status":"queued"' "$ROOT/queue.jsonl" 2>/dev/null | head -1 | cut -d: -f1)
+	if [ -n "$line" ]; then
+		sed -n "${line}p" "$ROOT/queue.jsonl"
+		sed -i "${line}d" "$ROOT/queue.jsonl"
+	fi
+	qlock_close
+	[ -n "$line" ]
+}
+
+cmd_drain() {
+	local limit=0 follow=0
+	while [ $# -gt 0 ]; do
+		case $1 in
+			--follow) follow=1 ;;
+			--limit) limit=${2:-0}; shift ;;
+		esac
+		shift
+	done
+	mkdir -p "$ROOT/results"
+	local processed=0
+	while :; do
+		local item
+		item=$(queue_pop_first) || break
+		[ -n "$item" ] || { [ "$follow" = 1 ] && { sleep 60; continue; }; break; }
+		local id class model payload_file path
+		id=$(python3 -c 'import json,sys; print(json.loads(sys.stdin.read())["id"])' <<<"$item")
+		class=$(python3 -c 'import json,sys; print(json.loads(sys.stdin.read())["class"])' <<<"$item")
+		model=$(python3 -c 'import json,sys; print(json.loads(sys.stdin.read())["model"])' <<<"$item")
+		payload_file=$(python3 -c 'import json,sys; print(json.loads(sys.stdin.read())["payload_file"])' <<<"$item")
+		local path=/v1/chat/completions
+		[ "$class" = "decider" ] && path=/v1/systemone
+		echo "hngh-route: draining $id ($class -> $model)"
+		local t0 t1 lat body rc
+		t0=$(date +%s)
+		body=$(post_with_retries "$path" "$model" "$payload_file")
+		rc=$?
+		t1=$(date +%s)
+		lat=$((t1 - t0))
+		local status=failed
+		[ $rc -eq 0 ] && status=ok
+		[ -n "$body" ] && printf '%s' "$body" > "$ROOT/results/$id.json"
+		printf '{"id":"%s","model":"%s","latency_s":%s,"status":"%s"}\n' \
+			"$id" "$model" "$lat" "$status" >> "$ROOT/results.jsonl"
+		processed=$((processed + 1))
+		[ "$limit" -gt 0 ] && [ "$processed" -ge "$limit" ] && { echo "hngh-route: limit reached"; break; }
+	done
+	echo "hngh-route: drained $processed item(s)"
+}
+
+cmd_selfcheck() {
+	local sandbox port=18977 stub_pid fails=0
+	sandbox=$(mktemp -d)
+	export HNGH_ROUTE_DIR="$sandbox/route"
+	python3 - "$port" > "$sandbox/stub.log" 2>&1 <<'PY' &
+import json, sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+class H(BaseHTTPRequestHandler):
+    def log_message(self, *a): pass
+    def do_POST(self):
+        n = int(self.headers.get("Content-Length", 0))
+        try:
+            body = json.loads(self.rfile.read(n) or b"{}")
+            assert body.get("model"), "model field required"
+        except Exception as e:
+            out = json.dumps({"error": str(e)}).encode()
+            self.send_response(400)
+        else:
+            resp = {"answers": {"q": {"type": "choice", "choice": "a", "confidence": 0.9,
+                    "probabilities": {"a": 0.9}}}} if "systemone" in self.path else \
+                   {"choices": [{"message": {"content": "ok"}}], "usage": {"input_tokens": 1}}
+            out = json.dumps(resp).encode()
+            self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(out)))
+        self.end_headers()
+        self.wfile.write(out)
+HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
+PY
+	stub_pid=$!
+	sleep 1
+	SELF=$0
+	hngh_route_self() { bash "$SELF" "$@"; }
+	export HNGH_ROUTE_URL="http://127.0.0.1:$port"
+	export HNGH_ROUTE_API_KEY="stub-key-for-selfcheck"
+	local out
+	okk() { echo "ok: $1"; }
+	badd() { echo "FAIL: $1"; fails=$((fails + 1)); }
+	printf '{"messages":[{"role":"user","content":"probe"}]}' > "$sandbox/payload.json"
+	out=$(hngh_route_self submit summarizer "$sandbox/payload.json" "selfcheck" 2>&1)
+	case $out in *"queued"*) okk "submit queues an item" ;; *) badd "submit: $out" ;; esac
+	out=$(hngh_route_self status 2>&1)
+	case $out in *queued:*) okk "status counts the queue" ;; *) badd "status: $out" ;; esac
+	out=$(hngh_route_self drain 2>&1)
+	case $out in *"drained 1"*) okk "drain processes the queued item" ;; *) badd "drain: $out" ;; esac
+	[ -s "$HNGH_ROUTE_DIR/results.jsonl" ] && grep -q '"latency_s"' "$HNGH_ROUTE_DIR/results.jsonl" \
+		&& okk "provenance recorded" || badd "provenance missing"
+	local rid
+	rid=$(python3 -c 'import json;print(json.loads(open("'$HNGH_ROUTE_DIR'/results.jsonl").read().splitlines()[0])["id"])' 2>/dev/null)
+	[ -n "$rid" ] && [ -s "$HNGH_ROUTE_DIR/results/$rid.json" ] && okk "raw response stored" || badd "raw response missing"
+	out=$(hngh_route_self submit bogusclass "$sandbox/payload.json" 2>&1)
+	case $out in *"unknown class"*) okk "unknown class refused" ;; *) badd "class validation: $out" ;; esac
+	kill $stub_pid 2>/dev/null
+	rm -rf "$sandbox"
+	[ $fails -eq 0 ] && echo "hngh-route SELF-CHECK GREEN" || { echo "hngh-route SELF-CHECK FAILED ($fails)"; exit 1; }
+}
+
+cmd=${1:-}
+case $cmd in
+	submit) shift; cmd_submit "$@" ;;
+	drain) shift; cmd_drain "$@" ;;
+	status) cmd_status ;;
+	loaded-models) cmd_loaded_models ;;
+	selfcheck) cmd_selfcheck ;;
+	-h | --help | help | "") usage; exit 0 ;;
+	*) usage >&2; die "unknown subcommand: $cmd" ;;
+esac
