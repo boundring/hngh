@@ -339,6 +339,18 @@ def emit_fullfile():
                 old = open(target).read() if os.path.isfile(target) else ""
                 sys.stdout.write(unified(old, "\n".join(body) + "\n", path))
                 sys.exit(0)
+    # Unfenced full-file reply: a model that answers with the bare file (no
+    # fence at all — measured 2026-10-30 on the noise port) still means the
+    # single workdir file. Accept it only when the first non-blank line looks
+    # like source, so prose analysis is never captured as code.
+    if len(cand) == 1 and len(lines) >= 5:
+        first = next((l for l in lines if l.strip()), "")
+        if re.match(r"^(?:/\*|\*|//|#!|\"\"\"|import |export |from |def |class |function |package )", first):
+            path = cand[0]
+            target = os.path.join(workdir, path)
+            old = open(target).read() if os.path.isfile(target) else ""
+            sys.stdout.write(unified(old, "\n".join(lines) + "\n", path))
+            sys.exit(0)
 text = sys.stdin.read()
 workdir = sys.argv[1]
 lines = text.splitlines()
@@ -554,6 +566,29 @@ apply_diff() {
 	local wd=$1 diff=$2 f rc out
 	f=$(mktemp)
 	printf '%s\n' "$diff" > "$f"
+	# Header path normalization: small coders emit diffs against the SPEC's
+	# repo/skeleton paths (e.g. docs/v3/skeleton/src/render/camera.ts) while
+	# the workdir holds the basename copy. Rewrite each ---/+++ header pair to
+	# the workdir basename when it matches, so patch -p1 can apply.
+	python3 - "$f" "$wd" <<'PY'
+import os, re, sys
+p, wd = sys.argv[1], sys.argv[2]
+names = set(os.listdir(wd)) if os.path.isdir(wd) else set()
+lines = open(p).read().splitlines()
+for i, l in enumerate(lines):
+    m = re.match(r'^(---|\+\+\+) (?:[ab]/)?(.+)$', l)
+    if m and i + 1 < len(lines):
+        other = '+++ ' if m.group(1) == '---' else '--- '
+        if not lines[i + 1].startswith(other):
+            continue
+        base = os.path.basename(m.group(2))
+        if base in names:
+            lines[i] = '%s a/%s' % (m.group(1), base)
+            m2 = re.match(r'^(?:\+\+\+|---) (?:[ab]/)?(.+)$', lines[i + 1])
+            if m2 and os.path.basename(m2.group(1)) == base:
+                lines[i + 1] = '%s %s/%s' % (m2.group(0).split(' ')[0], 'b' if m2.group(0).startswith('+++') else 'a', base)
+open(p, 'w').write('\n'.join(lines) + '\n')
+PY
 	# Recount @@ headers in place: small coders emit correct hunks with wrong
 	# counts, which both patch and git apply reject as corrupt/malformed.
 	# GNU patch then finds the true position from context (offset search).
