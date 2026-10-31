@@ -63,6 +63,28 @@ case "$url" in
 	*loaded-models)
 		printf '{"object": "list", "data": []}'
 		exit 0 ;;
+	*/api/inference/load)
+		# the fill's preload. $STUB_STATE/load409 names the resident model
+		# the studio refuses to evict; the first load is answered 409.
+		if [ -f "$STUB_STATE/load409" ]; then
+			n=$(cat "$STUB_STATE/load409.count" 2>/dev/null || echo 0)
+			n=$((n + 1)); printf '%s' "$n" > "$STUB_STATE/load409.count"
+			if [ -f "$STUB_STATE/load409_always" ] || [ "$n" = 1 ]; then
+				printf '{"detail":"Loading this model would unload the chat model %s, and Keep multiple models loaded is set to Always. Unload that model first, or choose When they fit."}' "$(cat "$STUB_STATE/load409")" > "$out"
+				printf '409'
+				exit 0
+			fi
+		fi
+		printf '{"status":"loaded"}' > "$out"
+		printf '200'
+		exit 0 ;;
+	*/api/inference/unload)
+		n=$(cat "$STUB_STATE/unload.count" 2>/dev/null || echo 0)
+		n=$((n + 1)); printf '%s' "$n" > "$STUB_STATE/unload.count"
+		printf '%s' "$data" > "$STUB_STATE/unload.$n.body"
+		printf '{"status":"unloaded"}' > "$out"
+		printf '200'
+		exit 0 ;;
 esac
 body=${data#@}
 [ -f "$body" ] || body=""
@@ -285,6 +307,49 @@ check "growth-stop: a diff that doubles while the tests stay red escalates" $?
 	grep -q 'language mismatch' "$HNGH_FILL_DIR/escalate/lang-item/result.json" &&
 	! grep -q 'import os' "$HNGH_FILL_DIR/escalate/lang-item/workdir/script.sh"
 check "language lint: a python-flavoured patch for a shell file is rejected before it is applied" $?
+
+# ---- 10. the studio refuses the load (409): evict the resident and retry ------
+# The studio refuses (409) a load that would evict a resident chat model when
+# "keep multiple models loaded" is Always. The fill must evict the named
+# resident and retry the load once; if the retry still fails, the item
+# escalates with the load-failure note and NO chat request is sent.
+export HNGH_FILL_DIR="$sandbox/queue_evict"
+mkdir -p "$HNGH_FILL_DIR"
+mk_item evict-item GREEN 'grep -q FIXED hello.txt && echo PASS || { echo "expected FIXED"; exit 1; }'
+printf 'nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB' > "$STUB_STATE/load409"
+printf '0' > "$STUB_STATE/load409.count"
+evict_out=$(bash "$fill" drain --attempts 2 2>&1)
+evict_rc=$?
+
+[ $evict_rc = 0 ] && [ -d "$HNGH_FILL_DIR/filled/evict-item" ] &&
+	[ ! -d "$HNGH_FILL_DIR/queued/evict-item" ]
+check "409 refusal: the resident is evicted, the load retried, and the item proceeds to filled/" $?
+
+[ -f "$STUB_STATE/unload.1.body" ] &&
+	grep -q 'nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB' "$STUB_STATE/unload.1.body"
+check "409 refusal: the unload endpoint is called with the model id the studio named" $?
+
+[ "$(cat "$STUB_STATE/load409.count" 2>/dev/null)" = 2 ]
+check "409 refusal: the load is retried exactly once" $?
+
+printf '%s' "$evict_out" | grep -q 'evicted resident nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB to admit'
+check "409 refusal: the eviction is logged" $?
+
+export HNGH_FILL_DIR="$sandbox/queue_evict_fail"
+mkdir -p "$HNGH_FILL_DIR"
+mk_item evict-fail-item EVICTFAIL 'grep -q FIXED hello.txt && echo PASS || { echo "expected FIXED"; exit 1; }'
+touch "$STUB_STATE/load409_always"
+printf '0' > "$STUB_STATE/load409.count"
+evict_fail_out=$(bash "$fill" drain --attempts 2 2>&1)
+
+[ -d "$HNGH_FILL_DIR/escalate/evict-fail-item" ] &&
+	grep -q 'model load failed' "$HNGH_FILL_DIR/escalate/evict-fail-item/result.json"
+check "409 refusal: a retry that still fails escalates with the load-failure note" $?
+
+[ ! -f "$STUB_STATE/calls/EVICTFAIL.1.body" ]
+check "409 refusal: a failed load sends no chat request" $?
+
+rm -f "$STUB_STATE/load409" "$STUB_STATE/load409.count" "$STUB_STATE/load409_always"
 
 export HNGH_FILL_DIR="$sandbox/queue"
 
