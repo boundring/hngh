@@ -1,0 +1,188 @@
+#!/usr/bin/env bash
+# hngh-vram-gate-selfcheck — sandboxed checks for the VRAM admission gate.
+# Nothing here touches the real studio or the real card: the VRAM file and the
+# studio's estimate endpoint are both stubbed (a temp file and a local HTTP
+# server), and hngh-fill runs against the same stub so we can prove it never
+# loads a model the gate refused.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"; kill ${stub_pid:-0} 2>/dev/null' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+gate="$selfcheck_dir/hngh-vram-gate"
+fill="$selfcheck_dir/hngh-fill"
+
+# ---- stub studio ------------------------------------------------------------
+port=18991
+export STUB_STATE="$sandbox/stub"
+mkdir -p "$STUB_STATE"
+python3 - "$port" "$STUB_STATE" > "$sandbox/stub.log" 2>&1 <<'PY' &
+import json, os, sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+state = sys.argv[2]
+class H(BaseHTTPRequestHandler):
+    def log_message(self, *a): pass
+    def _send(self, code, obj):
+        out = json.dumps(obj).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(out)))
+        self.end_headers()
+        self.wfile.write(out)
+    def do_POST(self):
+        n = int(self.headers.get("Content-Length", 0))
+        try:
+            body = json.loads(self.rfile.read(n) or b"{}")
+        except Exception:
+            body = {}
+        with open(os.path.join(state, "requests.log"), "a") as fh:
+            fh.write("POST %s\n" % self.path)
+        if self.path.endswith("/estimate-memory"):
+            with open(os.path.join(state, "estimate.json")) as fh:
+                est = json.load(fh)
+            self._send(200, est)
+            return
+        if self.path.endswith("/inference/load"):
+            with open(os.path.join(state, "requests.log"), "a") as fh:
+                fh.write("LOAD %s\n" % json.dumps(body))
+            self._send(200, {"ok": True})
+            return
+        if "/chat/completions" in self.path:
+            diff = "--- hello.txt\n+++ hello.txt\n@@ -1,1 +1,2 @@\n original\n+FIXED"
+            self._send(200, {"choices": [{"message": {"content": diff}}]})
+            return
+        self._send(404, {"detail": "not found"})
+    def do_GET(self):
+        with open(os.path.join(state, "requests.log"), "a") as fh:
+            fh.write("GET %s\n" % self.path)
+        if self.path.endswith("/loaded-models"):
+            try:
+                ids = [l.strip() for l in open(os.path.join(state, "loaded.txt")) if l.strip()]
+            except Exception:
+                ids = []
+            self._send(200, {"object": "list", "data": [{"id": i, "loaded": True} for i in ids]})
+            return
+        self._send(200, {})
+HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
+PY
+stub_pid=$!
+sleep 1
+
+export HNGH_STUDIO_URL="http://127.0.0.1:$port"
+export HNGH_STUDIO_API_KEY="stub-key-for-selfcheck"
+export HNGH_VRAM_FILE="$sandbox/vram_used"
+export HNGH_VRAM_BUDGET=17000000000
+
+set_est() { # set_est <available 0|1> <gpu_bytes>
+	printf '{"available": %s, "reason": null, "gpu_bytes": %s, "total_bytes": %s}\n' \
+		"$1" "$2" "$2" > "$STUB_STATE/estimate.json"
+}
+
+# ---- 1. admit ---------------------------------------------------------------
+set_est true 1000000000
+printf '1000000000\n' > "$HNGH_VRAM_FILE"
+out=$(bash "$gate" "some/model-GGUF" 32768 2>&1); rc=$?
+[ $rc -eq 0 ] && printf '%s' "$out" | grep -q '^admit ' &&
+	printf '%s' "$out" | grep -q 'estimate=studio'
+check "gate admits a model that fits (exit 0, one admit line)" $?
+
+# ---- 2. refuse --------------------------------------------------------------
+set_est true 16000000000
+printf '2000000000\n' > "$HNGH_VRAM_FILE"
+out=$(bash "$gate" "some/model-GGUF" 32768 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q '^refuse ' &&
+	printf '%s' "$out" | grep -q 'estimate=studio'
+check "gate refuses a model that would blow the budget (exit 1, one refuse line)" $?
+
+# a model already resident is refused too (current + demand over budget)
+printf '17000000000\n' > "$HNGH_VRAM_FILE"
+out=$(bash "$gate" "some/model-GGUF" 32768 2>&1); rc=$?
+[ $rc -eq 1 ]
+check "gate refuses when the card is already full" $?
+
+# ---- 3. estimate unavailable -> file-size fallback ---------------------------
+set_est false 0
+gguf="$sandbox/model.gguf"
+head -c 4096 /dev/zero > "$gguf"
+printf '1000000000\n' > "$HNGH_VRAM_FILE"
+out=$(bash "$gate" "$gguf" 1024 2>&1); rc=$?
+[ $rc -eq 0 ] && printf '%s' "$out" | grep -q 'estimate=fallback' &&
+	printf '%s' "$out" | grep -q 'demand=134221824'
+check "gate falls back to GGUF size + KV allowance when the studio cannot price it" $?
+
+# ---- 3b. a model the studio already holds resident is admitted ----------------
+set_est true 16000000000
+printf 'stub/model-GGUF\n' > "$STUB_STATE/loaded.txt"
+printf '16000000000\n' > "$HNGH_VRAM_FILE"
+out=$(bash "$gate" "stub/model-GGUF" 32768 2>&1); rc=$?
+[ $rc -eq 0 ] && printf '%s' "$out" | grep -q 'estimate=resident'
+check "gate admits a model the studio already holds resident (no new VRAM)" $?
+: > "$STUB_STATE/loaded.txt"
+
+# ---- 4. hngh-fill honours the gate -------------------------------------------
+# A fake HOME gives hngh-fill a resolvable GGUF (model_gguf_path reads
+# $HOME/.cache/huggingface/hub/models--<slug>).
+export HOME="$sandbox/home"
+mkdir -p "$HOME/.cache/huggingface/hub/models--stub--model-GGUF/snapshots/abc"
+head -c 4096 /dev/zero > "$HOME/.cache/huggingface/hub/models--stub--model-GGUF/snapshots/abc/model.gguf"
+export HNGH_FILL_DIR="$sandbox/queue"
+export HNGH_ENV_DIR="$sandbox/env"
+mkdir -p "$HNGH_ENV_DIR" "$HNGH_FILL_DIR/queued/refused/workdir"
+printf 'UNSLOTH_API_KEY=stub-key-for-selfcheck\n' > "$HNGH_ENV_DIR/70-unsloth.conf"
+printf '# spec\n' > "$HNGH_FILL_DIR/queued/refused/SPEC.md"
+printf '{"id":"refused","test_cmd":"grep -q FIXED hello.txt","workdir_rel":"workdir"}\n' \
+	> "$HNGH_FILL_DIR/queued/refused/item.json"
+printf 'original\n' > "$HNGH_FILL_DIR/queued/refused/workdir/hello.txt"
+export HNGH_FILL_URL="http://127.0.0.1:$port/v1/chat/completions"
+
+# refuse: the studio prices the model at 16 GB over a 2 GB card
+set_est true 16000000000
+printf '2000000000\n' > "$HNGH_VRAM_FILE"
+: > "$STUB_STATE/requests.log"
+out=$(bash "$fill" drain --model "stub/model-GGUF" --attempts 1 2>&1); rc=$?
+[ $rc -eq 0 ] && printf '%s' "$out" | grep -qi 'vram gate refused' &&
+	! grep -q '^LOAD ' "$STUB_STATE/requests.log" &&
+	! grep -q '^POST /v1/chat/completions' "$STUB_STATE/requests.log" &&
+	[ -d "$HNGH_FILL_DIR/escalate/refused" ] &&
+	grep -qi 'vram gate refused' "$HNGH_FILL_DIR/escalate/refused/result.json"
+check "hngh-fill refuses to load (and never chats) when the gate refuses; item stays red" $?
+
+# admit: the same fill now loads and chats
+set_est true 1000000000
+mkdir -p "$HNGH_FILL_DIR/queued/admitted/workdir"
+printf '# spec\n' > "$HNGH_FILL_DIR/queued/admitted/SPEC.md"
+printf '{"id":"admitted","test_cmd":"grep -q FIXED hello.txt","workdir_rel":"workdir"}\n' \
+	> "$HNGH_FILL_DIR/queued/admitted/item.json"
+printf 'original\n' > "$HNGH_FILL_DIR/queued/admitted/workdir/hello.txt"
+: > "$STUB_STATE/requests.log"
+out=$(bash "$fill" drain --model "stub/model-GGUF" --attempts 1 2>&1); rc=$?
+[ $rc -eq 0 ] && grep -q '^LOAD ' "$STUB_STATE/requests.log" &&
+	grep -q '^POST /v1/chat/completions' "$STUB_STATE/requests.log"
+check "hngh-fill loads and chats when the gate admits" $?
+
+# ---- 5. no credential material in any output --------------------------------
+out_all=$(bash "$gate" "some/model-GGUF" 32768 2>&1)
+leak=0
+if printf '%s' "$out_all" | grep -q 'stub-key-for-selfcheck'; then
+	leak=1
+fi
+[ "$leak" = 0 ]
+check "the gate never prints the API key" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

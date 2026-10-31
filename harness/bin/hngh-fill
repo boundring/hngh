@@ -206,13 +206,43 @@ do_drain() {
 			# auto context derivation ignores the desktop's VRAM — it fitted
 			# 240896 ctx => 13.85 GB GPU for a 12B model, which hung the GPU
 			# (REG_WAIT timeout -> amdgpu reset) and killed the compositor.
-			# Ask for an explicit context instead: 32768 ctx => 9.85 GB GPU
-			# (measured via /api/inference/estimate-memory). Best-effort: on
-			# failure the chat request proceeds and the studio derives its own.
-			if [ -n "$PRELOAD_CTX" ] && [ "$PRELOAD_CTX" != "0" ]; then
-				local mp
-				mp=$(model_gguf_path "$model")
-				if [ -n "$mp" ]; then
+			# Ask for an explicit context instead (32768 ctx), and only after
+			# hngh-vram-gate admits the load: if the model does not fit
+			# alongside what is resident, the attempt is refused outright —
+			# the chat request is not sent, because the studio would
+			# auto-load the very model the gate just refused.
+			local mp
+			mp=$(model_gguf_path "$model")
+			if [ -n "$mp" ]; then
+				# Hard VRAM admission gate: never load a model that
+				# would not fit alongside what is already resident. The
+				# chat request itself can make the studio auto-load the
+				# model (openai auto-switch is on), so the gate guards
+				# the attempt, not just the explicit load POST.
+				local gate verdict
+				local gate_rc
+				local gate_ctx=${PRELOAD_CTX:-32768}
+				[ "$gate_ctx" = "0" ] && gate_ctx=32768
+				gate=$(command -v hngh-vram-gate || true)
+				[ -n "$gate" ] || gate="$(dirname "$(readlink -f "$0")")/hngh-vram-gate"
+				[ -x "$gate" ] || gate="$HOME/Projects/hngh/bin/hngh-vram-gate"
+				if [ ! -x "$gate" ]; then
+					echo "hngh-fill: $id attempt $attempts_used: hngh-vram-gate not found — refusing to load" >&2
+					failure_out="VRAM gate unavailable: hngh-vram-gate not found"
+					escalate_note="$failure_out"
+					continue
+				fi
+				verdict=$(HNGH_STUDIO_URL="${HNGH_STUDIO_URL:-$STUDIO}" \
+					HNGH_ENV_DIR="$ENV_DIR" HNGH_STUDIO_API_KEY="$ukey" \
+					bash "$gate" "$mp" "$gate_ctx" 2>&1)
+				gate_rc=$?
+				if [ "$gate_rc" -ne 0 ]; then
+					echo "hngh-fill: $id attempt $attempts_used: VRAM gate refused — $verdict" >&2
+					failure_out="VRAM gate refused: $verdict"
+					escalate_note="$failure_out"
+					continue
+				fi
+				if [ -n "$PRELOAD_CTX" ] && [ "$PRELOAD_CTX" != "0" ]; then
 					curl -sS --max-time 120 -o /dev/null \
 						-H "Authorization: Bearer $ukey" -H 'Content-Type: application/json' \
 						-X POST "$STUDIO/api/inference/load" \

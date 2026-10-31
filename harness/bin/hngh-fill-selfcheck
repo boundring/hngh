@@ -13,6 +13,16 @@ failures=0
 export HNGH_FILL_DIR="$sandbox/queue"
 export HNGH_ENV_DIR="$sandbox/env"
 export STUB_STATE="$sandbox/stub"
+# The VRAM gate runs before every preload: sandbox its inputs so this
+# selfcheck never reads the real card and never depends on the real budget.
+export HNGH_VRAM_FILE="$sandbox/vram_used"
+export HNGH_VRAM_BUDGET=100000000000
+printf '0\n' > "$sandbox/vram_used"
+# A fake HOME: the VRAM gate's fallback estimate looks the model's GGUF up in
+# the HF cache, so give it a tiny local one instead of the real 10 GB file.
+export HOME="$sandbox/home"
+mkdir -p "$HOME/.cache/huggingface/hub/models--yuxinlu1--gemma-4-12B-coder-fable5-composer2.5-v1-GGUF/snapshots/x"
+head -c 4096 /dev/zero > "$HOME/.cache/huggingface/hub/models--yuxinlu1--gemma-4-12B-coder-fable5-composer2.5-v1-GGUF/snapshots/x/model.gguf"
 mkdir -p "$HNGH_ENV_DIR" "$STUB_STATE/calls" "$sandbox/bin"
 
 check() {
@@ -40,10 +50,20 @@ while [ $# -gt 0 ]; do
 		-w) shift 2 ;;
 		-H) shift 2 ;;
 		--max-time) shift 2 ;;
+		-d) data=${2-}; shift 2 ;;
 		--data-binary) data=${2-}; shift 2 ;;
 		*) url=$1; shift ;;
 	esac
 done
+case "$url" in
+	*estimate-memory)
+		# the VRAM gate asks the studio to price a prospective load
+		printf '{"available": true, "reason": null, "gpu_bytes": 1000000000, "total_bytes": 1000000000}'
+		exit 0 ;;
+	*loaded-models)
+		printf '{"object": "list", "data": []}'
+		exit 0 ;;
+esac
 body=${data#@}
 [ -f "$body" ] || body=""
 if [ -f "$STUB_STATE/down" ]; then

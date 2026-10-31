@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+# hngh-vram-gate — hard VRAM admission gate for local model loads.
+#
+#   hngh-vram-gate <model_path_or_id> [ctx]
+#
+# exit 0 = the model MAY be loaded; exit 1 = it must NOT be loaded.
+# One line of numbers is printed on stdout:
+#
+#   admit|refuse model=... ctx=... current=... demand=... total=... budget=... estimate=studio|fallback
+#
+# current  VRAM in use on card1 (mem_info_vram_used; 0 if unreadable)
+# demand  GPU bytes the load would add
+# total   current + demand
+# budget  ceiling for total (default 17 GB)
+#
+# demand comes from the studio's own /api/inference/estimate-memory when it
+# can price the model (estimate=studio). Otherwise it falls back to the GGUF's
+# size on disk plus a conservative KV allowance (estimate=fallback).
+#
+# Env: HNGH_STUDIO_URL (http://127.0.0.1:8888), HNGH_VRAM_BUDGET (17000000000),
+#      HNGH_VRAM_FILE (/sys/class/drm/card1/device/mem_info_vram_used),
+#      HNGH_VRAM_KV_PER_TOKEN (131072), HNGH_STUDIO_API_KEY (else UNSLOTH_API_KEY
+#      from ${HNGH_ENV_DIR:-~/.config/environment.d}/70-unsloth.conf — never printed).
+set -u
+
+STUDIO=${HNGH_STUDIO_URL:-http://127.0.0.1:8888}
+VRAM_FILE=${HNGH_VRAM_FILE:-/sys/class/drm/card1/device/mem_info_vram_used}
+BUDGET=${HNGH_VRAM_BUDGET:-17000000000}
+ENV_DIR=${HNGH_ENV_DIR:-$HOME/.config/environment.d}
+KV_PER_TOKEN=${HNGH_VRAM_KV_PER_TOKEN:-131072}
+DEFAULT_CTX=32768
+
+usage() {
+	cat <<'EOF'
+hngh-vram-gate — VRAM admission gate. exit 0 = may load, 1 = refuse.
+
+  hngh-vram-gate <model_path_or_id> [ctx]
+EOF
+}
+
+die() { echo "hngh-vram-gate: $*" >&2; exit 1; }
+
+model=${1:-}
+[ -n "$model" ] || { usage >&2; exit 2; }
+ctx=${2:-$DEFAULT_CTX}
+case "$ctx" in
+	''|*[!0-9]*) die "ctx must be an integer: $ctx" ;;
+esac
+case "$BUDGET" in
+	''|*[!0-9]*) die "HNGH_VRAM_BUDGET must be an integer: $BUDGET" ;;
+esac
+
+# ---- current residency ----------------------------------------------------
+current=0
+if [ -r "$VRAM_FILE" ]; then
+	cur=$(cat "$VRAM_FILE" 2>/dev/null | tr -dc '0-9')
+	[ -n "$cur" ] && current=$cur
+fi
+
+# ---- the studio's own estimate --------------------------------------------
+api_key() {
+	[ -n "${HNGH_STUDIO_API_KEY:-}" ] && { echo "$HNGH_STUDIO_API_KEY"; return; }
+	local f="$ENV_DIR/70-unsloth.conf" k
+	[ -f "$f" ] || return 0
+	k=$(set -a; . "$f"; eval 'printf %s "${UNSLOTH_API_KEY:-}"')
+	printf %s "$k"
+}
+
+studio_demand() { # prints gpu_bytes, empty when the studio cannot price it
+	local key body
+	key=$(api_key)
+	[ -n "$key" ] || return 0
+	body=$(curl -sS --max-time 60 -H "Authorization: Bearer $key" \
+		-H 'Content-Type: application/json' -X POST "$STUDIO/api/inference/estimate-memory" \
+		-d "{\"model_path\":\"$model\",\"n_ctx\":$ctx,\"load_in_4bit\":false}" 2>/dev/null) || return 0
+	[ -n "$body" ] || return 0
+	printf '%s' "$body" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+if not d.get("available"):
+    sys.exit(0)
+n = d.get("gpu_bytes")
+if not isinstance(n, int) or n <= 0:
+    sys.exit(0)
+print(n)'
+}
+
+# A model the studio already holds resident costs no extra VRAM — its weights
+# are in `current` already. Charging its full demand again would refuse every
+# retry on a loaded model.
+model_resident() { # prints 1 when the studio already has this model loaded
+	local key body
+	key=$(api_key)
+	[ -n "$key" ] || return 0
+	body=$(curl -sS --max-time 15 -H "Authorization: Bearer $key" \
+		"$STUDIO/api/inference/loaded-models" 2>/dev/null) || return 0
+	[ -n "$body" ] || return 0
+	printf '%s' "$body" | python3 -c '
+import json, re, sys
+want = sys.argv[1].lower()
+m = re.search(r"models--(.+?)/snapshots/", want)
+wants = {want, want.replace("/", "--")}
+if m:
+    wants.add(m.group(1))
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+for x in d.get("data", []):
+    if not x.get("loaded", True):
+        continue
+    got = str(x.get("id", "")).lower()
+    got = got.split(":")[0]
+    if got in wants or got.replace("/", "--") in wants:
+        print(1)
+        sys.exit(0)
+' "$model"
+}
+
+# ---- fallback: GGUF size on disk + conservative KV allowance ----------------
+gguf_bytes() { # prints the size of the largest GGUF behind $1, empty if none
+	local p=$1 d slug
+	if [ -f "$p" ]; then du -bL "$p" 2>/dev/null | cut -f1; return; fi
+	slug=$(printf '%s' "$p" | sed 's|/|--|g')
+	d="$HOME/.cache/huggingface/hub/models--$slug"
+	[ -d "$d" ] || return 0
+	find -L "$d" -name '*.gguf' -printf '%s\t%p\n' 2>/dev/null | sort -nr | head -1 | cut -f1
+}
+
+demand=""
+estimate="studio"
+resident=$(model_resident)
+if [ "$resident" = "1" ]; then
+	# already loaded: its VRAM is in `current`, nothing more is needed
+	if [ "$current" -le "$BUDGET" ]; then
+		printf 'admit model=%s ctx=%s current=%s demand=%s total=%s budget=%s estimate=%s\n' \
+			"$model" "$ctx" "$current" 0 "$current" "$BUDGET" "resident"
+		exit 0
+	fi
+	printf 'refuse model=%s ctx=%s current=%s demand=%s total=%s budget=%s estimate=%s\n' \
+		"$model" "$ctx" "$current" 0 "$current" "$BUDGET" "resident"
+	exit 1
+fi
+demand=$(studio_demand)
+if [ -z "$demand" ]; then
+	estimate="fallback"
+	size=$(gguf_bytes "$model")
+	if [ -n "$size" ]; then
+		demand=$((size + ctx * KV_PER_TOKEN))
+	fi
+fi
+
+if [ -z "$demand" ]; then
+	# Nothing can be priced: refuse rather than guess.
+	echo "hngh-vram-gate: cannot estimate $model — refusing" >&2
+	printf 'refuse model=%s ctx=%s current=%s demand=%s total=%s budget=%s estimate=none\n' \
+		"$model" "$ctx" "$current" 0 "$current" "$BUDGET"
+	exit 1
+fi
+
+total=$((current + demand))
+if [ "$total" -le "$BUDGET" ]; then
+	printf 'admit model=%s ctx=%s current=%s demand=%s total=%s budget=%s estimate=%s\n' \
+		"$model" "$ctx" "$current" "$demand" "$total" "$BUDGET" "$estimate"
+	exit 0
+fi
+printf 'refuse model=%s ctx=%s current=%s demand=%s total=%s budget=%s estimate=%s\n' \
+	"$model" "$ctx" "$current" "$demand" "$total" "$BUDGET" "$estimate"
+exit 1

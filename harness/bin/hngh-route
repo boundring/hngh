@@ -26,6 +26,7 @@ TIMEOUT=${HNGH_ROUTE_TIMEOUT:-600}
 RETRIES=${HNGH_ROUTE_RETRIES:-3}
 BACKOFF=${HNGH_ROUTE_BACKOFF:-30}
 VRAM_LIMIT=${HNGH_ROUTE_VRAM_LIMIT:-17000000000}
+ROUTE_CTX=${HNGH_ROUTE_CTX:-32768}
 
 usage() {
 	cat <<'EOF'
@@ -113,12 +114,51 @@ json.dump(d, open(p, "w"), indent=1)
 qlock_open() { exec 8>>"$ROOT/queue.jsonl" || die "cannot open queue"; flock 8; }
 qlock_close() { flock -u 8; exec 8>&-; }
 
+# The studio loads a model on demand when a request names one that is not
+# resident. Ask the VRAM gate first: a model that would not fit alongside the
+# current residency is refused (hard), not warned about.
+model_resident() { # model_resident <model-id> -> 0 when resident
+	local ukey
+	ukey=$(key)
+	curl -sS --max-time 15 -H "Authorization: Bearer $ukey" "$URL/api/inference/loaded-models" 2>/dev/null |
+		python3 -c '
+import json, sys
+def norm(s):
+    return s.lower().split(":")[0]
+want = norm(sys.argv[1])
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(2)
+for m in d.get("data", []):
+    if norm(str(m.get("id", ""))) == want:
+        sys.exit(0)
+sys.exit(1)' "$1"
+}
+
+vram_gate() { # vram_gate <model-id> -> 0 when the load may proceed
+	local gate verdict ukey
+	gate=$(command -v hngh-vram-gate || true)
+	[ -n "$gate" ] || gate="$(dirname "$(readlink -f "$0")")/hngh-vram-gate"
+	[ -x "$gate" ] || gate="$HOME/Projects/hngh/bin/hngh-vram-gate"
+	[ -x "$gate" ] || { echo "hngh-route: hngh-vram-gate not found — refusing to load" >&2; return 1; }
+	ukey=$(key)
+	verdict=$(HNGH_STUDIO_URL="${HNGH_STUDIO_URL:-$URL}" HNGH_ENV_DIR="$ENV_DIR" \
+		HNGH_STUDIO_API_KEY="$ukey" bash "$gate" "$1" "$ROUTE_CTX" 2>&1)
+	local rc=$?
+	[ $rc -eq 0 ] || echo "hngh-route: VRAM gate refused — $verdict" >&2
+	return $rc
+}
+
 cmd_submit() {
 	local class=${1:-} payload=${2:-} note=${3:-}
 	[ -n "$class" ] && [ -n "$payload" ] || { usage >&2; exit 2; }
 	[ -f "$payload" ] || die "payload file not found: $payload"
 	local model
 	model=$(route_model_for "$class")
+	# route_model_for dies inside a command substitution: its exit status is
+	# lost there, so an unknown class would queue an item with no model.
+	[ -n "$model" ] || die "unknown class '$class' (router|summarizer|coder|decider)"
 	mkdir -p "$ROOT"
 	local id ts
 	ts=$(date -u +%Y%m%dT%H%M%S)
@@ -152,7 +192,7 @@ for m in d.get("data", []):
 '
 	v=$(cat /sys/class/drm/card1/device/mem_info_vram_used 2>/dev/null || echo 0)
 	awk -v v="$v" -v lim="$VRAM_LIMIT" 'BEGIN { printf "card1 VRAM used: %.1f GB (limit %.0f GB)\n", v/1e9, lim/1e9 }'
-	[ "$v" -le "$VRAM_LIMIT" ] || echo "hngh-route: WARNING cumulative VRAM over limit" >&2
+	echo "hngh-route: admission is enforced by hngh-vram-gate before every load"
 	return 0
 }
 
@@ -191,6 +231,19 @@ cmd_drain() {
 		payload_file=$(python3 -c 'import json,sys; print(json.loads(sys.stdin.read())["payload_file"])' <<<"$item")
 		local path=/v1/chat/completions
 		[ "$class" = "decider" ] && path=/v1/systemone
+		# A model that is not resident may trigger a load: gate it first.
+		if [ "$class" != "decider" ]; then
+			local resident
+			resident=$(model_resident "$model"); resident=$?
+			if [ $resident -ne 0 ] && ! vram_gate "$model"; then
+				printf '{"id":"%s","model":"%s","latency_s":0,"status":"refused-vram"}\n' \
+					"$id" "$model" >> "$ROOT/results.jsonl"
+				echo "hngh-route: refusing $id ($class -> $model) — it does not fit in VRAM" >&2
+				processed=$((processed + 1))
+				[ "$limit" -gt 0 ] && [ "$processed" -ge "$limit" ] && { echo "hngh-route: limit reached"; break; }
+				continue
+			fi
+		fi
 		echo "hngh-route: draining $id ($class -> $model)"
 		local t0 t1 lat body rc
 		t0=$(date +%s)
@@ -213,13 +266,37 @@ cmd_selfcheck() {
 	local sandbox port=18977 stub_pid fails=0
 	sandbox=$(mktemp -d)
 	export HNGH_ROUTE_DIR="$sandbox/route"
+	export STUB_GPU_BYTES_FILE="$sandbox/gpu_bytes"
+	printf '1000000000\n' > "$sandbox/gpu_bytes"
 	python3 - "$port" > "$sandbox/stub.log" 2>&1 <<'PY' &
 import json, sys
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
+    def do_GET(self):
+        out = json.dumps({"object": "list", "data": []}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(out)))
+        self.end_headers()
+        self.wfile.write(out)
     def do_POST(self):
         n = int(self.headers.get("Content-Length", 0))
+        if "estimate-memory" in self.path:
+            gpu = 1000000000
+            try:
+                gpu = int(open(os.environ["STUB_GPU_BYTES_FILE"]).read().strip())
+            except Exception:
+                pass
+            out = json.dumps({"available": True, "reason": None,
+                              "gpu_bytes": gpu}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(out)))
+            self.end_headers()
+            self.wfile.write(out)
+            return
         try:
             body = json.loads(self.rfile.read(n) or b"{}")
             assert body.get("model"), "model field required"
@@ -244,6 +321,9 @@ PY
 	hngh_route_self() { bash "$SELF" "$@"; }
 	export HNGH_ROUTE_URL="http://127.0.0.1:$port"
 	export HNGH_ROUTE_API_KEY="stub-key-for-selfcheck"
+	export HNGH_STUDIO_URL="http://127.0.0.1:$port"
+	export HNGH_VRAM_FILE="$sandbox/vram_used"
+	printf '0\n' > "$sandbox/vram_used"
 	local out
 	okk() { echo "ok: $1"; }
 	badd() { echo "FAIL: $1"; fails=$((fails + 1)); }
@@ -261,6 +341,13 @@ PY
 	[ -n "$rid" ] && [ -s "$HNGH_ROUTE_DIR/results/$rid.json" ] && okk "raw response stored" || badd "raw response missing"
 	out=$(hngh_route_self submit bogusclass "$sandbox/payload.json" 2>&1)
 	case $out in *"unknown class"*) okk "unknown class refused" ;; *) badd "class validation: $out" ;; esac
+	# the VRAM gate refuses the load: the item must not be dispatched
+	printf '17500000000\n' > "$sandbox/gpu_bytes"
+	out=$(hngh_route_self submit summarizer "$sandbox/payload.json" "gate" 2>&1)
+	out=$(hngh_route_self drain 2>&1)
+	case $out in *"does not fit in VRAM"*) okk "the VRAM gate refuses a load that does not fit" ;; *) badd "gate refusal: $out" ;; esac
+	grep -q '"status":"refused-vram"' "$HNGH_ROUTE_DIR/results.jsonl" \
+		&& okk "the refused item is recorded as refused-vram" || badd "refusal not recorded"
 	kill $stub_pid 2>/dev/null
 	rm -rf "$sandbox"
 	[ $fails -eq 0 ] && echo "hngh-route SELF-CHECK GREEN" || { echo "hngh-route SELF-CHECK FAILED ($fails)"; exit 1; }
