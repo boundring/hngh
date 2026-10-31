@@ -36,8 +36,11 @@ done
 
 # Dated pause: a service can be paused without touching the timer (honest-blocked
 # state). Marker: <quotas dir>/<service>-paused-until holding YYYY-MM-DD; refresh
-# resumes automatically on that date.
-if [ "$service" = xiaomi ]; then
+# resumes automatically on that date. The pause gate applies to the browser
+# relay only: with --source omp-usage this tool refreshes every lane, and the
+# xiaomi default service must not short-circuit it (that bug froze the quota
+# meter from 2026-10-29 to 10-31).
+if [ "$service" = xiaomi ] && [ "$source_mode" = browser-relay ]; then
 	paused_file="${HNGH_QUOTAS_DIR:-$HOME/.local/state/hngh/quotas}/xiaomi-paused-until"
 	paused_until=$(cat "$paused_file" 2>/dev/null)
 	if [ -n "$paused_until" ] && [ "$(date -u +%Y%m%d)" -lt "$(printf '%s' "$paused_until" | tr -d -)" ]; then
