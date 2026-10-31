@@ -22,3 +22,18 @@ each of which does one job over existing infrastructure and stays thin.
    over dependencies.
 8. **Small blast radius.** A hngh bug may never take the desktop or live sessions
    down (three GPU-hang incidents taught the rollout and ban-list rules).
+9. **Never discard work without measuring it.** A shipped implementation and a
+   proposed one are compared by BEHAVIOUR (differential harness on identical
+   inputs), not by diff size or suspicion; the extra work in a proposal is
+   reviewed before it is thrown away. (Operator ruling 2026-10-31: "Do we know
+   that our shipped implementation is at parity or superior? Why can't we
+   review that extra work before we discard it?")
+10. **Decisions get briefs, not binaries.** For a contract-level choice, hand the
+    operator benefits, drawbacks, cost, risk, and a recommendation with
+    measurements — a yes/no question with no economics is not a decision aid.
+    (Operator ruling 2026-10-31: "there should be benefits and drawbacks for
+    either choice.")
+11. **Admission before load.** Multiple models may stay resident when they FIT:
+    every load passes a VRAM admission gate (current residency + estimate <=
+    budget) and uses an explicit context; never let an auto-derived context
+    decide VRAM for us. (Operator ruling 2026-10-31.)
