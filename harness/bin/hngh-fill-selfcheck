@@ -21,8 +21,8 @@ printf '0\n' > "$sandbox/vram_used"
 # A fake HOME: the VRAM gate's fallback estimate looks the model's GGUF up in
 # the HF cache, so give it a tiny local one instead of the real 10 GB file.
 export HOME="$sandbox/home"
-mkdir -p "$HOME/.cache/huggingface/hub/models--yuxinlu1--gemma-4-12B-coder-fable5-composer2.5-v1-GGUF/snapshots/x"
-head -c 4096 /dev/zero > "$HOME/.cache/huggingface/hub/models--yuxinlu1--gemma-4-12B-coder-fable5-composer2.5-v1-GGUF/snapshots/x/model.gguf"
+mkdir -p "$HOME/.cache/huggingface/hub/models--unsloth--NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF/snapshots/x"
+head -c 4096 /dev/zero > "$HOME/.cache/huggingface/hub/models--unsloth--NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF/snapshots/x/model.gguf"
 mkdir -p "$HNGH_ENV_DIR" "$STUB_STATE/calls" "$sandbox/bin"
 
 check() {

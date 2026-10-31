@@ -7,26 +7,135 @@
 
 ## Start here
 
-1. Read `docs/README.md`.
-2. Read `docs/project/roadmap.md` and the record relevant to the task.
+1. Read `harness/PRINCIPLES.md` (the v2 doctrine) and `harness/CANON.md`.
+2. Get the current state once: `hngh-orient` (or a pre-digested brief from
+   the assignment — then skip it).
 3. Inspect `git status --short` before editing.
-4. Run the smallest named verification before reporting a result.
+4. Run the smallest named verification before reporting a result. For a
+   harness tool, that is its `-selfcheck`, not a manual re-run.
 
-## hngh brief: start oriented, do not re-walk
+## Current boundary (v2 — the Omarchy system harness)
 
-Run `python3 scripts/omp-bridge --orient` once for the current-state brief
-(queue next, roadmap next, working tree, last ceremony commit), then act on
-it -- do not re-run orientation reads (queue/roadmap files) before acting.
-If your assignment already carries a pre-digested context pack or brief, use
-that and skip `--orient`. Read-only hngh state is also exposed as MCP tools
-(server `hngh`: `hngh_present`, `hngh_status`, `queue_report`,
-`dashboard_readout`, `research_lines`) -- prefer those over opening repo
-files for hngh-state questions.
+Hngh v2 is a **thin harness of CLI tools over the operator's existing
+tools**: oh-my-pi sessions, Tern tabs, the unsloth studio, and git. There
+is **no daemon and none may be started** — no service, provider, watcher,
+scheduler, agent, or background process. Every tool is a foreground
+command that runs, reports, and exits.
 
-## Current boundary
+v2 lives in `harness/` in this repo (`harness/bin/`, `harness/roles/`,
+`harness/src/`, `harness/PRINCIPLES.md`, `harness/CANON.md`,
+`harness/ROUTE-v0.md`) and is mirrored from the canonical working tree
+`~/Projects/hngh`. The v1 generation (Common Lisp kernel, `docs/`, `src/`,
+`scripts/`, `automation/`) is ARCHIVED — see the last section of this file.
 
-Hngh is a side-effect-free local kernel. Do not start a daemon, service,
-provider, watcher, scheduler, agent, or process.
+### Land banks first
+
+Every tool has a `-selfcheck` sibling. A tool without one is not landed.
+Before relying on a tool you changed, run its selfcheck:
+
+```bash
+bash ~/Projects/hngh/bin/<tool>-selfcheck
+```
+
+(The repo mirror is `harness/bin/<tool>-selfcheck`.) A selfcheck must be
+sandboxed and honest about exit codes. A tool whose behaviour changed
+without its selfcheck green is not landed.
+
+### Proposals, not edits
+
+The local-model funnel (`hngh-plan` -> `hngh-fill`) produces **proposals**,
+never silent edits. Fill output lands in
+`~/.local/state/hngh/fill/filled/` (with `SPEC.md`, `item.json`,
+`test_out.log`, the reply attempts, and the workdir). Integration is an
+explicit action by a human or an orchestrator with the operator's go:
+
+- copy the proposal into the target repo by **explicit pathspec** (never
+  `-A`, never a bare `git commit`),
+- run the target's own gate,
+- commit under the operator's go; **pushes need the operator's go** too.
+
+A proposal that the operator has not integrated stays a proposal. Do not
+"helpfully" apply it. Escalated items live in
+`~/.local/state/hngh/fill/escalate/`, superseded ones in
+`~/.local/state/hngh/fill/superseded/`.
+
+### State roots
+
+Live state is under `~/.local/state/hngh/`:
+
+| Root | Holds |
+|---|---|
+| `fill/` | the fill funnel: `queued/`, `filled/`, `escalate/`, `superseded/`, `log.jsonl` |
+| `route/` | `hngh-route` queue and results |
+| `quotas/` | quota ledger rows and pause markers |
+| `sessions/` | session feed |
+
+Ledgers are **append-only** (JSONL); fold views are derived, never
+hand-edited. **Exactly one writer per ledger file** — two writers produce
+split-brain diagnostics, not a merge.
+
+### Gates: the four authority tiers
+
+Actions are tiered (house rules, `~/AGENTS.md` §11):
+
+| Tier | Consent | Examples |
+|---|---|---|
+| **Silent** | never asks | read-only state probes; dry-runs |
+| **Confirm** | asks once per domain | default handlers, editing an instruction file, enabling a service |
+| **Presence-gated** | observe-only while the operator is at the machine; actuation needs an idle window or an explicit per-action go | anything that steals focus, moves the pointer, or types |
+| **Forbidden** | explicit per-action approval, every time | deletion, `pacman`, `/usr/share/**`, secrets, the 2TB drive |
+
+"May I act" and "is now a safe moment to act" are different questions.
+
+### Model safety (VRAM)
+
+- **Every load carries an explicit `max_seq_length`**, never an
+  auto-derived one (`max_seq_length_auto_derived=false`; `hngh-fill` uses
+  `HNGH_FILL_CTX`, default 32768). Auto-fit contexts have twice killed
+  this desktop by fitting 240k ctx against a 12B model.
+- **VRAM admission gate**: current residency + the studio's estimate must
+  stay at or below the budget (17 GB default, `HNGH_VRAM_BUDGET`;
+  `estimate=resident` avoids double-counting). `hngh-vram-gate` is wired
+  into `hngh-fill`'s preload and `hngh-route`'s dispatch.
+- **Qwen3.8-27B is banned on this machine** (operator ruling 2026-10-30):
+  it hangs the GPU. The ban stands while the desktop shares the card.
+- **The desktop lives on the iGPU** (display on card0); the **dGPU is
+  inference-only** (card1). The iGPU move landed 2026-10-30 and closed the
+  shared-card crash class; after every reboot, verify display on card0.
+
+### Quota pacing
+
+- Daily allowance = **remaining × 0.8 ÷ remaining days**. Pacing the burn
+  rate matters more than the session count.
+- Tiered slowdown at **60% / 80% / 95%** of a lane's window.
+- **Refresh the meter before trusting a number**:
+  `hngh-quota-refresh --source omp-usage`. The meter was once frozen for
+  two days by a pause gate short-circuit; a stale row reads as false
+  headroom.
+- Analysis tasks are budgeted. An unbounded analysis is a quota leak.
+
+### Doctrine
+
+Read `harness/PRINCIPLES.md` (11 rules) and `harness/CANON.md` (12
+crystallized principles, each with its adversarial guard) before designing
+anything new. `harness/ROUTE-v0.md` records the routing design and the
+measured fleet. Short version: shepherd, don't replace; every tool has a
+selfcheck; ledgers are the audit trail; gates at operator presence; config
+over code; measure before features; boring shapes; small blast radius;
+never discard work without measuring it; decisions get briefs; admission
+before load.
+
+## Archived v1 generation (Common Lisp kernel — history, not the current boundary)
+
+The v1 iteration (last synced 2026-10-16) is archived on the
+`archive/v1` branch (`cc7aeb70`); its history is preserved in main's
+ancestry. Its README and records live in `archive/v1` plus `docs/`. The
+rules below still apply to v1-era trees (`docs/`, `src/` (Lisp),
+`scripts/`, `automation/`) — they do not describe how v2 tools behave.
+
+**Hngh v1 was a side-effect-free local kernel. Do not start a daemon,
+service, provider, watcher, scheduler, agent, or process.** (v2 keeps the
+no-daemon rule; see "Current boundary" above.)
 
 Userspace data home (2026-09-13 operator directive): machine sessions
 MAY write userspace data — newspaper copies, manga outputs, digest
@@ -62,7 +171,18 @@ archive material is harvested into the operator's separate llm-wiki knowledge
 base, not imported back into this repository. Treat prior-state records
 (`docs/records/`) as the authoritative history of the refactor.
 
-## Engineering rules
+### v1 brief: start oriented, do not re-walk
+
+Run `python3 scripts/omp-bridge --orient` once for the current-state brief
+(queue next, roadmap next, working tree, last ceremony commit), then act on
+it -- do not re-run orientation reads (queue/roadmap files) before acting.
+If your assignment already carries a pre-digested context pack or brief, use
+that and skip `--orient`. Read-only hngh state is also exposed as MCP tools
+(server `hngh`: `hngh_present`, `hngh_status`, `queue_report`,
+`dashboard_readout`, `research_lines`) -- prefer those over opening repo
+files for hngh-state questions.
+
+### v1 engineering rules
 
 - Keep dependency direction inward and behavior fixture-backed.
 - Write a failing test before production behavior.
@@ -83,7 +203,7 @@ base, not imported back into this repository. Treat prior-state records
   there require the ceremony label (`hngh: candidate <hash>`); the
   automation free-commit rule covers `automation/` only.
 
-## Working rules the repo enforces nowhere else
+### v1 working rules the repo enforces nowhere else
 
 These four were being re-explained in session after session and existed only as
 prose in a handoff. They are enforced by convention, not by tooling — which is
@@ -115,7 +235,7 @@ a reader of this file.)
    re-`add` explicit paths. (`git status --cached` is not a command; it is
    `git diff --cached --name-status`.)
 
-## Path seams and the systemd deploy
+### v1 path seams and the systemd deploy
 
 Every cross-project path default resolves through `ETC_ROOT` and `CISTERN_ROOT`,
 declared **once** in `automation/lib/common.sh`. Two scripts that must survive a
