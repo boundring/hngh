@@ -42,6 +42,7 @@ Live state lives under `~/.local/state/hngh/`: `fill/`, `route/`,
 | `harness/CANON.md` | 12 principles crystallized from the pantheon classics |
 | `harness/ROUTE-v0.md` | the router design and the measured fleet |
 | `harness/README.md` | the harness operator guide (tool table, quickstart) |
+| `harness/ROADMAP.md` | where v2 stands and the next stretch of work |
 | `AGENTS.md` | agent notes, state roots, gates, quota pacing |
 | `docs/`, `src/`, `scripts/`, `automation/` | the archived v1 generation |
 
@@ -126,6 +127,9 @@ yourself; calibrate the cadence of correction; timing is policy.
 
 `harness/ROUTE-v0.md` holds the router design, the measured fleet, and
 the decisions that are explicitly out of scope for v0.
+
+`harness/ROADMAP.md` holds the current state of v2 and the next stretch of
+work, each stretch with its own done condition.
 
 `AGENTS.md` is the working contract: state roots, the four authority
 tiers, VRAM rules, quota pacing.

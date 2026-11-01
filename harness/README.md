@@ -9,7 +9,8 @@ This guide is the operational view: the tool inventory, the state roots, the
 gates, the fill funnel, the routing fleet, and a quickstart. The doctrine
 lives next door. `PRINCIPLES.md` holds 11 rules. `CANON.md` holds 12
 principles, each with its adversarial guard. `ROUTE-v0.md` holds the router
-design and the measured fleet. The working contract is `../AGENTS.md`.
+design and the measured fleet. `ROADMAP.md` holds where v2 stands and what
+comes next. The working contract is `../AGENTS.md`.
 
 ## Quickstart
 
