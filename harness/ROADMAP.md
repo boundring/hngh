@@ -82,14 +82,16 @@ Three stretches first, then the exclusions. The selfcheck stretch landed on
 
 The slice set is six items wide: `v3-core-town-state`, `v3-core-town-map`,
 `v3-core-job-executor`, `v3-core-townsfolk-needs`, `v3-core-shop-stock` and
-`v3-game-actions`. The SPEC set is being authored now, against the frozen port contract
-and the donor simulation sources. `hngh-plan` refuses an item that does not declare the
-existing file state.
+`v3-game-actions`. The SPEC set landed on 2026-11-01 in
+`/home/bricker/Work/sessions/2026-11-01-cistern-economy-spec/`, against the frozen port
+contract and the donor simulation sources. `hngh-plan` refuses an item that does not
+declare the existing file state, and `hngh-plan validate plan.yaml` prints `OK` for all
+six and exits 0.
 
-Done looks like this: a plan.yaml that `hngh-plan validate` passes with rc=0, one
-SPEC.md per item at no more than 150 lines each, one tests/run_tests.sh per item, and a
-report.md carrying the slice table. The fill then runs on the local coder, and
-integration copies by explicit pathspec and runs the repo's own gate, `npm test`.
+What is left is the fill. The local coder runs the six items, and integration copies by
+explicit pathspec and runs the repo's own gate, `npm test`. Every suite is proven RED
+against the port's current file, so a green means the fill landed and not that the test
+was written to pass.
 
 Measured dependency: `npm test` builds with `tsc` and runs `node --test tests/` over 12
 test files, and `src/core` holds 11 TypeScript modules. The charter at
