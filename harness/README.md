@@ -99,6 +99,10 @@ Every tool has one. 42 of the 43 scripts in `harness/bin/` carry a
 `hngh-route selfcheck` subcommand, and `hngh-pointer-selfcheck` covers the
 pointer the Makefile builds. That is 44 of 44 tools.
 
+Two of the selfchecks are Python rather than bash:
+`omp-session-index-selfcheck` and `systemone-research-selfcheck`. Run those
+with `python3`, the rest with `bash`.
+
 ## State roots
 
 Live state is under `~/.local/state/hngh/`:

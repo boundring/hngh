@@ -24,13 +24,13 @@ gate="$selfcheck_dir/hngh-vram-gate"
 fill="$selfcheck_dir/hngh-fill"
 
 # ---- stub studio ------------------------------------------------------------
-port=18991
 export STUB_STATE="$sandbox/stub"
 mkdir -p "$STUB_STATE"
-python3 - "$port" "$STUB_STATE" > "$sandbox/stub.log" 2>&1 <<'PY' &
+port_file="$sandbox/port"
+python3 - "$STUB_STATE" "$port_file" > "$sandbox/stub.log" 2>&1 <<'PY' &
 import json, os, sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
-state = sys.argv[2]
+state = sys.argv[1]
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
     def _send(self, code, obj):
@@ -74,10 +74,21 @@ class H(BaseHTTPRequestHandler):
             self._send(200, {"object": "list", "data": [{"id": i, "loaded": True} for i in ids]})
             return
         self._send(200, {})
-HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
+server = HTTPServer(("127.0.0.1", 0), H)
+with open(sys.argv[2], "w") as fh:
+    fh.write(str(server.server_port))
+server.serve_forever()
 PY
 stub_pid=$!
-sleep 1
+for _ in $(seq 50); do
+	[ -s "$port_file" ] && break
+	sleep 0.1
+done
+port=$(cat "$port_file" 2>/dev/null)
+if [ -z "$port" ]; then
+	echo "FAIL: the stub studio never came up" >&2
+	exit 1
+fi
 
 export HNGH_STUDIO_URL="http://127.0.0.1:$port"
 export HNGH_STUDIO_API_KEY="stub-key-for-selfcheck"

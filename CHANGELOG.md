@@ -170,6 +170,15 @@ the answer has to be the sha of a transcribed image, not the note the
 fallback 1x1 PNG produces, so the happy path cannot pass for the wrong
 reason.
 
+The whole set now runs clean in one sweep: 43 of 43 green in the mirror.
+Getting there took one fix. The VRAM gate's selfcheck bound its stub studio
+to a fixed port, so two runs of it on one machine fought over the port and
+the loser read the winner's state. The stub now takes a port the kernel
+hands out and writes it to a file the script reads back, which lets two
+copies run side by side. Two of the selfchecks are Python rather than
+bash, so a sweep has to dispatch on the shebang: `omp-session-index-selfcheck`
+and `systemone-research-selfcheck` answer to `python3`, the rest to `bash`.
+
 ### 2026-10-06
 
 - **Automation — unattended stock-Omarchy install driver lands**:
