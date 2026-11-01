@@ -289,6 +289,17 @@ for pos, s in enumerate(sessions):
         if spec_path is None:
             errs.append("spec path does not exist: %s" % spec_ref)
 
+    # existing state: a slice must declare whether its file is already in the
+    # repo. Measured 2026-10-31: the whole v3 batch re-derived code that was
+    # already shipped and delivered nothing because nobody checked first.
+    eff_spec = ""
+    if spec_path:
+        eff_spec = read_text(spec_path)
+    elif spec_text:
+        eff_spec = spec_text
+    if eff_spec and not re.search(r"(?im)^\s*EXISTING FILE STATE\s*:\s*(shipped|absent|partial)\b", eff_spec):
+        errs.append("spec does not declare 'EXISTING FILE STATE: shipped | absent | partial'")
+
     # tests
     tests_entry = s.get("tests")
     tfiles = test_files_of(tests_entry) if tests_entry is not None else []
