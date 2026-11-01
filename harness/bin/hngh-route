@@ -51,6 +51,11 @@ route_model_for() {
 	local class=$1 var="HNGH_ROUTE_MODEL_${class}"
 	local v="${!var:-}"
 	[ -n "$v" ] && { echo "$v"; return; }
+	# the header documents the override as HNGH_ROUTE_MODEL_<CLASS>; accept that
+	# spelling too (the lower-case class name is the literal one).
+	local uvar="HNGH_ROUTE_MODEL_${class^^}"
+	v="${!uvar:-}"
+	[ -n "$v" ] && { echo "$v"; return; }
 	case $class in
 		router | summarizer) echo "LiquidAI/LFM3-1.7B-GGUF" ;;
 		coder) echo "unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF" ;;
@@ -348,6 +353,27 @@ PY
 	case $out in *"does not fit in VRAM"*) okk "the VRAM gate refuses a load that does not fit" ;; *) badd "gate refusal: $out" ;; esac
 	grep -q '"status":"refused-vram"' "$HNGH_ROUTE_DIR/results.jsonl" \
 		&& okk "the refused item is recorded as refused-vram" || badd "refusal not recorded"
+	# duty table normalisation (route-normalizer cases, 2026-11-01): every class
+	# maps to its measured model, and the env overrides win over the table.
+	local pair cls want
+	for pair in "router LiquidAI/LFM3-1.7B-GGUF" "summarizer LiquidAI/LFM3-1.7B-GGUF" "coder unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF" "decider laya-multilingual"; do
+		set -- $pair
+		cls=$1
+		want=$2
+		out=$(hngh_route_self submit "$cls" "$sandbox/payload.json" "duty" 2>&1)
+		case $out in
+			*"-> $want"*) okk "duty table maps $cls to $want" ;;
+			*) badd "duty table for $cls: $out (wanted $want)" ;;
+		esac
+	done
+	export HNGH_ROUTE_MODEL_CODER=custom/my-model
+	out=$(hngh_route_self submit coder "$sandbox/payload.json" "override" 2>&1)
+	unset HNGH_ROUTE_MODEL_CODER
+	case $out in *"-> custom/my-model"*) okk "HNGH_ROUTE_MODEL_CODER overrides the duty table" ;; *) badd "class override: $out" ;; esac
+	export HNGH_SYSTEMONE_MODEL=kev-4b
+	out=$(hngh_route_self submit decider "$sandbox/payload.json" "decider" 2>&1)
+	unset HNGH_SYSTEMONE_MODEL
+	case $out in *"-> kev-4b"*) okk "HNGH_SYSTEMONE_MODEL overrides the decider model" ;; *) badd "decider override: $out" ;; esac
 	kill $stub_pid 2>/dev/null
 	rm -rf "$sandbox"
 	[ $fails -eq 0 ] && echo "hngh-route SELF-CHECK GREEN" || { echo "hngh-route SELF-CHECK FAILED ($fails)"; exit 1; }
