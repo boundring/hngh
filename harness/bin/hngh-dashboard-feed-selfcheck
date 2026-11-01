@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# hngh-dashboard-feed-selfcheck — sandboxed checks for the dashboard feed writer.
+# The feed lives in a temp dir (HNGH_DASHBOARD_DIR, or a sandboxed HOME for the
+# default path); the real ~/.local/state/hngh/dashboard is never touched.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-dashboard-feed"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+export HNGH_DASHBOARD_DIR="$sandbox/dashboard"
+mkdir -p "$HNGH_DASHBOARD_DIR"
+feed="$HNGH_DASHBOARD_DIR/notes.jsonl"
+
+# ---- 1. happy path: one item lands in the namespace feed -------------------
+out=$(bash "$tool" notes '{"writer":"w1","item":"hello"}' 2>&1); rc=$?
+[ $rc -eq 0 ] &&
+	[ "$(wc -l < "$feed")" = 1 ] &&
+	printf '%s' "$out" | jq -e '.writer == "w1" and .item == "hello" and .namespace == "notes" and .severity == "info"' >/dev/null &&
+	grep -q '"item":"hello"' "$feed"
+check "an item is stored as one JSON row with its namespace and default severity" $?
+
+# ---- 2. the row carries a UTC stamp ----------------------------------------
+jq -r '.ts' "$feed" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$'
+check "the row carries a UTC timestamp" $?
+
+# ---- 3. an explicit severity and ts are kept -------------------------------
+bash "$tool" notes '{"writer":"w1","item":"bad","severity":"crit","ts":"2026-11-01T09:00:00Z"}' >/dev/null
+jq -e 'select(.item == "bad") | .severity == "crit" and .ts == "2026-11-01T09:00:00Z"' "$feed" >/dev/null
+check "an explicit severity and ts are stored verbatim" $?
+
+# ---- 4. the wrong argument count is refused --------------------------------
+out=$(bash "$tool" notes 2>&1); rc=$?
+[ $rc -eq 2 ] && printf '%s' "$out" | grep -q 'usage:'
+check "a missing payload is refused (exit 2, usage)" $?
+
+# ---- 5. a bad namespace is refused -----------------------------------------
+out=$(bash "$tool" 'bad ns' '{"writer":"w","item":"x"}' 2>&1); rc=$?
+[ $rc -eq 2 ] && printf '%s' "$out" | grep -q 'bad namespace'
+check "a bad namespace is refused (exit 2)" $?
+
+# ---- 6. malformed JSON is rejected -----------------------------------------
+out=$(bash "$tool" notes '{not json' 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q 'rejected'
+check "malformed JSON is rejected (exit 1)" $?
+
+# ---- 7. a missing writer is rejected ---------------------------------------
+out=$(bash "$tool" notes '{"item":"x"}' 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q 'rejected'
+check "a payload without a writer is rejected (exit 1)" $?
+
+# ---- 8. an empty writer is rejected ----------------------------------------
+out=$(bash "$tool" notes '{"writer":"","item":"x"}' 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q 'rejected'
+check "an empty writer is rejected (exit 1)" $?
+
+# ---- 9. an unknown severity is rejected ------------------------------------
+out=$(bash "$tool" notes '{"writer":"w","item":"x","severity":"nope"}' 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q 'rejected'
+check "an unknown severity is rejected (exit 1)" $?
+
+# ---- 10. an unparseable ts is rejected -------------------------------------
+out=$(bash "$tool" notes '{"writer":"w","item":"x","ts":"not-a-date"}' 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q 'unparseable ts'
+check "an unparseable ts is rejected (exit 1)" $?
+
+# ---- 11. state isolation: the default path follows a sandboxed HOME -------
+before=$(wc -l < "$feed")
+env -u HNGH_DASHBOARD_DIR HOME="$sandbox/home" bash "$tool" notes '{"writer":"w","item":"x"}' >/dev/null
+[ -f "$sandbox/home/.local/state/hngh/dashboard/notes.jsonl" ] &&
+	[ "$(wc -l < "$feed")" = "$before" ]
+check "with no override the row lands under the sandboxed HOME, not the override dir" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

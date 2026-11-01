@@ -20,6 +20,13 @@
 #   lint        the patch does not add python to an owned shell script
 #   growth      a diff that doubles while the tests stay red escalates instead
 #               of burning the remaining attempts
+#
+# Escalation ladder (2026-11-01): the default coder gets --attempts tries; if
+# the item is still red, the escalation coder gets its own tries with its own
+# context and completion budget. The item reaches escalate/ only after the
+# last rung fails. A growth-stop ends the rung it happens in and hands the
+# item to the next rung: a diverging diff is a question for a different coder,
+# not a reason to keep asking the same one.
 set -u
 
 ROOT=${HNGH_FILL_DIR:-$HOME/.local/state/hngh/fill}
@@ -29,7 +36,14 @@ DEFAULT_MODEL=unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF
 MAX_TOKENS=${HNGH_FILL_MAX_TOKENS:-12288}
 TIMEOUT=${HNGH_FILL_TIMEOUT:-600}
 PRELOAD_CTX=${HNGH_FILL_CTX:-32768}
+ESCALATION_MODEL=${HNGH_FILL_ESCALATION_MODEL:-unsloth/Qwen-AgentWorld-35B-A3B-GGUF}
 STUDIO=${URL%/v1/chat/completions}
+# Rung 1's budget. The escalation rung has its own, measured budget (see
+# model_profile); keep the base values so a rung never inherits the previous
+# rung's context.
+BASE_CTX=$PRELOAD_CTX
+BASE_TOKENS=$MAX_TOKENS
+BASE_TIMEOUT=$TIMEOUT
 
 usage() {
 	cat <<'EOF'
@@ -40,6 +54,10 @@ hngh-fill — local-fill runner (spec + tests in, patched workdir out).
       and the test files, apply the returned unified diff in workdir/, run the
       item's test_cmd there. Green -> filled/, still red after N attempts ->
       escalate/. A dead local server moves nothing and aborts the drain.
+      --model M is the first rung of the ladder. When the item is still red the
+      escalation coder (HNGH_FILL_ESCALATION_MODEL) gets its own N attempts
+      with its own context and completion budget; the item reaches escalate/
+      only after the last rung fails.
   status
       One line per item across queued/, filled/, escalate/.
   reset <id>
@@ -56,6 +74,160 @@ model_gguf_path() { # model slug -> largest local GGUF path (HF cache layout)
 	d="$HOME/.cache/huggingface/hub/models--$slug_q"
 	[ -d "$d" ] || return 0
 	find -L "$d" -name '*.gguf' -printf '%s\t%p\n' 2>/dev/null | sort -nr | head -1 | cut -f2-
+}
+
+# model_profile <slug> -> "<ctx> <max_tokens> <measured> <timeout>"
+# Per-model budget, measured on the dGPU (2026-11-01): the 35B reasons for
+# ~4k tokens before it answers, so the 12288 budget that suits the default
+# coder leaves its reply body empty ("no unified diff in reply"); it also needs
+# the wider context to hold a real SPEC plus the workdir. "measured" marks a
+# model whose load is governed by hngh-vram-gate — the studio prices the real
+# demand at the context we will use — instead of the coarse byte ceiling.
+model_profile() {
+	case "$1" in
+	unsloth/Qwen-AgentWorld-35B-A3B-GGUF)
+		echo "${HNGH_FILL_ESCALATION_CTX:-98304} ${HNGH_FILL_ESCALATION_MAX_TOKENS:-30000} 1 ${HNGH_FILL_ESCALATION_TIMEOUT:-1800}" ;;
+	*)
+		echo "$BASE_CTX $BASE_TOKENS 0 $BASE_TIMEOUT" ;;
+	esac
+}
+
+# model_measured <slug>: 1 when the model has a measured per-model budget.
+model_measured() { model_profile "$1" | cut -d' ' -f3; }
+
+# model_bytes <slug>: the size of the largest local GGUF for that slug (0 if
+# none is on disk).
+model_bytes() {
+	local mp
+	mp=$(model_gguf_path "$1")
+	[ -n "$mp" ] || { echo 0; return 0; }
+	stat -c %s "$mp" 2>/dev/null || echo 0
+}
+
+# rung_fits <slug> <measured>: does this coder fit the card?
+# The byte ceiling is a proxy for demand; a measured profile replaces it with
+# the studio's own estimate at the rung's context (measured 2026-11-01: the
+# 35B at 98304 ctx is 14.75 GB on a 19.98 GiB card, and the desktop no longer
+# shares that card). Either way hngh-vram-gate has the last word.
+rung_fits() {
+	[ "$2" = 1 ] && return 0
+	[ "${HNGH_FILL_ALLOW_BIG:-0}" = 1 ] && return 0
+	local bytes
+	bytes=$(model_bytes "$1")
+	[ "$bytes" -gt 12000000000 ] && return 1
+	return 0
+}
+
+# resident_models <api_key>: the ids of the models the studio holds loaded.
+resident_models() {
+	curl -sS --max-time 30 -H "Authorization: Bearer $1" \
+		"$STUDIO/api/inference/loaded-models" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+for m in d.get("data", []):
+    if m.get("loaded") and m.get("id"):
+        print(m["id"])'
+}
+
+# resident_ctx <model_id> <api_key>: the context a resident model was loaded
+# at (empty when it is not resident). The studio keeps a loaded model at the
+# context it was loaded with, so a rung that wants a different one has to
+# reload it — otherwise the prompt is truncated silently.
+resident_ctx() {
+	curl -sS --max-time 30 -H "Authorization: Bearer $2" \
+		"$STUDIO/api/inference/loaded-models" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+for m in d.get("data", []):
+    if m.get("loaded") and m.get("id") == sys.argv[1]:
+        print(m.get("context_length") or "")
+        break' "$1"
+}
+
+# unload_model <model_id> <api_key>: evict a resident model.
+unload_model() {
+	local status
+	status=$(curl -sS --max-time 120 -o /dev/null -w '%{http_code}' \
+		-H "Authorization: Bearer $2" -H 'Content-Type: application/json' \
+		-X POST "$STUDIO/api/inference/unload" \
+		-d "{\"model_path\":\"$1\"}" 2>/dev/null) || status=000
+	[ "$status" = "200" ]
+}
+
+# free_vram_for <model_id> <api_key>: evict ONE resident that is not the
+# target, so the card can make room for a coder it cannot hold alongside them
+# (19.98 GiB; the fleet plus a 35B coder do not fit). One eviction at a time:
+# the smallest blast radius that unblocks the load. The fleet is re-admitted by
+# hngh-route. Returns 0 when a resident was evicted, 1 when there was none.
+free_vram_for() {
+	local want=$1 key=$2 r residents prev now
+	local vram_file=${HNGH_VRAM_FILE:-/sys/class/drm/card1/device/mem_info_vram_used}
+	residents=$(resident_models "$key")
+	[ -n "$residents" ] || return 1
+	for r in $residents; do
+		[ "$r" = "$want" ] && continue
+		if unload_model "$r" "$key"; then
+			echo "hngh-fill: evicted resident $r to make room for $want" >&2
+			# wait for the card to give the memory back before the gate re-reads it
+			prev=""
+			for _ in 1 2 3 4 5 6 7 8 9 10; do
+				now=$(cat "$vram_file" 2>/dev/null || echo "")
+				[ -n "$now" ] && [ "$now" = "$prev" ] && break
+				prev=$now
+				sleep 2
+			done
+			return 0
+		fi
+		echo "hngh-fill: could not evict resident $r to make room for $want" >&2
+	done
+	return 1
+}
+
+# vram_admit <gguf_path> <ctx> <model_id> <api_key>: ask hngh-vram-gate whether
+# this model may be loaded now. A refusal that comes from another resident
+# holding the card is resolved by evicting that resident and asking once more
+# — the fleet is re-admitted by hngh-route, and nothing loads that does not fit
+# (the operator's residency ruling, 2026-10-31). Prints the gate's verdict.
+vram_admit() {
+	local mp=$1 ctx=$2 model=$3 key=$4 gate verdict rc
+	gate=$(command -v hngh-vram-gate || true)
+	[ -n "$gate" ] || gate="$(dirname "$(readlink -f "$0")")/hngh-vram-gate"
+	[ -x "$gate" ] || gate="$HOME/Projects/hngh/bin/hngh-vram-gate"
+	if [ ! -x "$gate" ]; then
+		echo "hngh-vram-gate not found"
+		return 2
+	fi
+	for _ in 1 2 3 4; do
+		verdict=$(HNGH_STUDIO_URL="${HNGH_STUDIO_URL:-$STUDIO}" \
+			HNGH_ENV_DIR="$ENV_DIR" HNGH_STUDIO_API_KEY="$key" \
+			bash "$gate" "$mp" "$ctx" 2>&1)
+		rc=$?
+		[ "$rc" -eq 0 ] && break
+		[ "$rc" -eq 2 ] && break
+		# the card is too full: evict one resident that is not the target
+		# and ask the gate again.
+		free_vram_for "$model" "$key" || break
+	done
+	printf '%s\n' "$verdict"
+	return $rc
+}
+
+# ensure_ctx <model_id> <ctx> <api_key>: a resident loaded at another context
+# is reloaded at this one. The studio keeps a model at the context it was
+# loaded with; a rung that asks for more silently truncates the prompt.
+ensure_ctx() {
+	local model=$1 ctx=$2 key=$3 cur
+	cur=$(resident_ctx "$model" "$key")
+	[ -n "$cur" ] || return 0
+	[ "$cur" = "$ctx" ] && return 0
+	echo "hngh-fill: resident $model is at ctx $cur — reloading at $ctx" >&2
+	unload_model "$model" "$key"
 }
 
 # studio_load_post <gguf_path> <ctx> <api_key> <body_file>: POST the studio load
@@ -218,19 +390,18 @@ do_drain() {
 	# VRAM budget guard (2026-10-29 crash): loading a model whose weights + KV
 	# cache approach the card's free VRAM OOM-kills the desktop. Rule: GGUF file
 	# > 12 GB ⇒ weights+mmproj+KV demand exceeds the operator's 12–14 GB ceiling
-	# once context is served. Refuse unless the caller overrides.
-	if [ "${HNGH_FILL_ALLOW_BIG:-0}" != 1 ]; then
-		slug_q=$(printf '%s' "$model" | sed 's|/|--|g')
-		# -L twice: snapshot files are symlinks into the blob store; both find
-		# and du must dereference or du measures the 79-byte symlink
-		gguf_bytes=$(find -L "$HOME/.cache/huggingface/hub/models--$slug_q" -name '*.gguf' -exec du -bL {} + 2>/dev/null | sort -nr | head -1 | cut -f1)
-		if [ -n "$gguf_bytes" ] && [ "$gguf_bytes" -gt 12000000000 ]; then
-			printf 'hngh-fill: refusing %s — GGUF is %d GB; total demand (weights+mmproj+KV) exceeds the 12–14 GB VRAM budget and OOM-crashed the desktop on 2026-10-29. Bound its context in the unsloth studio first, or override with HNGH_FILL_ALLOW_BIG=1.\n' "$model" "$((gguf_bytes / 1000000000))" >&2
-			exit 1
-		fi
+	# once context is served. Refuse unless the caller overrides. A measured
+	# profile replaces the byte ceiling with the studio's own estimate at the
+	# rung's context — hngh-vram-gate has the last word there.
+	if ! rung_fits "$model" "$(model_measured "$model")"; then
+		printf 'hngh-fill: refusing %s — GGUF is %d GB; total demand (weights+mmproj+KV) exceeds the 12–14 GB VRAM budget and OOM-crashed the desktop on 2026-10-29. Bound its context in the unsloth studio first, or override with HNGH_FILL_ALLOW_BIG=1.\n' "$model" "$(( $(model_bytes "$model") / 1000000000 ))" >&2
+		exit 1
 	fi
 
 	local id item workdir test_cmd spec tests_rel attempts_used attempt
+	local rung_model rung_ctx rung_tokens rung_timeout rung_attempts
+	local rung_attempt last_diff_size rung_outcome ladder_log rung rung_list
+	local failure_out escalated escalate_note
 	for id in $items; do
 		item="$ROOT/queued/$id"
 		[ -d "$item" ] || continue
@@ -252,16 +423,45 @@ do_drain() {
 			rm -rf "$ROOT/.prefill/$id"
 			mkdir -p "$ROOT/.prefill/$id"
 			cp -a "$workdir"/. "$ROOT/.prefill/$id"/
+			# the reply files are evidence, not pre-fill state: keep them out
+			# of the snapshot so a restore cannot resurrect the previous run's
+			# replies (measured 2026-11-01 on demo-json-001).
+			rm -f "$ROOT/.prefill/$id"/reply-attempt-*.txt 2>/dev/null
 		fi
 
 		attempts_used=0
-		local failure_out=""
-		local escalated=1
-		local escalate_note=""
-		local last_diff_size=0
-		while [ "$attempts_used" -lt "$attempts" ]; do
-			attempts_used=$((attempts_used + 1))
-			escalate_note=""
+		failure_out=""
+		escalated=1
+		escalate_note=""
+		# The ladder: rung 1 is the coder we were asked to use; when the item
+		# is still red the escalation coder gets its own tries, with its own
+		# context and completion budget. Rung 2 runs only when its model is on
+		# disk (we load it ourselves, at a bounded context) and the ladder is
+		# not switched off.
+		ladder_log=""
+		local r_ctx r_tokens r_measured r_timeout
+		read -r r_ctx r_tokens r_measured r_timeout <<<"$(model_profile "$model")"
+		local ladder="$model|$r_ctx|$r_tokens|$r_timeout|$attempts"
+		if [ "${HNGH_FILL_LADDER:-1}" = 1 ] && [ -n "$ESCALATION_MODEL" ] && \
+			[ "$ESCALATION_MODEL" != "$model" ] && [ -n "$(model_gguf_path "$ESCALATION_MODEL")" ]; then
+			local e_ctx e_tokens e_measured e_timeout
+			read -r e_ctx e_tokens e_measured e_timeout <<<"$(model_profile "$ESCALATION_MODEL")"
+			if rung_fits "$ESCALATION_MODEL" "$e_measured"; then
+				ladder="$ladder;$ESCALATION_MODEL|$e_ctx|$e_tokens|$e_timeout|${HNGH_FILL_ESCALATION_ATTEMPTS:-2}"
+			else
+				echo "hngh-fill: escalation coder $ESCALATION_MODEL does not fit the card — the ladder stops at $model" >&2
+			fi
+		fi
+		IFS=';' read -r -a rung_list <<< "$ladder"
+		for rung in "${rung_list[@]}"; do
+			IFS='|' read -r rung_model rung_ctx rung_tokens rung_timeout rung_attempts <<< "$rung"
+			rung_attempt=0
+			last_diff_size=0
+			rung_outcome="red"
+			while [ "$rung_attempt" -lt "$rung_attempts" ]; do
+				rung_attempt=$((rung_attempt + 1))
+				attempts_used=$((attempts_used + 1))
+				escalate_note=""
 
 			# Bounded pre-load (2026-10-29 GPU-hang incident): the studio's
 			# auto context derivation ignores the desktop's VRAM — it fitted
@@ -273,46 +473,37 @@ do_drain() {
 			# the chat request is not sent, because the studio would
 			# auto-load the very model the gate just refused.
 			local mp
-			mp=$(model_gguf_path "$model")
+			mp=$(model_gguf_path "$rung_model")
 			if [ -n "$mp" ]; then
 				# Hard VRAM admission gate: never load a model that
 				# would not fit alongside what is already resident. The
 				# chat request itself can make the studio auto-load the
 				# model (openai auto-switch is on), so the gate guards
 				# the attempt, not just the explicit load POST.
-				local gate verdict
+				local verdict
 				local gate_rc
-				local gate_ctx=${PRELOAD_CTX:-32768}
-				[ "$gate_ctx" = "0" ] && gate_ctx=32768
-				gate=$(command -v hngh-vram-gate || true)
-				[ -n "$gate" ] || gate="$(dirname "$(readlink -f "$0")")/hngh-vram-gate"
-				[ -x "$gate" ] || gate="$HOME/Projects/hngh/bin/hngh-vram-gate"
-				if [ ! -x "$gate" ]; then
-					echo "hngh-fill: $id attempt $attempts_used: hngh-vram-gate not found — refusing to load" >&2
-					failure_out="VRAM gate unavailable: hngh-vram-gate not found"
-					escalate_note="$failure_out"
-					continue
-				fi
-				verdict=$(HNGH_STUDIO_URL="${HNGH_STUDIO_URL:-$STUDIO}" \
-					HNGH_ENV_DIR="$ENV_DIR" HNGH_STUDIO_API_KEY="$ukey" \
-					bash "$gate" "$mp" "$gate_ctx" 2>&1)
+				verdict=$(vram_admit "$mp" "$rung_ctx" "$rung_model" "$ukey")
 				gate_rc=$?
 				if [ "$gate_rc" -ne 0 ]; then
 					echo "hngh-fill: $id attempt $attempts_used: VRAM gate refused — $verdict" >&2
 					failure_out="VRAM gate refused: $verdict"
 					escalate_note="$failure_out"
-					continue
+					break
 				fi
-				if [ -n "$PRELOAD_CTX" ] && [ "$PRELOAD_CTX" != "0" ]; then
+				if [ -n "$rung_ctx" ] && [ "$rung_ctx" != "0" ]; then
+					# The studio keeps a resident model at the context it
+					# was loaded with; a rung that asks for a different
+					# context would have its prompt truncated silently.
+					ensure_ctx "$rung_model" "$rung_ctx" "$ukey"
 					# The studio refuses (409) a load that would evict a
 					# resident model when "keep multiple models loaded" is
 					# Always: evict the named resident and retry once.
-					preload_model "$mp" "$PRELOAD_CTX" "$ukey" "$model" || true
+					preload_model "$mp" "$rung_ctx" "$ukey" "$rung_model" || true
 					if [ -n "$LOAD_ERROR" ]; then
 						echo "hngh-fill: $id attempt $attempts_used: $LOAD_ERROR" >&2
 						failure_out="$LOAD_ERROR"
 						escalate_note="$failure_out"
-						continue
+						break
 					fi
 				fi
 			fi
@@ -320,7 +511,7 @@ do_drain() {
 			local payload body status content diff applied
 			payload=$(mktemp)
 			SPEC_FILE="$spec" TESTS_DIR="$item/tests" FAILURE_OUT="$failure_out" \
-			WORKDIR="$workdir" MODEL="$model" MAX_TOKENS="$MAX_TOKENS" python3 - > "$payload" <<'PY'
+			WORKDIR="$workdir" MODEL="$rung_model" MAX_TOKENS="$rung_tokens" python3 - > "$payload" <<'PY'
 import json, os
 spec = open(os.environ["SPEC_FILE"], encoding="utf-8", errors="replace").read()
 tests = []
@@ -341,7 +532,12 @@ files = []
 if os.path.isdir(wd):
     for f in sorted(os.listdir(wd)):
         p = os.path.join(wd, f)
-        if f in ("SPEC.md", "item.json", "result.json") or f.startswith(".") or not os.path.isfile(p):
+        # Only the owned file(s) belong in the prompt. Harness bookkeeping
+        # (SPEC/item/result/replies) and patch leftovers (.orig/.rej) are not
+        # patch targets; showing them (measured 2026-11-01 on a path-2 item)
+        # made the model patch against the wrong content.
+        if (f in ("SPEC.md", "item.json", "result.json") or f.startswith("reply-attempt-")
+                or f.endswith((".orig", ".rej")) or f.startswith(".") or not os.path.isfile(p)):
             continue
         try:
             files.append("--- %s (current content) ---\n%s" % (f, open(p, encoding="utf-8", errors="replace").read()))
@@ -360,7 +556,7 @@ print(json.dumps({"model": os.environ["MODEL"], "max_tokens": int(os.environ["MA
 PY
 
 			body=$(mktemp)
-			status=$(curl -sS --max-time "$TIMEOUT" -o "$body" -w '%{http_code}' \
+			status=$(curl -sS --max-time "$rung_timeout" -o "$body" -w '%{http_code}' \
 				-H "Authorization: Bearer $ukey" -H 'Content-Type: application/json' \
 				--data-binary "@$payload" "$URL" 2>/dev/null)
 			rm -f "$payload"
@@ -415,10 +611,20 @@ def emit_fullfile():
         sys.stdout.write(unified(old, "\n".join(body) + "\n", path))
         sys.exit(0)
     # language-labeled fence (e.g. ```python): models label fences with the
-    # language, not the path. If the workdir holds exactly one file, the fence
-    # can only mean that file — map it and synthesize the diff.
-    cand = [f for f in os.listdir(workdir)
-            if os.path.isfile(os.path.join(workdir, f))]
+    # language, not the path. If the workdir holds exactly one patchable
+    # file, the fence can only mean that file — map it and synthesize the
+    # diff. Bookkeeping is not patchable: a path-2 workdir IS the item dir,
+    # so it holds SPEC.md, item.json, the reply files and the patch leftovers
+    # next to the owned file (measured 2026-11-01 on demo-json-001: the
+    # fenced full-file reply could not be mapped because the workdir held
+    # more than one file).
+    def owned(f):
+        return (f not in ("SPEC.md", "item.json", "result.json")
+                and not f.startswith("reply-attempt-")
+                and not f.endswith((".orig", ".rej"))
+                and not f.startswith("."))
+    cand = [f for f in sorted(os.listdir(workdir))
+            if os.path.isfile(os.path.join(workdir, f)) and owned(f)]
     if len(cand) == 1:
         path = cand[0]
         for i, l in enumerate(lines):
@@ -533,10 +739,7 @@ PY
 			if [ -n "$lint_out" ]; then
 				echo "hngh-fill: $id attempt $attempts_used: patch REJECTED — $lint_out" >&2
 				printf '%s\n' "$content" > "$item/reply-attempt-$attempts_used.txt" 2>/dev/null
-				if [ -d "$ROOT/.prefill/$id" ]; then
-					find "$workdir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-					cp -a "$ROOT/.prefill/$id"/. "$workdir"/
-				fi
+				restore_prefill "$id" "$workdir"
 				failure_out="language mismatch: patch looks Python, owned file is a shell script"
 				escalate_note="language mismatch: patch looks Python, owned file is a shell script"
 				continue
@@ -548,12 +751,7 @@ PY
 				printf '%s\n' "$content" > "$item/reply-attempt-$attempts_used.txt" 2>/dev/null
 				# GNU patch may have applied SOME hunks (rc=1, rejects saved) —
 				# reset to the pre-fill snapshot so the next attempt starts clean.
-				# find-based clear: for path-2 items workdir IS the item dir,
-				# so `rm -rf "$workdir"` would refuse '.'.
-				if [ -d "$ROOT/.prefill/$id" ]; then
-					find "$workdir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-					cp -a "$ROOT/.prefill/$id"/. "$workdir"/
-				fi
+				restore_prefill "$id" "$workdir"
 				failure_out="patch did not apply: $applied"
 				last_diff_size=$diff_size
 				continue
@@ -577,8 +775,7 @@ for f in os.listdir(pf):
 				if [ -n "$gutted" ]; then
 					echo "hngh-fill: $id attempt $attempts_used: green REJECTED — full-file rewrite ($gutted)" >&2
 					printf '%s\n' "$content" > "$item/reply-attempt-$attempts_used.txt" 2>/dev/null
-					find "$workdir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-					cp -a "$ROOT/.prefill/$id"/. "$workdir"/
+					restore_prefill "$id" "$workdir"
 					failure_out="green rejected: $gutted. Patch the provided content; keep the existing engine."
 					continue
 				fi
@@ -607,8 +804,7 @@ for f in os.listdir(pf):
 					if [ "$bite_rc" = 0 ]; then
 						echo "hngh-fill: $id attempt $attempts_used: green REJECTED — tests do not bite (they pass on the pre-fill state)" >&2
 						printf '%s\n' "$content" > "$item/reply-attempt-$attempts_used.txt" 2>/dev/null
-						find "$workdir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-						cp -a "$ROOT/.prefill/$id"/. "$workdir"/
+						restore_prefill "$id" "$workdir"
 						failure_out="tests do not bite: they pass on the pre-fill state"
 						escalate_note="tests do not bite: they pass on the pre-fill state"
 						continue
@@ -616,7 +812,7 @@ for f in os.listdir(pf):
 				fi
 				echo "hngh-fill: $id green after $attempts_used attempt(s)" >&2
 				mv "$item" "$ROOT/filled/$id" || die "cannot move $id to filled/"
-				write_result "$ROOT/filled/$id" "$id" "$model" "$attempts_used" "filled" "tests green"
+				write_result "$ROOT/filled/$id" "$id" "$rung_model" "$attempts_used" "filled" "tests green"
 				rm -rf "$ROOT/.prefill/$id"
 				# audit trail: a green claim must carry the test output that proved it
 				printf '%s\n' "$test_out" > "$ROOT/filled/$id/test_out.log"
@@ -625,29 +821,37 @@ for f in os.listdir(pf):
 				break
 			fi
 			echo "hngh-fill: $id attempt $attempts_used: tests still red" >&2
-			if [ -d "$ROOT/.prefill/$id" ]; then
-				find "$workdir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-				cp -a "$ROOT/.prefill/$id"/. "$workdir"/
-			fi
+			# keep the reply: it is the evidence of what the model answered
+			printf '%s\n' "$content" > "$item/reply-attempt-$attempts_used.txt" 2>/dev/null
+			restore_prefill "$id" "$workdir"
 			failure_out=$test_out
 			# Growth-stop: a diff that doubles while the tests stay red is
 			# growing, not converging. Escalate instead of burning attempts.
 			local prev_diff_size=$last_diff_size
 			last_diff_size=$diff_size
-			if [ "$attempts_used" -ge 2 ] && [ "$prev_diff_size" -gt 0 ] && \
+			if [ "$rung_attempt" -ge 2 ] && [ "$prev_diff_size" -gt 0 ] && \
 				[ "$diff_size" -ge $((prev_diff_size * 2)) ]; then
 				failure_out="growing, not converging: diff grew from $prev_diff_size to $diff_size characters while the tests stayed red"
 				escalate_note="$failure_out"
+				rung_outcome="growing, not converging"
 				echo "hngh-fill: $id attempt $attempts_used: ESCALATED — $failure_out" >&2
 				break
 			fi
+			done
+
+			if [ "$escalated" = 0 ]; then
+				ladder_log="$ladder_log ${rung_model}=green"
+				break
+			fi
+			ladder_log="$ladder_log ${rung_model}=${escalate_note:-${rung_outcome:-red}}"
 		done
 
 		if [ "$escalated" = 1 ]; then
 			mv "$item" "$ROOT/escalate/$id" || die "cannot move $id to escalate/"
 			local esc_note="still red after $attempts_used attempt(s)"
 			[ -n "$escalate_note" ] && esc_note="$escalate_note"
-			write_result "$ROOT/escalate/$id" "$id" "$model" "$attempts_used" "escalated" "$esc_note"
+			esc_note="$esc_note [ladder: $ladder_log]"
+			write_result "$ROOT/escalate/$id" "$id" "$rung_model" "$attempts_used" "escalated" "$esc_note"
 			log_transition "$id" "queued" "escalate" "$attempts_used" "$esc_note"
 		fi
 	done
@@ -669,7 +873,8 @@ apply_diff() {
 	python3 - "$f" "$wd" <<'PY'
 import os, re, sys
 p, wd = sys.argv[1], sys.argv[2]
-names = set(os.listdir(wd)) if os.path.isdir(wd) else set()
+names = set(f for f in os.listdir(wd)
+            if os.path.isfile(os.path.join(wd, f))) if os.path.isdir(wd) else set()
 lines = open(p).read().splitlines()
 for i, l in enumerate(lines):
     m = re.match(r'^(---|\+\+\+) (?:[ab]/)?(.+)$', l)
@@ -679,10 +884,14 @@ for i, l in enumerate(lines):
             continue
         base = os.path.basename(m.group(2))
         if base in names:
-            lines[i] = '%s a/%s' % (m.group(1), base)
+            # rewrite to the bare basename: patch -p0 then applies to the
+            # workdir copy directly. The a/ b/ form forced the -p1 fallback
+            # and, on a path-2 item, hid the real failure behind the last
+            # fallback's message (measured 2026-11-01).
+            lines[i] = '%s %s' % (m.group(1), base)
             m2 = re.match(r'^(?:\+\+\+|---) (?:[ab]/)?(.+)$', lines[i + 1])
             if m2 and os.path.basename(m2.group(1)) == base:
-                lines[i + 1] = '%s %s/%s' % (m2.group(0).split(' ')[0], 'b' if m2.group(0).startswith('+++') else 'a', base)
+                lines[i + 1] = '%s %s' % (m2.group(0).split(' ')[0], base)
 open(p, 'w').write('\n'.join(lines) + '\n')
 PY
 	# Recount @@ headers in place: small coders emit correct hunks with wrong
@@ -718,19 +927,44 @@ while i < len(lines):
         out.append(l); i += 1
 open(p, 'w').write('\n'.join(out) + '\n')
 PY
+	local errs
 	out=$(cd "$wd" && patch -p0 --batch --forward -u < "$f" 2>&1); rc=$?
 	if [ $rc = 0 ]; then rm -f "$f"; echo ok; return 0; fi
+	errs="$out"
 	out=$(cd "$wd" && patch -p1 --batch --forward -u < "$f" 2>&1); rc=$?
 	if [ $rc = 0 ]; then rm -f "$f"; echo ok; return 0; fi
+	errs="$errs | $out"
 	# --recount: small coders write correct hunks with wrong @@ line counts
 	# (measured 2026-10-30, Nemotron E4B) — recount instead of rejecting.
 	out=$(cd "$wd" && git apply --recount -p1 --unsafe-paths "$f" 2>&1); rc=$?
 	if [ $rc = 0 ]; then rm -f "$f"; echo ok; return 0; fi
+	errs="$errs | $out"
 	out=$(cd "$wd" && git apply --recount -p0 --unsafe-paths "$f" 2>&1); rc=$?
 	if [ $rc = 0 ]; then rm -f "$f"; echo ok; return 0; fi
+	errs="$errs | $out"
 	rm -f "$f"
-	printf '%s' "$(printf '%s' "$out" | tr '\n' ' ' | cut -c1-160)"
+	printf '%s' "$(printf '%s' "$errs" | tr '\n' ' ' | cut -c1-240)"
 	return 1
+}
+
+# restore_prefill <id> <workdir>: put the workdir back to its pre-fill state.
+# The reply files are evidence, not state: keep them. For a path-2 item the
+# workdir IS the item dir, so the blanket restore wiped the reply the same
+# attempt had just written and brought the previous run's replies back
+# (measured 2026-11-01 on demo-json-001).
+restore_prefill() {
+	local id=$1 wd=$2 keep f
+	[ -d "$ROOT/.prefill/$id" ] || return 0
+	keep=$(mktemp -d)
+	for f in "$wd"/reply-attempt-*.txt; do
+		[ -e "$f" ] && mv "$f" "$keep"/
+	done
+	find "$wd" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+	cp -a "$ROOT/.prefill/$id"/. "$wd"/
+	for f in "$keep"/*; do
+		[ -e "$f" ] && mv "$f" "$wd"/
+	done
+	rm -rf "$keep"
 }
 
 # ---- status -----------------------------------------------------------------

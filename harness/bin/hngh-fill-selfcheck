@@ -129,6 +129,19 @@ RETRY)
 +FIXED'
 	fi ;;
 RED) emit 'I am sorry, I cannot produce that patch.' ;;
+LADDER)
+	# the escalation coder is handed the same SPEC but must answer
+	# differently: the ladder is only proved when rung 1 is red and
+	# rung 2 is green.
+	if grep -q 'Qwen-AgentWorld-35B' "$body"; then
+		emit '--- hello.txt
++++ hello.txt
+@@ -1,1 +1,2 @@
+ original
++FIXED'
+	else
+		emit 'I am sorry, I cannot produce that patch.'
+	fi ;;
 DOWN) printf '000'; exit 7 ;;
 BITE) emit '--- hello.txt
 +++ hello.txt
@@ -156,6 +169,15 @@ LANG) emit '--- script.sh
  #!/bin/bash
  echo hi
 +import os' ;;
+PATHFENCE) emit '```bash
+#!/bin/bash
+echo FIXED
+```' ;;
+PATHBAD) emit '--- hngh-artifact
++++ hngh-artifact
+@@ -1,1 +1,2 @@
+-NOTTHERE
++ALSO_NOPE' ;;
 *) emit 'no diff' ;;
 esac
 STUB
@@ -350,6 +372,86 @@ check "409 refusal: a retry that still fails escalates with the load-failure not
 check "409 refusal: a failed load sends no chat request" $?
 
 rm -f "$STUB_STATE/load409" "$STUB_STATE/load409.count" "$STUB_STATE/load409_always"
+
+export HNGH_FILL_DIR="$sandbox/queue"
+
+# ---- 11. the escalation ladder ----------------------------------------------
+# When the default coder is still red after its tries, the escalation coder
+# gets its own tries with its own context and completion budget. The ladder
+# only engages when the escalation model is on disk, so the fake 35B GGUF is
+# created here — after the sections above, which must keep single-rung
+# behaviour.
+export HNGH_FILL_DIR="$sandbox/queue_ladder"
+mkdir -p "$HNGH_FILL_DIR"
+mkdir -p "$HOME/.cache/huggingface/hub/models--unsloth--Qwen-AgentWorld-35B-A3B-GGUF/snapshots/x"
+head -c 4096 /dev/zero > "$HOME/.cache/huggingface/hub/models--unsloth--Qwen-AgentWorld-35B-A3B-GGUF/snapshots/x/model.gguf"
+mk_item ladder-item LADDER 'grep -q FIXED hello.txt && echo PASS || { echo "expected FIXED"; exit 1; }'
+ladder_out=$(bash "$fill" drain --attempts 2 2>&1)
+
+[ -d "$HNGH_FILL_DIR/filled/ladder-item" ] && [ ! -d "$HNGH_FILL_DIR/escalate/ladder-item" ]
+check "ladder: the item is filled by the escalation coder after the default coder is red" $?
+
+python3 -c '
+import json,sys
+r=json.load(open(sys.argv[1]))
+assert r["status"]=="filled", r
+assert r["model"]=="unsloth/Qwen-AgentWorld-35B-A3B-GGUF", r
+assert r["attempts"]==3, r' "$HNGH_FILL_DIR/filled/ladder-item/result.json"
+check "ladder: the filled result names the escalation coder and counts every attempt" $?
+
+grep -q 'NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF' "$STUB_STATE/calls/LADDER.1.body"
+check "ladder: the first rung asks the default coder" $?
+
+grep -q 'Qwen-AgentWorld-35B-A3B-GGUF' "$STUB_STATE/calls/LADDER.3.body" &&
+	grep -q '"max_tokens": 30000' "$STUB_STATE/calls/LADDER.3.body"
+check "ladder: the escalation rung asks the escalation coder with its own completion budget" $?
+
+# both rungs red: the item escalates and the note records the ladder it walked
+export HNGH_FILL_DIR="$sandbox/queue_ladder_fail"
+mkdir -p "$HNGH_FILL_DIR"
+mk_item ladder-fail-item NODIFF 'grep -q FIXED hello.txt && echo PASS || { echo "expected FIXED"; exit 1; }'
+bash "$fill" drain --attempts 2 >/dev/null 2>&1
+
+[ -d "$HNGH_FILL_DIR/escalate/ladder-fail-item" ] &&
+	grep -q '\[ladder:' "$HNGH_FILL_DIR/escalate/ladder-fail-item/result.json" &&
+	grep -q 'Qwen-AgentWorld-35B-A3B-GGUF' "$HNGH_FILL_DIR/escalate/ladder-fail-item/result.json"
+check "ladder: an item red on every rung escalates with the ladder recorded in the note" $?
+
+# ---- 12. a path-2 item: the owned file sits at the item root ---------------
+# A path-2 item (workdir_rel ".") keeps its owned file next to SPEC.md,
+# item.json, the reply files and the patch leftovers, so the extractor must
+# pick the owned file out of that pile, and a restore must not resurrect the
+# previous run's replies (measured 2026-11-01 on demo-json-001).
+export HNGH_FILL_DIR="$sandbox/queue_path2"
+mkdir -p "$HNGH_FILL_DIR"
+d="$HNGH_FILL_DIR/queued/path2-item"
+mkdir -p "$d/tests"
+printf '# spec for path2-item\nFIXTURE:PATHFENCE\n' > "$d/SPEC.md"
+printf '#!/bin/bash\necho original\n' > "$d/hngh-artifact"
+printf '#!/bin/bash\ngrep -q FIXED hngh-artifact && echo PASS || { echo "expected FIXED"; exit 1; }\n' > "$d/tests/run_tests.sh"
+printf '{"id":"path2-item","test_cmd":"bash tests/run_tests.sh","workdir_rel":"."}\n' > "$d/item.json"
+
+d="$HNGH_FILL_DIR/queued/path2-bad-item"
+mkdir -p "$d/tests"
+printf '# spec for path2-bad-item\nFIXTURE:PATHBAD\n' > "$d/SPEC.md"
+printf '#!/bin/bash\necho original\n' > "$d/hngh-artifact"
+printf '#!/bin/bash\ngrep -q FIXED hngh-artifact && echo PASS || { echo "expected FIXED"; exit 1; }\n' > "$d/tests/run_tests.sh"
+printf '{"id":"path2-bad-item","test_cmd":"bash tests/run_tests.sh","workdir_rel":"."}\n' > "$d/item.json"
+# a reply from an earlier run must not come back as this run's evidence
+printf 'STALE-EVIDENCE\n' > "$d/reply-attempt-1.txt"
+
+bash "$fill" drain --attempts 2 >/dev/null 2>&1
+
+[ -d "$HNGH_FILL_DIR/filled/path2-item" ] &&
+	grep -q FIXED "$HNGH_FILL_DIR/filled/path2-item/hngh-artifact"
+check "path-2: a fenced full-file reply is mapped to the owned file and fills" $?
+
+[ -d "$HNGH_FILL_DIR/escalate/path2-bad-item" ]
+check "path-2: a diff that does not apply escalates" $?
+
+grep -q NOTTHERE "$HNGH_FILL_DIR/escalate/path2-bad-item/reply-attempt-1.txt" 2>/dev/null &&
+	! grep -q STALE-EVIDENCE "$HNGH_FILL_DIR/escalate/path2-bad-item/reply-attempt-1.txt" 2>/dev/null
+check "path-2: the live reply survives the restore instead of the earlier run's" $?
 
 export HNGH_FILL_DIR="$sandbox/queue"
 

@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# hngh-sense-selfcheck — sandboxed checks for the hngh sensor bus.
+#
+# hngh-sense reads the omarchy-* sensors, hyprctl and the tern daemon, and
+# prints one JSON object. Every one of those is stubbed on a sandboxed PATH;
+# a second, minimal PATH (jq + date + timeout only) proves the degradation
+# contract: a missing source degrades to null, never to a broken blob.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-sense"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+stub="$sandbox/bin"
+minbin="$sandbox/minbin"
+mkdir -p "$stub" "$minbin"
+
+# ---- the stub sensors ------------------------------------------------------
+cat > "$stub/omarchy-battery-status" <<'S'
+#!/usr/bin/env bash
+echo '{"level":80,"charging":false}'
+S
+cat > "$stub/omarchy-network-status" <<'S'
+#!/usr/bin/env bash
+echo "Connected to HomeNet"
+S
+cat > "$stub/omarchy-hyprland-session-locked" <<'S'
+#!/usr/bin/env bash
+exit 0
+S
+cat > "$stub/omarchy-update-status" <<'S'
+#!/usr/bin/env bash
+echo "2 updates pending"
+S
+cat > "$stub/omarchy-theme-current" <<'S'
+#!/usr/bin/env bash
+echo "tokyonight"
+S
+cat > "$stub/omarchy-monitor-state" <<'S'
+#!/usr/bin/env bash
+echo "1 monitor"
+S
+cat > "$stub/omarchy-system-stats" <<'S'
+#!/usr/bin/env bash
+echo "cpu 3% mem 40%"
+S
+cat > "$stub/hyprctl" <<'S'
+#!/usr/bin/env bash
+case "$2" in
+	monitors) echo '[{"id":"eDP-1","name":"eDP-1"}]' ;;
+	clients)  echo '[{"address":"0x1"}]' ;;
+	*)        echo '{}' ;;
+esac
+S
+cat > "$stub/tern" <<'S'
+#!/usr/bin/env bash
+echo '{"sessions":[{"name":"alpha","tabs":[{"name":"t1"}]},{"name":"beta","tabs":[{"name":"t2"},{"name":"t3"}]}]}'
+S
+chmod +x "$stub"/*
+
+# a PATH with the tools hngh-sense itself needs, but none of the sensors
+for c in bash jq date timeout; do ln -s "/usr/bin/$c" "$minbin/$c"; done
+
+# ---- 1. the output is exactly one JSON object ------------------------------
+out=$(PATH="$stub:/usr/bin:/bin" bash "$tool" 2>/dev/null); rc=$?
+[ $rc -eq 0 ] &&
+	printf '%s' "$out" | jq -s -e 'length == 1' >/dev/null
+check "the sensor bus prints exactly one JSON object (exit 0)" $?
+
+# ---- 2. every documented key is present ------------------------------------
+printf '%s' "$out" | jq -e '
+  has("generated_at") and has("battery") and has("network") and
+  has("session_locked") and has("updates") and has("theme") and
+  has("monitor_state") and has("system_stats") and
+  has("hyprland_monitors") and has("hyprland_clients") and
+  has("tern_sessions")' >/dev/null
+check "the blob carries every documented key" $?
+
+# ---- 3. the stub sensor values land in the blob ----------------------------
+printf '%s' "$out" | jq -e '.theme == "tokyonight"' >/dev/null &&
+	printf '%s' "$out" | jq -e '.network == "Connected to HomeNet"' >/dev/null &&
+	printf '%s' "$out" | jq -e '.updates == "2 updates pending"' >/dev/null &&
+	printf '%s' "$out" | jq -e '.battery | type == "string"' >/dev/null
+check "the omarchy sensor values are carried into the blob" $?
+
+# ---- 4. the lock probe is reported as a boolean ----------------------------
+printf '%s' "$out" | jq -e '.session_locked == true' >/dev/null
+check "a locked session is reported as session_locked true" $?
+
+cat > "$stub/omarchy-hyprland-session-locked" <<'S'
+#!/usr/bin/env bash
+exit 1
+S
+chmod +x "$stub/omarchy-hyprland-session-locked"
+out=$(PATH="$stub:/usr/bin:/bin" bash "$tool" 2>/dev/null)
+printf '%s' "$out" | jq -e '.session_locked == false' >/dev/null
+check "an unlocked session is reported as session_locked false" $?
+
+# ---- 5. hyprctl output is parsed as JSON -----------------------------------
+out=$(PATH="$stub:/usr/bin:/bin" bash "$tool" 2>/dev/null)
+printf '%s' "$out" | jq -e '.hyprland_monitors[0].id == "eDP-1"' >/dev/null &&
+	printf '%s' "$out" | jq -e '.hyprland_clients[0].address == "0x1"' >/dev/null
+check "hyprctl monitors and clients are carried as JSON arrays" $?
+
+# ---- 6. the tern summary counts sessions and tabs --------------------------
+out=$(PATH="$stub:/usr/bin:/bin" bash "$tool" 2>/dev/null)
+printf '%s' "$out" | jq -e '.tern_sessions.sessions == 2' >/dev/null &&
+	printf '%s' "$out" | jq -e '.tern_sessions.tabs == 3' >/dev/null &&
+	printf '%s' "$out" | jq -e '.tern_sessions.names == ["alpha","beta"]' >/dev/null
+check "the tern daemon summary counts sessions, tabs and names" $?
+
+# ---- 7. non-JSON hyprctl output degrades to null --------------------------
+cat > "$stub/hyprctl" <<'S'
+#!/usr/bin/env bash
+echo "hyprctl: cannot connect to display"
+S
+chmod +x "$stub/hyprctl"
+out=$(PATH="$stub:/usr/bin:/bin" bash "$tool" 2>/dev/null); rc=$?
+[ $rc -eq 0 ] && printf '%s' "$out" | jq -e '.hyprland_monitors == null' >/dev/null
+check "a non-JSON hyprctl answer degrades to null (exit 0)" $?
+
+# ---- 8. every missing source degrades to null, blob stays valid ------------
+out=$(PATH="$minbin" bash "$tool" 2>/dev/null); rc=$?
+[ $rc -eq 0 ] &&
+	printf '%s' "$out" | jq -e '
+	  .battery == null and .network == null and .updates == null and
+	  .theme == null and .monitor_state == null and .system_stats == null and
+	  .hyprland_monitors == null and .hyprland_clients == null and
+	  .tern_sessions == null and .session_locked == false' >/dev/null
+check "with no sensor on PATH every source degrades to null (exit 0)" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

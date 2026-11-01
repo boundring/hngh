@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# hngh-quota-refresh-selfcheck — sandboxed checks for the quota meter refresher.
+#
+# Nothing here touches the real ledger, the real browser relay or a real
+# provider: the ledger lives in a temp dir and "omp usage --json" is a stub
+# script. The case that matters most is the source gate — the xiaomi pause
+# branch once short-circuited every omp-usage refresh and froze the meter for
+# two days (2026-10-29 -> 10-31), so the pause marker and the omp-usage
+# refresh are now independent paths and this check pins that.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-quota-refresh"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+export HNGH_QUOTAS_DIR="$sandbox/quotas"
+mkdir -p "$HNGH_QUOTAS_DIR" "$sandbox/bin"
+ledger="$HNGH_QUOTAS_DIR/quotas.jsonl"
+
+cat > "$sandbox/bin/omp" <<'STUB'
+#!/usr/bin/env bash
+if [ "${1:-}" = "usage" ]; then
+	cat <<'JSON'
+{"reports":[{"provider":"zai","limits":[{"id":"zai:credits:5h","label":"zai credits","amount":{"used":34,"limit":12000,"usedFraction":0.0028,"unit":"count"},"window":{"id":"5h"}}]},{"provider":"minimax-code","limits":[{"id":"minimax-code:7d","label":"","amount":{"used":12,"limit":100,"usedFraction":0.12,"unit":"count"},"window":{"id":"7d"}}]}]}
+JSON
+fi
+STUB
+chmod +x "$sandbox/bin/omp"
+
+cat > "$sandbox/bin/omp-empty" <<'STUB'
+#!/usr/bin/env bash
+exit 0
+STUB
+chmod +x "$sandbox/bin/omp-empty"
+
+lines() { wc -l < "$ledger" 2>/dev/null || echo 0; }
+
+# ---- 1. the pause marker must not short-circuit an omp-usage refresh --------
+printf '2099-12-31\n' > "$HNGH_QUOTAS_DIR/xiaomi-paused-until"
+out=$(HNGH_OMP_BIN="$sandbox/bin/omp" bash "$tool" --source omp-usage 2>&1); rc=$?
+[ $rc -eq 0 ] && ! printf '%s' "$out" | grep -q 'paused until' &&
+	[ -f "$ledger" ] && grep -q '"service":"zai:5h"' "$ledger" &&
+	grep -q '"service":"minimax-code:7d"' "$ledger"
+check "omp-usage refresh ignores the xiaomi pause marker (the 2026-10-29 freeze)" $?
+
+# ---- 2. the pause still holds the browser-relay path ------------------------
+before=$(lines)
+out=$(HNGH_OMP_BIN="$sandbox/bin/omp" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] && printf '%s' "$out" | grep -q 'xiaomi paused until' &&
+	[ "$(lines)" = "$before" ]
+check "the xiaomi pause holds the browser-relay path and appends nothing" $?
+
+# ---- 3. an expired marker does not hold anything ----------------------------
+printf '2020-01-01\n' > "$HNGH_QUOTAS_DIR/xiaomi-paused-until"
+out=$(HNGH_OMP_BIN="$sandbox/bin/omp" bash "$tool" 2>&1); rc=$?
+! printf '%s' "$out" | grep -q 'paused until'
+check "an expired pause marker does not hold the refresh" $?
+
+# ---- 4. --no-append reports without writing ---------------------------------
+before=$(lines)
+out=$(HNGH_OMP_BIN="$sandbox/bin/omp" bash "$tool" --source omp-usage --no-append --json 2>&1); rc=$?
+[ $rc -eq 0 ] && [ "$(lines)" = "$before" ] && printf '%s' "$out" | grep -q 'zai:5h'
+check "--no-append reports the rows without writing the ledger" $?
+
+# ---- 5. ledger rows carry the source and the numbers ------------------------
+grep -q '"source":"omp-usage"' "$ledger" && grep -q '"used":34' "$ledger" &&
+	grep -q '"total":12000' "$ledger"
+check "ledger rows carry source, used and total" $?
+
+# ---- 6. an empty usage answer fails loudly ----------------------------------
+out=$(HNGH_OMP_BIN="$sandbox/bin/omp-empty" bash "$tool" --source omp-usage 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q 'omp usage returned nothing'
+check "an empty usage answer fails loudly (exit 1)" $?
+
+# ---- 7. a missing omp fails loudly ------------------------------------------
+out=$(PATH=/usr/bin:/bin HNGH_OMP_BIN="$sandbox/missing-omp" bash "$tool" --source omp-usage 2>&1); rc=$?
+[ $rc -eq 5 ] && printf '%s' "$out" | grep -q 'omp not found'
+check "a missing omp fails loudly (exit 5)" $?
+
+# ---- 8. an unknown flag is refused ------------------------------------------
+out=$(bash "$tool" --bogus 2>&1); rc=$?
+[ $rc -eq 2 ] && printf '%s' "$out" | grep -q 'usage:'
+check "an unknown flag is refused (exit 2)" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

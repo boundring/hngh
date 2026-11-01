@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# hngh-cockpit-selfcheck — sandboxed checks for the cockpit tab toggle.
+#
+# hngh-cockpit drives the real `tern` CLI, so the check stubs `tern` on a
+# sandboxed PATH: the stub answers `tern ls --json` with a fixture and records
+# every call, so focus-vs-create is observable without touching the live
+# Tern window.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-cockpit"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+mkdir -p "$sandbox/bin"
+
+# stub tern: `ls --json` prints $TERN_LS_JSON; every call is logged to $TERN_LOG.
+cat > "$sandbox/bin/tern" <<'STUB'
+#!/usr/bin/env bash
+echo "$@" >> "$TERN_LOG"
+case "$1 $2" in
+	"ls --json") cat "$TERN_LS_JSON" ;;
+	"new tab")   echo '{"block":"b-new"}' ;;
+	*)           : ;;
+esac
+exit 0
+STUB
+chmod +x "$sandbox/bin/tern"
+
+export TERN_LOG="$sandbox/tern.log"
+export TERN_LS_JSON="$sandbox/ls.json"
+
+ls_fixture() { # ls_fixture <json>
+	printf '%s' "$1" > "$TERN_LS_JSON"
+	: > "$TERN_LOG"
+}
+
+# ---- 1. no live cockpit tab -> a new tab is created and renamed -------------
+ls_fixture '{"sessions":[{"name":"s1","tabs":[{"name":"work","blocks":[{"id":"b1"}]}]}]}'
+out=$(PATH="$sandbox/bin:/usr/bin:/bin" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] &&
+	grep -q 'new tab' "$TERN_LOG" &&
+	grep -q 'rename b-new hngh-cockpit' "$TERN_LOG"
+check "with no cockpit tab a new tab is created and renamed hngh-cockpit" $?
+
+# ---- 2. a live cockpit tab is focused, not recreated -----------------------
+ls_fixture '{"sessions":[{"name":"s1","tabs":[{"name":"hngh-cockpit","blocks":[{"id":"b-live","exited":null}]}]}]}'
+out=$(PATH="$sandbox/bin:/usr/bin:/bin" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] &&
+	grep -q 'focus b-live' "$TERN_LOG" &&
+	! grep -q 'new tab' "$TERN_LOG"
+check "a live cockpit tab is focused and no tab is created" $?
+
+# ---- 3. a stale (exited) block is closed, then a fresh tab is created ------
+ls_fixture '{"sessions":[{"name":"s1","tabs":[{"name":"hngh-cockpit","blocks":[{"id":"b-dead","exited":7}]}]}]}'
+out=$(PATH="$sandbox/bin:/usr/bin:/bin" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] &&
+	grep -q 'close b-dead' "$TERN_LOG" &&
+	grep -q 'new tab' "$TERN_LOG" &&
+	grep -q 'rename b-new hngh-cockpit' "$TERN_LOG"
+check "a stale cockpit block is closed and a fresh tab is relaunched" $?
+
+# ---- 4. a missing tern is survivable: the tool still exits 0 ---------------
+: > "$TERN_LOG"
+out=$(PATH="/usr/bin:/bin" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ]
+check "with no tern on PATH the tool still exits 0" $?
+
+# ---- 5. no tern call is attempted when tern is absent ----------------------
+[ ! -s "$TERN_LOG" ] || ! grep -q 'new tab' "$TERN_LOG"
+check "with no tern on PATH no tab is created" $?
+
+# ---- 6. the tool prints nothing on stdout ----------------------------------
+ls_fixture '{"sessions":[]}'
+out=$(PATH="$sandbox/bin:/usr/bin:/bin" bash "$tool" 2>/dev/null)
+[ -z "$out" ]
+check "the cockpit toggle is silent on stdout" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

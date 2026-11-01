@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# hngh-digest-refresh-selfcheck — sandboxed checks for the digest refresher.
+#
+# hngh-digest-refresh reads its helper CLIs from $HOME/Projects/hngh/bin, so
+# the sandbox replaces HOME wholesale: a fake bin dir holds stub hngh-sessions
+# / hngh-agents readers plus a copy of the real hngh-digest-note writer. The
+# digest ledger itself is redirected with HNGH_DIGESTS_DIR.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-digest-refresh"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+fakehome="$sandbox/home"
+fakebin="$fakehome/Projects/hngh/bin"
+mkdir -p "$fakebin" "$sandbox/digests"
+cp "$selfcheck_dir/hngh-digest-note" "$fakebin/hngh-digest-note"
+
+export HNGH_DIGESTS_DIR="$sandbox/digests"
+ledger="$HNGH_DIGESTS_DIR/digests.jsonl"
+
+# stub readers: name -> JSON array printed for --json
+stub_reader() { # stub_reader <name> <json>
+	cat > "$fakebin/$1" <<STUB
+#!/usr/bin/env bash
+[ "\${1:-}" = "--json" ] && cat <<'JSON'
+$2
+JSON
+exit 0
+STUB
+	chmod +x "$fakebin/$1"
+}
+
+stub_reader hngh-sessions '[{"id":"s1"},{"id":"s2"}]'
+stub_reader hngh-agents '[{"id":"a1","state":"active"},{"id":"a2","state":"idle"},{"id":"a3","state":"warm"}]'
+
+# ---- 1. happy path: the folded row lands in the ledger ----------------------
+out=$(HOME="$fakehome" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] &&
+	[ "$(wc -l < "$ledger")" = 1 ] &&
+	jq -e '.sessions == 2 and .agents == 3 and .active_agents == 2' "$ledger" >/dev/null
+check "the folded counts (2 sessions, 3 agents, 2 active) are stored" $?
+
+# ---- 2. the summary names the counts ---------------------------------------
+printf '%s' "$out" | jq -e '.summary == "2 sessions, 3 agents, 2 active"' >/dev/null
+check "the row carries the 'N sessions, N agents, N active' summary" $?
+
+# ---- 3. an idle agent does not count as active -----------------------------
+# (already implied above: 3 agents, one of them idle -> 2 active)
+jq -e '.agents == 3 and .active_agents == 2' "$ledger" >/dev/null
+check "idle agents are excluded from the active count" $?
+
+# ---- 4. a missing source folds to zeros, never a loud failure --------------
+rm -f "$fakebin/hngh-sessions" "$fakebin/hngh-agents"
+out=$(HOME="$fakehome" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] &&
+	jq -e '.sessions == 0 and .agents == 0 and .active_agents == 0' "$ledger" >/dev/null &&
+	printf '%s' "$out" | jq -e '.summary == "0 sessions, 0 agents, 0 active"' >/dev/null
+check "missing source CLIs fold to zeros (exit 0)" $?
+
+# ---- 5. non-array source output folds to zero ------------------------------
+cat > "$fakebin/hngh-sessions" <<'STUB'
+#!/usr/bin/env bash
+[ "${1:-}" = "--json" ] && echo '{"not":"an array"}'
+exit 0
+STUB
+chmod +x "$fakebin/hngh-sessions"
+out=$(HOME="$fakehome" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] && printf '%s' "$out" | jq -e '.sessions == 0' >/dev/null
+check "a non-array --json answer folds to zero" $?
+
+# ---- 6. a missing hngh-digest-note fails loudly -----------------------------
+rm -f "$fakebin/hngh-digest-note"
+out=$(HOME="$fakehome" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q 'hngh-digest-note not found'
+check "a missing hngh-digest-note fails loudly (exit 1)" $?
+
+# ---- 7. the real ledger is never touched -----------------------------------
+cp "$selfcheck_dir/hngh-digest-note" "$fakebin/hngh-digest-note"
+before=$(wc -l < "$ledger")
+HOME="$fakehome" bash "$tool" >/dev/null
+[ "$(wc -l < "$ledger")" = "$((before + 1))" ] &&
+	[ ! -e "$fakehome/.local/state/hngh/digests/digests.jsonl" ]
+check "the row lands in HNGH_DIGESTS_DIR, not under the sandbox HOME default" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

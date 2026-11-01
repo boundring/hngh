@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# hngh-observe-selfcheck — sandboxed checks for the observation-tab opener.
+#
+# hngh-observe drives the real `tern` CLI, so the check stubs `tern` on a
+# sandboxed PATH: the stub answers `tern ls --json` with a fixture and records
+# every call, so the tab set and the focus handoff are observable without
+# touching the live Tern window.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-observe"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+mkdir -p "$sandbox/bin"
+
+cat > "$sandbox/bin/tern" <<'STUB'
+#!/usr/bin/env bash
+echo "$@" >> "$TERN_LOG"
+case "$1 $2" in
+	"ls --json") cat "$TERN_LS_JSON" ;;
+	"new tab")   echo '{"block":"b-new"}' ;;
+	*)           : ;;
+esac
+exit 0
+STUB
+chmod +x "$sandbox/bin/tern"
+
+export TERN_LOG="$sandbox/tern.log"
+export TERN_LS_JSON="$sandbox/ls.json"
+
+ls_fixture() {
+	printf '%s' "$1" > "$TERN_LS_JSON"
+	: > "$TERN_LOG"
+}
+
+# ---- 1. the three observation tabs are opened and named --------------------
+ls_fixture '{"sessions":[]}'
+out=$(PATH="$sandbox/bin:/usr/bin:/bin" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] &&
+	grep -q 'rename b-new hngh-agents' "$TERN_LOG" &&
+	grep -q 'rename b-new slot-transcript' "$TERN_LOG" &&
+	grep -q 'rename b-new ledger+dashboard' "$TERN_LOG"
+check "the agents, slot-transcript and ledger+dashboard tabs are opened and named" $?
+
+# ---- 2. the tool says what it opened ---------------------------------------
+printf '%s' "$out" | grep -q 'hngh-agents, slot-transcript, ledger+dashboard'
+check "the closing line names the three tabs" $?
+
+# ---- 3. a previous tab with the same name is closed first ------------------
+ls_fixture '{"sessions":[{"name":"s1","tabs":[{"name":"hngh-agents","blocks":[{"id":"b-stale"}]}]}]}'
+out=$(PATH="$sandbox/bin:/usr/bin:/bin" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] &&
+	grep -q 'close b-stale' "$TERN_LOG" &&
+	grep -q 'rename b-new hngh-agents' "$TERN_LOG"
+check "an existing tab with the same name is closed before the new one opens" $?
+
+# ---- 4. focus is handed back to the previously focused block ---------------
+ls_fixture '{"sessions":[{"name":"s1","tabs":[{"name":"work","blocks":[{"id":"b-prev","focused":true}]}]}]}'
+out=$(PATH="$sandbox/bin:/usr/bin:/bin" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] && grep -q 'focus b-prev' "$TERN_LOG"
+check "focus is restored to the block the operator was on" $?
+
+# ---- 5. with nothing focused, no focus call is made -----------------------
+ls_fixture '{"sessions":[]}'
+out=$(PATH="$sandbox/bin:/usr/bin:/bin" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] && ! grep -q '^focus' "$TERN_LOG"
+check "with no previously focused block no focus call is made" $?
+
+# ---- 6. a missing tern is survivable: the tool still exits 0 ---------------
+: > "$TERN_LOG"
+out=$(PATH="/usr/bin:/bin" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ]
+check "with no tern on PATH the tool still exits 0" $?
+
+# ---- 7. the closing line is printed even when tern is missing -------------
+out=$(PATH="/usr/bin:/bin" bash "$tool" 2>/dev/null)
+printf '%s' "$out" | grep -q 'observation tabs open'
+check "with no tern on PATH the tool still reports the tabs it opened" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

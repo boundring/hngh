@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# hngh-quota-note-selfcheck — sandboxed checks for the quota ledger writer.
+# The ledger lives in a temp dir (HNGH_QUOTAS_DIR, or a sandboxed HOME for the
+# default path); the real ~/.local/state/hngh/quotas is never touched.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-quota-note"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+export HNGH_QUOTAS_DIR="$sandbox/quotas"
+mkdir -p "$HNGH_QUOTAS_DIR"
+ledger="$HNGH_QUOTAS_DIR/quotas.jsonl"
+
+# ---- 1. happy path: one row lands in the ledger -----------------------------
+out=$(bash "$tool" --service zai:5h --used 34 --total 12000 2>&1); rc=$?
+[ $rc -eq 0 ] &&
+	[ "$(wc -l < "$ledger")" = 1 ] &&
+	printf '%s' "$out" | jq -e '.service == "zai:5h" and .used == 34 and .total == 12000 and .unit == "count"' >/dev/null &&
+	grep -q '"service":"zai:5h"' "$ledger"
+check "a reading is stored as one JSON row and echoed on stdout" $?
+
+# ---- 2. the row carries the server stamp and the unit ----------------------
+at=$(jq -r '.at' "$ledger")
+printf '%s' "$at" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$'
+check "the row carries a server-side UTC stamp" $?
+
+# ---- 3. optional fields are dropped when absent -----------------------------
+jq -e 'has("percent") | not' "$ledger" >/dev/null &&
+	jq -e 'has("plan") | not' "$ledger" >/dev/null &&
+	jq -e 'has("source") | not' "$ledger" >/dev/null
+check "absent optional fields are omitted from the row" $?
+
+# ---- 4. supplied optional fields are stored ---------------------------------
+bash "$tool" --service zai:5h --used 1 --total 10 --percent 12.5 --plan pro --source omp >/dev/null
+jq -e 'select(.percent == 12.5) | .plan == "pro" and .source == "omp"' "$ledger" >/dev/null
+check "percent, plan and source are stored when given" $?
+
+# ---- 5. missing required arguments -> usage, exit 2 ------------------------
+out=$(bash "$tool" --service zai:5h 2>&1); rc=$?
+[ $rc -eq 2 ] && printf '%s' "$out" | grep -q 'usage:'
+check "a missing --total is refused (exit 2, usage)" $?
+
+# ---- 6. an unknown flag is refused -----------------------------------------
+out=$(bash "$tool" --bogus 1 2>&1); rc=$?
+[ $rc -eq 2 ] && printf '%s' "$out" | grep -q 'usage:'
+check "an unknown flag is refused (exit 2, usage)" $?
+
+# ---- 7. non-integer numbers are rejected -----------------------------------
+out=$(bash "$tool" --service a --used x --total 10 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q 'must be integers'
+check "a non-integer --used is rejected (exit 1)" $?
+
+# ---- 8. an unknown unit is rejected ----------------------------------------
+out=$(bash "$tool" --service a --used 1 --total 10 --unit bogus 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q 'must be credits, percent or count'
+check "an unknown --unit is rejected (exit 1)" $?
+
+# ---- 9. state isolation: the default path follows a sandboxed HOME ---------
+before=$(wc -l < "$ledger")
+env -u HNGH_QUOTAS_DIR HOME="$sandbox/home" bash "$tool" --service s --used 1 --total 2 >/dev/null
+[ -f "$sandbox/home/.local/state/hngh/quotas/quotas.jsonl" ] &&
+	[ "$(wc -l < "$ledger")" = "$before" ]
+check "with no override the row lands under the sandboxed HOME, not the override dir" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# hngh-session-note-selfcheck — sandboxed checks for the ledger writer.
+#
+# The ledger is the hngh audit trail, so this pins the three things that
+# silently corrupt it: a malformed record, a lost row under concurrency, and
+# a row that is not valid JSON. The ledger lives in a temp dir (HNGH_SESSIONS_DIR).
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-session-note"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+export HNGH_SESSIONS_DIR="$sandbox/sessions"
+feed="$HNGH_SESSIONS_DIR/feed.jsonl"
+rows() { wc -l < "$feed" 2>/dev/null || echo 0; }
+
+# ---- 1. a plain note lands one valid JSONL row -----------------------------
+out=$(bash "$tool" sess-01 phase_done 2>&1); rc=$?
+[ $rc -eq 0 ] && [ "$(rows)" = 1 ] && printf '%s' "$out" | jq -e . >/dev/null 2>&1
+check "a plain note appends one valid JSONL row" $?
+
+# ---- 2. role and detail are kept, empty fields are dropped -----------------
+bash "$tool" sess-01 phase_done --role orchestrator --detail "did the thing" >/dev/null
+jq -e 'select(.role == "orchestrator" and .detail == "did the thing" and .session == "sess-01" and .event == "phase_done")' "$feed" >/dev/null 2>&1 &&
+	! jq -e 'has("detail") and .detail == null' "$feed" >/dev/null 2>&1
+check "role and detail are stored, unset fields are omitted" $?
+
+# ---- 3. --line is repeatable and lands as an array -------------------------
+bash "$tool" sess-01 note --line hngh --line manga >/dev/null
+jq -e 'select(.lines == ["hngh","manga"])' "$feed" >/dev/null 2>&1
+check "--line repeats into a lines array" $?
+
+# ---- 4. a bad session id is refused ----------------------------------------
+out=$(bash "$tool" 'bad session' phase_done 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q 'bad session id'
+check "a bad session id is refused (exit 1)" $?
+
+# ---- 5. a bad event is refused ----------------------------------------------
+out=$(bash "$tool" sess-01 'bad event' 2>&1); rc=$?
+[ $rc -eq 1 ] && printf '%s' "$out" | grep -q 'bad event'
+check "a bad event is refused (exit 1)" $?
+
+# ---- 6. missing arguments are a usage error --------------------------------
+out=$(bash "$tool" 2>&1); rc=$?
+[ $rc -eq 2 ] && printf '%s' "$out" | grep -q 'usage:'
+out=$(bash "$tool" sess-01 2>&1); rc=$?
+[ $rc -eq 2 ] && printf '%s' "$out" | grep -q 'usage:'
+check "missing arguments are a usage error (exit 2)" $?
+
+# ---- 7. an unknown flag is a usage error ------------------------------------
+out=$(bash "$tool" sess-01 phase_done --nope x 2>&1); rc=$?
+[ $rc -eq 2 ] && printf '%s' "$out" | grep -q 'usage:'
+check "an unknown flag is a usage error (exit 2)" $?
+
+# ---- 8. an empty --role value is a usage error ------------------------------
+out=$(bash "$tool" sess-01 phase_done --role '' 2>&1); rc=$?
+[ $rc -eq 2 ] && printf '%s' "$out" | grep -q 'usage:'
+check "an empty --role value is a usage error (exit 2)" $?
+
+# ---- 9. concurrent appends lose nothing ------------------------------------
+before=$(rows)
+for i in 1 2 3 4 5; do bash "$tool" sess-01 "event_$i" >/dev/null & done
+wait
+[ "$(rows)" = "$((before + 5))" ] && jq -e . "$feed" >/dev/null 2>&1
+check "five concurrent appends land five whole rows" $?
+
+# ---- 10. the ledger directory is created on demand --------------------------
+rm -rf "$sandbox/sessions"
+bash "$tool" sess-01 note >/dev/null
+[ -f "$feed" ]
+check "the ledger directory is created on demand" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

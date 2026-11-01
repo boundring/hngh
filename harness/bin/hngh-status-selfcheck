@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# hngh-status-selfcheck — sandboxed checks for the consolidated status writer.
+#
+# hngh-status has no env override: it resolves ~/.local/state/hngh/status.json,
+# ~/.local/state/hngh/dashboard and ~/Projects/hngh/bin through expanduser("~").
+# A sandboxed HOME therefore redirects all three roots at once, and the fake
+# home carries stub hngh-sessions / hngh-agents readers. The tool is always run
+# with --once: without it the writer loops forever by design.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-status"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+fakehome="$sandbox/home"
+fakebin="$fakehome/Projects/hngh/bin"
+mkdir -p "$fakebin" "$fakehome/.local/state/hngh/dashboard"
+status="$fakehome/.local/state/hngh/status.json"
+
+stub_reader() { # stub_reader <name> <json>
+	cat > "$fakebin/$1" <<STUB
+#!/usr/bin/env bash
+[ "\${1:-}" = "--json" ] && cat <<'JSON'
+$2
+JSON
+exit 0
+STUB
+	chmod +x "$fakebin/$1"
+}
+
+stub_reader hngh-sessions '[{"id":"s1"},{"id":"s2"}]'
+stub_reader hngh-agents '[{"id":"a1","state":"active"}]'
+
+# ---- 1. --once writes the status file --------------------------------------
+out=$(HOME="$fakehome" python3 "$tool" --once 2>&1); rc=$?
+[ $rc -eq 0 ] && [ -f "$status" ]
+check "--once writes ~/.local/state/hngh/status.json (exit 0)" $?
+
+# ---- 2. the file is a JSON object with the documented sections --------------
+jq -e 'type == "object" and has("generated_at") and has("sessions") and has("agents") and has("events") and has("posture")' "$status" >/dev/null
+check "the status file has generated_at, sessions, agents, events and posture" $?
+
+# ---- 3. the stubbed session/agent readers are folded in ---------------------
+jq -e '.sessions | length == 2' "$status" >/dev/null &&
+	jq -e '.agents | length == 1' "$status" >/dev/null &&
+	jq -e '.agents[0].id == "a1"' "$status" >/dev/null
+check "sessions and agents come from the hngh-sessions / hngh-agents readers" $?
+
+# ---- 4. dashboard feed rows become events -----------------------------------
+cat > "$fakehome/.local/state/hngh/dashboard/notes.jsonl" <<'JSONL'
+{"writer":"w1","item":"first","ts":"2026-11-01T10:00:00Z"}
+{"writer":"w1","item":"second","ts":"2026-11-01T10:01:00Z"}
+{"writer":"w1","no_item":true,"ts":"2026-11-01T10:02:00Z"}
+JSONL
+HOME="$fakehome" python3 "$tool" --once >/dev/null
+jq -e '.events | length == 2' "$status" >/dev/null &&
+	jq -e '.events[0].item == "first"' "$status" >/dev/null &&
+	jq -e '.events[0].namespace == "notes"' "$status" >/dev/null &&
+	jq -e '[.events[].item] | index("second") != null' "$status" >/dev/null
+check "dashboard rows with an item become events, tagged with their namespace" $?
+
+# ---- 5. only the last 20 events are kept ------------------------------------
+rm -f "$fakehome/.local/state/hngh/dashboard/notes.jsonl"
+: > "$fakehome/.local/state/hngh/dashboard/many.jsonl"
+for i in $(seq 1 25); do
+	printf '{"writer":"w","item":"e%s","ts":"2026-11-01T10:%02d:00Z"}\n' "$i" "$i" \
+		>> "$fakehome/.local/state/hngh/dashboard/many.jsonl"
+done
+HOME="$fakehome" python3 "$tool" --once >/dev/null
+[ "$(jq '.events | length' "$status")" = 20 ]
+check "at most the last 20 dashboard rows are kept" $?
+
+# ---- 6. a missing reader degrades to empty, never a crash -------------------
+rm -f "$fakebin/hngh-sessions" "$fakebin/hngh-agents"
+out=$(HOME="$fakehome" python3 "$tool" --once 2>&1); rc=$?
+[ $rc -eq 0 ] && jq -e '.sessions == [] and .agents == []' "$status" >/dev/null
+check "missing reader CLIs fold to empty arrays (exit 0)" $?
+
+# ---- 7. the posture snapshot carries the machine numbers -------------------
+jq -e '.posture | has("load") and has("mem_total_mb") and has("vram") and has("disk_total_mb")' "$status" >/dev/null
+check "the posture section reports load, memory, vram and disk" $?
+
+# ---- 8. state isolation: the real status file is untouched ------------------
+real="$HOME/.local/state/hngh/status.json"
+[ ! -e "$real" ] || before=$(stat -c %Y "$real")
+HOME="$fakehome" python3 "$tool" --once >/dev/null
+if [ -e "$real" ]; then [ "$(stat -c %Y "$real")" = "$before" ]; else true; fi
+check "the real ~/.local/state/hngh/status.json is not rewritten" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

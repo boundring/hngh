@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# hngh-tail-selfcheck — sandboxed checks for the transcript tailer.
+#
+# hngh-tail follows a transcript forever, so every case runs it under a short
+# timeout and asserts on what it printed before the timeout. The transcripts
+# live in the sandbox (--root / --path); the real ~/Work/sessions is never read.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-tail"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+# run_tail <args...> — run the tailer for 2s, print stdout, ignore the timeout.
+run_tail() {
+	timeout 2 python3 "$tool" "$@" 2>/dev/null
+}
+
+mkdir -p "$sandbox/work/sessions/demo/sessions"
+transcript="$sandbox/work/sessions/demo/sessions/session.jsonl"
+cat > "$transcript" <<'JSONL'
+{"timestamp":"2026-11-01T10:00:00Z","message":{"role":"user","content":"hello there"}}
+{"timestamp":"2026-11-01T10:00:05Z","message":{"role":"assistant","content":[{"text":"general kenobi"}]}}
+{"timestamp":"2026-11-01T10:00:07Z","customType":"tool_execution_start","data":{"toolName":"bash","intent":"run something"}}
+{"timestamp":"2026-11-01T10:00:09Z","customType":"session_exit","data":{"reason":"done"}}
+JSONL
+
+# ---- 1. it names the transcript it follows ---------------------------------
+out=$(run_tail --path "$transcript")
+printf '%s' "$out" | grep -q "following $transcript"
+check "the tailer announces the transcript it follows" $?
+
+# ---- 2. a user message is rendered with the You tag ------------------------
+out=$(run_tail --path "$transcript")
+printf '%s' "$out" | grep -q 'You' && printf '%s' "$out" | grep -q 'hello there'
+check "a user message is rendered as 'You <text>'" $?
+
+# ---- 3. an assistant message is rendered with the AI tag -------------------
+out=$(run_tail --path "$transcript")
+printf '%s' "$out" | grep -q 'AI ' && printf '%s' "$out" | grep -q 'general kenobi'
+check "an assistant message is rendered as 'AI <text>'" $?
+
+# ---- 4. a tool start and a session exit are rendered -----------------------
+out=$(run_tail --path "$transcript")
+printf '%s' "$out" | grep -q 'tool bash' && printf '%s' "$out" | grep -q 'session exit: done'
+check "tool starts and session exits are rendered" $?
+
+# ---- 5. --history limits the rendered backlog ------------------------------
+out=$(run_tail --path "$transcript" --history 1)
+[ "$(printf '%s' "$out" | grep -c 'hello there')" = 0 ] &&
+	printf '%s' "$out" | grep -q 'session exit: done'
+check "--history 1 drops the older backlog" $?
+
+# ---- 6. --root picks the newest transcript under the sandbox ---------------
+mkdir -p "$sandbox/work/sessions/older/sessions"
+cp "$transcript" "$sandbox/work/sessions/older/sessions/old.jsonl"
+touch -d '1 hour ago' "$sandbox/work/sessions/older/sessions/old.jsonl"
+out=$(run_tail --root "$sandbox/work/sessions")
+printf '%s' "$out" | grep -q 'session.jsonl' && ! printf '%s' "$out" | grep -q 'old.jsonl'
+check "--root follows the newest transcript under the root" $?
+
+# ---- 7. an empty root yields no transcript lines and keeps running --------
+timeout 2 python3 "$tool" --root "$sandbox/empty" > "$sandbox/empty.out" 2>/dev/null; rc=$?
+[ $rc -eq 124 ] && [ ! -s "$sandbox/empty.out" ]
+check "an empty root prints nothing and keeps following (timeout kill)" $?
+
+# ---- 8. a bad flag is refused ---------------------------------------------
+out=$(python3 "$tool" --bogus 2>&1); rc=$?
+printf '%s' "$out" | grep -q 'unrecognized arguments'
+check "an unknown flag is refused (usage on stderr)" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1
