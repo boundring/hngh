@@ -137,10 +137,38 @@ snapshot drops stale reply files when it is taken.
 Thirteen selfchecks landed in `harness/bin/`: the cockpit, dashboard-feed,
 job-note, digest-note, digest-refresh, observe, quota-note, quota-refresh,
 sense, session-note, state, status and tail tools. With them the mirror
-carries 39 of the 44 tools' selfchecks. The quota-refresh selfcheck
+carried 39 of the 44 tools' selfchecks; the last four landed the same day.
+The quota-refresh selfcheck
 caught a real blind spot — the xiaomi pause gate short-circuited the
 refresh before any lane was read, so every quota row froze at 2026-10-29.
 The gate now only holds the browser-relay path.
+
+### 2026-11-01 — selfcheck coverage closes at 44 of 44
+
+Four tools had been running without the sibling `AGENTS.md` asks for. The
+lane probe and the three watch wrappers now have one each:
+`hngh-look-laneprobe-selfcheck`, `hngh-watch-agents-selfcheck`,
+`hngh-watch-ledger-selfcheck` and `hngh-watch-slot-selfcheck`. The mirror
+carries 43 `-selfcheck` files for 43 tool scripts, and `hngh-pointer`,
+which the Makefile builds, is covered by `hngh-pointer-selfcheck`. That is
+44 of 44 tools.
+
+The watch wrappers never exit, so their selfchecks run them under `timeout`
+and check the exit status 124 that says the loop was still running when it
+was killed. The ledger wrapper is checked on both halves of its body, the
+sessions list and the dashboard feed with `--namespace sessions`. The slot
+wrapper is checked on the transcript it picks, the timestamp slice, the
+role and the message text it projects, and on a missing sessions directory,
+which must not take the wrapper down.
+
+The lane probe is the one that could have leaked. It reads three cloud
+credentials and posts a rendered PNG to each lane, so its selfcheck stubs
+`curl` and `convert`, keeps the credential files and the state directory in
+a sandbox, and asserts that no credential value appears in the output or in
+`lanes.json`. It also separates the two ways the probe can report `ok:true`:
+the answer has to be the sha of a transcribed image, not the note the
+fallback 1x1 PNG produces, so the happy path cannot pass for the wrong
+reason.
 
 ### 2026-10-06
 

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# hngh-watch-agents-selfcheck — sandboxed checks for the live agent wrapper.
+#
+# The wrapper is a one-liner (`exec hngh-agents --follow`); what can break is
+# the exec: a dropped --follow turns a live feed into a one-shot dump, and a
+# broken exec turns the wrapper into a silent no-op. So a stub hngh-agents
+# records its argv and the wrapper must hand it exactly "--follow".
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-watch-agents"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+stub_bin="$sandbox/bin"
+mkdir -p "$stub_bin"
+argv_file="$sandbox/argv.txt"
+
+cat > "$stub_bin/hngh-agents" <<'EOF'
+#!/usr/bin/env bash
+echo "STUB-AGENTS-MARKER"
+echo "argv:$*"
+printf '%s\n' "$*" > "$ARGV_FILE"
+EOF
+chmod +x "$stub_bin/hngh-agents"
+
+# ---- 1. the wrapper execs hngh-agents with exactly --follow ----------------
+out=$(ARGV_FILE="$argv_file" PATH="$stub_bin:$PATH" bash "$tool" 2>&1); rc=$?
+[ $rc -eq 0 ] &&
+	printf '%s' "$out" | grep -q 'STUB-AGENTS-MARKER' &&
+	[ "$(cat "$argv_file" 2>/dev/null)" = "--follow" ]
+check "the wrapper execs hngh-agents with exactly --follow" $?
+
+# ---- 2. the stub's own output reaches the wrapper's stdout ------------------
+# (exec replaces the process, so the stub's stdout IS the wrapper's stdout)
+out=$(ARGV_FILE="$argv_file" PATH="$stub_bin:$PATH" bash "$tool" 2>/dev/null)
+printf '%s' "$out" | grep -q 'STUB-AGENTS-MARKER'
+check "the stub's stdout is inherited by the wrapper" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

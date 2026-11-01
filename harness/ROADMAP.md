@@ -12,15 +12,19 @@ Every tool runs, reports and exits.
 
 | Measure | Count |
 |---|---|
-| entries in `harness/bin/` | 82 |
+| entries in `harness/bin/` | 86 |
 | tool scripts in `harness/bin/` | 43 |
-| `-selfcheck` siblings in `harness/bin/` | 39 |
+| `-selfcheck` siblings in `harness/bin/` | 43 |
 | tools, counting `hngh-pointer` | 44 |
-| tools with no selfcheck at all | 4 |
+| tools with no selfcheck at all | 0 |
 
 `hngh-pointer` is not in `harness/bin/`. The Makefile builds it from
 `harness/src/hngh-pointer.c`, so the tool count is 44 and the script count stays 43.
 `hngh-route` carries its own as the `hngh-route selfcheck` subcommand.
+Coverage is 44 of 44 tools: 42 script siblings, the route subcommand and
+`hngh-pointer-selfcheck`. The four that had none until 2026-11-01 are
+`hngh-look-laneprobe`, `hngh-watch-agents`, `hngh-watch-ledger` and
+`hngh-watch-slot`.
 
 `hngh-route` is 391 lines of bash and curl. It dispatches by duty class against the
 studio on 127.0.0.1:8888, and the duty table came from a fleet sweep on 2026-10-30.
@@ -71,7 +75,8 @@ was repaired, as `CHANGELOG.md` records. The 2026-11-01T20:26:01Z reading shows 
 
 ## What the next stretch of work is
 
-Four stretches first, then the exclusions.
+Three stretches first, then the exclusions. The selfcheck stretch landed on
+2026-11-01 and is recorded above.
 
 ### The cistern-web v3 economy slice set
 
@@ -115,20 +120,6 @@ relationships and G-C3 legibility.
 
 Measured dependency: the art-order schema `cistern.manga.art-orders/1` and the trigger's
 fingerprint rule, which decides whether a batch needs a render.
-
-### Selfchecks for the four uncovered tools
-
-Four tools lack the sibling. `AGENTS.md` says a tool without a selfcheck is not landed.
-`hngh-look-laneprobe`, `hngh-watch-agents`, `hngh-watch-ledger` and `hngh-watch-slot`
-have none, so they are the gap between the rule and the tree.
-
-Done looks like this: a `-selfcheck` sibling for each, sandboxed and honest about exit
-codes, taking the sibling count from 39 to 43 and closing coverage at 44 of 44 tools
-once the `hngh-route selfcheck` subcommand is counted. `hngh-look-laneprobe` probes the
-cloud vision lanes with a synthetic PNG, so its selfcheck needs a live lane.
-
-Measured dependency: the four names above, and the 39 of 44 coverage that
-`harness/README.md` records.
 
 ### Router v1 candidates, waiting for queue data
 

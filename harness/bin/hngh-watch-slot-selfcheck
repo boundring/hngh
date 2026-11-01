@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# hngh-watch-slot-selfcheck — sandboxed checks for the live slot transcript view.
+#
+# The wrapper globs $HOME/Work/sessions/*/sessions/*.jsonl, prints the newest
+# file's path and a jq projection of the last 30 records (timestamp slice,
+# role, message text). Two things can break: it can die instead of looping
+# (a missing/empty sessions dir must not kill it), and the jq projection can
+# silently emit nothing (a projection bug looks identical to "no transcript").
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-watch-slot"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+home="$sandbox/home"
+mkdir -p "$home"
+transcript="$home/Work/sessions/sess-a/sessions/x.jsonl"
+mkdir -p "$(dirname "$transcript")"
+printf '%s\n' '{"timestamp":"2026-11-01T10:11:12Z","message":{"role":"assistant","content":[{"type":"text","text":"MARKER-TEXT"}]}}' \
+	> "$transcript"
+
+# ---- 1. with a transcript present: killed by timeout, not by a crash -------
+out=$(HOME="$home" timeout 3 bash "$tool" 2>&1); rc=$?
+[ $rc -eq 124 ]
+check "the wrapper keeps looping until it is killed (exit 124)" $?
+
+# ---- 2. it prints the transcript path --------------------------------------
+printf '%s' "$out" | grep -q "$transcript"
+check "the transcript path is printed" $?
+
+# ---- 3. it prints the timestamp slice, the role and the message text --------
+printf '%s' "$out" | grep -q '10:11:12' &&
+	printf '%s' "$out" | grep -q 'assistant' &&
+	printf '%s' "$out" | grep -q 'MARKER-TEXT'
+check "the timestamp slice, role and message text are projected" $?
+
+# ---- 4. no sessions dir at all: still looping, still killed by timeout ------
+home2="$sandbox/home-empty"
+mkdir -p "$home2"
+out2=$(HOME="$home2" timeout 3 bash "$tool" 2>&1); rc2=$?
+[ $rc2 -eq 124 ]
+check "a missing sessions dir does not crash the wrapper (exit 124)" $?
+
+# ---- 5. an empty sessions dir (dir exists, no transcript): same -------------
+home3="$sandbox/home-nofile"
+mkdir -p "$home3/Work/sessions/sess-a/sessions"
+out3=$(HOME="$home3" timeout 3 bash "$tool" 2>&1); rc3=$?
+[ $rc3 -eq 124 ] && printf '%s' "$out3" | grep -q '=='
+check "an empty sessions dir still loops and prints a header" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

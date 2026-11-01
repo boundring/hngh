@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# hngh-look-laneprobe-selfcheck — sandboxed checks for the cloud lane probe.
+#
+# The probe asks three cloud lanes to transcribe a rendered PNG. It must
+# report honestly (missing/empty credential, unreachable lane) and it must
+# never leak the credential value it read — that is the whole point of the
+# probe. Network and ImageMagick are stubbed; state and env dirs are temp.
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-look-laneprobe"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+stub_bin="$sandbox/bin"
+mkdir -p "$stub_bin"
+
+# stub curl: -o <file> gets the body, stdout gets the HTTP code.
+cat > "$stub_bin/curl" <<'EOF'
+#!/usr/bin/env bash
+out=""
+prev=""
+for a in "$@"; do
+	if [ "$prev" = "-o" ]; then out="$a"; fi
+	prev="$a"
+done
+if [ -n "$out" ]; then
+	printf '%s' '{"choices":[{"message":{"content":"HNGH-VISION-OK 7"}}]}' > "$out"
+fi
+printf '200'
+EOF
+
+# stub convert: write bytes to the LAST argument (the probe png path) so the
+# tool does not fall back to its textless 1x1 png.
+cat > "$stub_bin/convert" <<'EOF'
+#!/usr/bin/env bash
+for last; do :; done
+printf 'fake-png-bytes' > "$last"
+EOF
+
+chmod +x "$stub_bin/curl" "$stub_bin/convert"
+
+state_dir="$sandbox/state"
+env_dir="$sandbox/env"
+mkdir -p "$state_dir" "$env_dir"
+
+run_probe() { # run_probe <env_dir> ; prints stdout, lanes.json at $state_dir
+	HOME="$sandbox/home" \
+	HNGH_STATE_DIR="$state_dir" \
+	HNGH_ENV_DIR="$1" \
+	PATH="$stub_bin:$PATH" \
+	bash "$tool" 2>/dev/null
+}
+
+# ---- 1. no credential file at all -> every lane says "no credential file" --
+out=$(run_probe "$env_dir")
+n=$(printf '%s\n' "$out" | jq -r 'select(.answer_sha_or_note | test("no credential file")) | .lane' 2>/dev/null | wc -l)
+[ "${n:-0}" -eq 3 ]
+check "a missing credential file yields ok:false / no credential file for all lanes" $?
+
+# ---- 2. credential file present but the key is empty -> "<KEYVAR> empty" ----
+printf 'ZAI_API_KEY=\n' > "$env_dir/84-zai.conf"
+out=$(run_probe "$env_dir")
+printf '%s\n' "$out" | jq -e 'select(.lane=="zai" and .ok==false and .answer_sha_or_note=="ZAI_API_KEY empty")' >/dev/null 2>&1
+check "an empty credential yields ok:false / ZAI_API_KEY empty" $?
+
+# ---- 3. happy path with stubbed curl + convert -> every lane ok:true --------
+rm -f "$env_dir/84-zai.conf"
+secret_zai='SECRET-ZAI-4f2c9d-do-not-leak'
+secret_minimax='SECRET-MINIMAX-91ab-do-not-leak'
+secret_gemini='SECRET-GEMINI-77e3-do-not-leak'
+printf 'ZAI_API_KEY=%s\n' "$secret_zai" > "$env_dir/84-zai.conf"
+printf 'MINIMAX_API_KEY=%s\n' "$secret_minimax" > "$env_dir/80-minimax.conf"
+printf 'GEMINI_API_KEY=%s\n' "$secret_gemini" > "$env_dir/82-gemini.conf"
+
+out=$(run_probe "$env_dir")
+ok_n=$(printf '%s\n' "$out" | jq -r 'select(.ok==true) | .lane' 2>/dev/null | wc -l)
+[ "${ok_n:-0}" -eq 3 ]
+check "the stubbed happy path reports ok:true for all three lanes" $?
+
+# ---- 3b. the real probe image was used, not the textless 1x1 fallback -----
+# (the fallback branch also reports ok:true, so it must be excluded here)
+fb=$(printf '%s\n' "$out" | jq -r 'select(.answer_sha_or_note | test("fallback")) | .lane' 2>/dev/null | wc -l)
+[ "${fb:-0}" -eq 0 ] &&
+	printf '%s\n' "$out" | jq -e 'select(.answer_sha_or_note | test("^[0-9a-f]{16}$"))' >/dev/null 2>&1
+check "the rendered probe image was transcribed (not the 1x1 fallback)" $?
+
+# ---- 4. lanes.json records each lane with model and baseUrl ----------------
+lanes_file="$state_dir/look/lanes.json"
+[ -f "$lanes_file" ] &&
+	jq -e '.lanes.zai.model == "glm-5.3-flash" and (.lanes.zai.baseUrl | test("api.z.ai"))' "$lanes_file" >/dev/null 2>&1 &&
+	jq -e '.lanes.minimax.model == "MiniMax-M3.1-Flash-Preview" and (.lanes.minimax.baseUrl | test("api.minimax.io"))' "$lanes_file" >/dev/null 2>&1 &&
+	jq -e '.lanes.gemini.model == "gemini-3.8-flash" and (.lanes.gemini.baseUrl | test("generativelanguage"))' "$lanes_file" >/dev/null 2>&1
+check "lanes.json records each lane with its model and baseUrl" $?
+
+# ---- 5. lanes.json has a checked timestamp ---------------------------------
+jq -e '.checked.zai and (.checked.zai | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T"))' "$lanes_file" >/dev/null 2>&1
+check "lanes.json carries a checked timestamp per lane" $?
+
+# ---- 6. no credential value leaks into stdout or lanes.json ----------------
+leak=0
+for s in "$secret_zai" "$secret_minimax" "$secret_gemini"; do
+	printf '%s' "$out" | grep -qF "$s" && leak=1
+	[ -f "$lanes_file" ] && grep -qF "$s" "$lanes_file" && leak=1
+done
+[ $leak -eq 0 ]
+check "no credential value appears in stdout or in lanes.json" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1

@@ -94,9 +94,10 @@ sibling exists, it is the verification for that tool.
 | `omp-session-index` | Persistent index of omp agent transcripts (SQLite) |
 | `systemone-research` | Eval-matrix runner for local decision models against the studio |
 
-39 of the 44 have a `-selfcheck` sibling in `harness/bin/`. `hngh-route`
-carries its selfcheck as the `hngh-route selfcheck` subcommand. The tools
-without one: the three `hngh-watch-*` wrappers and `hngh-look-laneprobe`.
+Every tool has one. 42 of the 43 scripts in `harness/bin/` carry a
+`-selfcheck` sibling, `hngh-route` carries its selfcheck as the
+`hngh-route selfcheck` subcommand, and `hngh-pointer-selfcheck` covers the
+pointer the Makefile builds. That is 44 of 44 tools.
 
 ## State roots
 

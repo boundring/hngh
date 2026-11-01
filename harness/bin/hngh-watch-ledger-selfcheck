@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# hngh-watch-ledger-selfcheck — sandboxed checks for the live ledger wrapper.
+#
+# The wrapper is an infinite loop over `clear` + hngh-sessions +
+# hngh-dashboard --namespace sessions + sleep 10. Two things can break: it
+# can stop looping (then the "live" feed is a one-shot dump), and it can call
+# the dashboard without the sessions namespace (then the wrong panel renders).
+set -u
+
+selfcheck_dir=/home/bricker/Projects/hngh/bin
+tool="$selfcheck_dir/hngh-watch-ledger"
+sandbox=$(mktemp -d)
+trap 'rm -rf "$sandbox"' EXIT
+failures=0
+
+check() {
+	if [ "$2" = 0 ]; then
+		echo "ok: $1"
+	else
+		echo "FAIL: $1" >&2
+		failures=$((failures + 1))
+	fi
+}
+
+stub_bin="$sandbox/bin"
+mkdir -p "$stub_bin"
+dash_argv="$sandbox/dashboard-argv.txt"
+
+cat > "$stub_bin/hngh-sessions" <<'EOF'
+#!/usr/bin/env bash
+echo "STUB-SESSIONS-MARKER"
+EOF
+
+cat > "$stub_bin/hngh-dashboard" <<'EOF'
+#!/usr/bin/env bash
+echo "STUB-DASHBOARD-MARKER"
+printf '%s\n' "$*" > "$DASH_ARGV_FILE"
+EOF
+
+chmod +x "$stub_bin/hngh-sessions" "$stub_bin/hngh-dashboard"
+
+out=$(DASH_ARGV_FILE="$dash_argv" PATH="$stub_bin:$PATH" timeout 3 bash "$tool" 2>&1); rc=$?
+
+# ---- 1. the wrapper never exits on its own (timeout kills it, exit 124) -----
+[ $rc -eq 124 ]
+check "the wrapper keeps looping until it is killed (exit 124)" $?
+
+# ---- 2. both subcommands ran -----------------------------------------------
+printf '%s' "$out" | grep -q 'STUB-SESSIONS-MARKER' &&
+	printf '%s' "$out" | grep -q 'STUB-DASHBOARD-MARKER'
+check "both hngh-sessions and hngh-dashboard output appears" $?
+
+# ---- 3. the dashboard is asked for the sessions namespace --------------------
+[ "$(cat "$dash_argv" 2>/dev/null)" = "--namespace sessions" ]
+check "the dashboard is called with --namespace sessions" $?
+
+# ---- 4. it loops: the markers show up more than once in three seconds ------
+# (the loop sleeps 10s, so one iteration is expected; assert the loop body
+#  actually ran rather than crashing early — a crash gives a non-124 status.)
+n=$(printf '%s\n' "$out" | grep -c 'STUB-SESSIONS-MARKER')
+[ "${n:-0}" -ge 1 ]
+check "the loop body ran at least once before the kill" $?
+
+if [ $failures = 0 ]; then
+	echo "SELF-CHECK GREEN"
+	exit 0
+fi
+echo "SELF-CHECK FAILED ($failures)" >&2
+exit 1
