@@ -90,8 +90,16 @@ six and exits 0.
 
 What is left is the fill. The local coder runs the six items, and integration copies by
 explicit pathspec and runs the repo's own gate, `npm test`. Every suite is proven RED
-against the port's current file, so a green means the fill landed and not that the test
-was written to pass.
+against the workdir content the harness stages — the shipped port file for the three
+`modify` items, an empty placeholder for the three `add` items — so a green means the
+fill landed and not that the test was written to pass.
+
+One constraint shapes the fill: the harness imports the model's `.ts` file directly and
+Node v26.8.2 strips types natively, so the file the coder writes must be erasable. The
+shipped `src/core/sim.ts:51` uses a parameter property, which strip-only mode rejects
+(`SyntaxError [ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX]`), and the `v3-core-town-state` SPEC
+names the rewrite the fill has to make. `src/core/town.ts` and `src/core/townsfolk.ts`
+are clean.
 
 Measured dependency: `npm test` builds with `tsc` and runs `node --test tests/` over 12
 test files, and `src/core` holds 11 TypeScript modules. The charter at
