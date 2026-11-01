@@ -1,26 +1,26 @@
 # Hngh agent notes
 
-- Always respond to the operator in English: every message, summary,
-  annotation, and title is English/ASCII, regardless of prompt language
-  or conversation content (bilingual-model language drift renders as
-  unreadable CJK in the operator's terminal).
+- Reply to the operator in English. Every message, summary, annotation and
+  title is English/ASCII, whatever language the prompt or the conversation is
+  in: bilingual-model language drift renders as unreadable CJK in the
+  operator's terminal.
 
 ## Start here
 
 1. Read `harness/PRINCIPLES.md` (the v2 doctrine) and `harness/CANON.md`.
-2. Get the current state once: `hngh-orient` (or a pre-digested brief from
-   the assignment — then skip it).
-3. Inspect `git status --short` before editing.
-4. Run the smallest named verification before reporting a result. For a
-   harness tool, that is its `-selfcheck`, not a manual re-run.
+2. Get the current state once, with `hngh-orient`. If the assignment carries a
+   pre-digested brief, skip the orient run.
+3. Run `git status --short` before editing anything.
+4. Before reporting a result, run the smallest named verification. For a
+   harness tool that is its `-selfcheck`, not a manual re-run.
 
 ## Current boundary (v2 — the Omarchy system harness)
 
-Hngh v2 is a **thin harness of CLI tools over the operator's existing
-tools**: oh-my-pi sessions, Tern tabs, the unsloth studio, and git. There
-is **no daemon and none may be started** — no service, provider, watcher,
-scheduler, agent, or background process. Every tool is a foreground
-command that runs, reports, and exits.
+Hngh v2 is a **thin harness of CLI tools** over the operator's existing tools:
+oh-my-pi sessions, Tern tabs, the unsloth studio, and git. There is no daemon,
+and none may be started: no service, provider, watcher, scheduler, agent, or
+background process. Every tool is a foreground command that runs, reports, and
+exits.
 
 v2 lives in `harness/` in this repo (`harness/bin/`, `harness/roles/`,
 `harness/src/`, `harness/PRINCIPLES.md`, `harness/CANON.md`,
@@ -28,7 +28,7 @@ v2 lives in `harness/` in this repo (`harness/bin/`, `harness/roles/`,
 `~/Projects/hngh`. The v1 generation (Common Lisp kernel, `docs/`, `src/`,
 `scripts/`, `automation/`) is ARCHIVED — see the last section of this file.
 
-### Land banks first
+### Nothing lands without a selfcheck
 
 Every tool has a `-selfcheck` sibling. A tool without one is not landed.
 Before relying on a tool you changed, run its selfcheck:
@@ -37,24 +37,26 @@ Before relying on a tool you changed, run its selfcheck:
 bash ~/Projects/hngh/bin/<tool>-selfcheck
 ```
 
-(The repo mirror is `harness/bin/<tool>-selfcheck`.) A selfcheck must be
-sandboxed and honest about exit codes. A tool whose behaviour changed
-without its selfcheck green is not landed.
+The repo mirror is `harness/bin/<tool>-selfcheck`. A selfcheck must be
+sandboxed and honest about exit codes. A tool whose behaviour changed without
+its selfcheck green is not landed.
 
 ### Proposals, not edits
 
-The local-model funnel (`hngh-plan` -> `hngh-fill`) produces **proposals**,
-never silent edits. Fill output lands in
-`~/.local/state/hngh/fill/filled/` (with `SPEC.md`, `item.json`,
-`test_out.log`, the reply attempts, and the workdir). Integration is an
-explicit action by a human or an orchestrator with the operator's go:
+The local-model funnel (`hngh-plan` -> `hngh-fill`) produces **proposals**.
+It never edits silently. Fill output lands in
+`~/.local/state/hngh/fill/filled/` with `SPEC.md`, `item.json`,
+`test_out.log`, the reply attempts, and the workdir.
+
+Integration is explicit, done by a human or by an orchestrator holding the
+operator's go:
 
 - copy the proposal into the target repo by **explicit pathspec** (never
   `-A`, never a bare `git commit`),
 - run the target's own gate,
 - commit under the operator's go; **pushes need the operator's go** too.
 
-A proposal that the operator has not integrated stays a proposal. Do not
+A proposal the operator has not integrated stays a proposal. Do not
 "helpfully" apply it. Escalated items live in
 `~/.local/state/hngh/fill/escalate/`, superseded ones in
 `~/.local/state/hngh/fill/superseded/`.
@@ -70,13 +72,13 @@ Live state is under `~/.local/state/hngh/`:
 | `quotas/` | quota ledger rows and pause markers |
 | `sessions/` | session feed |
 
-Ledgers are **append-only** (JSONL); fold views are derived, never
-hand-edited. **Exactly one writer per ledger file** — two writers produce
+Ledgers are append-only (JSONL). Fold views are derived from them and never
+hand-edited. Exactly one writer per ledger file: two writers produce
 split-brain diagnostics, not a merge.
 
 ### Gates: the four authority tiers
 
-Actions are tiered (house rules, `~/AGENTS.md` §11):
+Actions are tiered by the house rules (`~/AGENTS.md` §11):
 
 | Tier | Consent | Examples |
 |---|---|---|
@@ -89,29 +91,29 @@ Actions are tiered (house rules, `~/AGENTS.md` §11):
 
 ### Model safety (VRAM)
 
-- **Every load carries an explicit `max_seq_length`**, never an
-  auto-derived one (`max_seq_length_auto_derived=false`; `hngh-fill` uses
-  `HNGH_FILL_CTX`, default 32768). Auto-fit contexts have twice killed
-  this desktop by fitting 240k ctx against a 12B model.
-- **VRAM admission gate**: current residency + the studio's estimate must
-  stay at or below the budget (17 GB default, `HNGH_VRAM_BUDGET`;
-  `estimate=resident` avoids double-counting). `hngh-vram-gate` is wired
-  into `hngh-fill`'s preload and `hngh-route`'s dispatch.
-- **Qwen3.8-27B is banned on this machine** (operator ruling 2026-10-30):
-  it hangs the GPU. The ban stands while the desktop shares the card.
-- **The desktop lives on the iGPU** (display on card0); the **dGPU is
-  inference-only** (card1). The iGPU move landed 2026-10-30 and closed the
-  shared-card crash class; after every reboot, verify display on card0.
+- Every load carries an explicit **`max_seq_length`**, never an auto-derived
+  one (`max_seq_length_auto_derived=false`; `hngh-fill` uses `HNGH_FILL_CTX`,
+  default 32768). Auto-fit contexts have twice killed this desktop by fitting
+  240k ctx against a 12B model.
+- The **VRAM admission gate** holds current residency plus the studio's
+  estimate at or below the budget (17 GB default, `HNGH_VRAM_BUDGET`;
+  `estimate=resident` avoids double-counting). `hngh-vram-gate` is wired into
+  `hngh-fill`'s preload and `hngh-route`'s dispatch.
+- **Qwen3.8-27B is banned on this machine** (operator ruling 2026-10-30): it
+  hangs the GPU. The ban stands while the desktop shares the card.
+- **The desktop lives on the iGPU** (display on card0); the
+  **dGPU is inference-only** (card1). The iGPU move landed 2026-10-30 and
+  closed the shared-card crash class. After every reboot, verify display on
+  card0.
 
 ### Quota pacing
 
-- Daily allowance = **remaining × 0.8 ÷ remaining days**. Pacing the burn
-  rate matters more than the session count.
-- Tiered slowdown at **60% / 80% / 95%** of a lane's window.
-- **Refresh the meter before trusting a number**:
-  `hngh-quota-refresh --source omp-usage`. The meter was once frozen for
-  two days by a pause gate short-circuit; a stale row reads as false
-  headroom.
+- Daily allowance = remaining × 0.8 ÷ remaining days. Pacing the burn rate
+  matters more than the session count.
+- Tiered slowdown at 60% / 80% / 95% of a lane's window.
+- Refresh the meter before trusting a number:
+  `hngh-quota-refresh --source omp-usage`. The meter was once frozen for two
+  days by a pause gate short-circuit; a stale row reads as false headroom.
 - Analysis tasks are budgeted. An unbounded analysis is a quota leak.
 
 ### Doctrine
@@ -119,11 +121,12 @@ Actions are tiered (house rules, `~/AGENTS.md` §11):
 Read `harness/PRINCIPLES.md` (11 rules) and `harness/CANON.md` (12
 crystallized principles, each with its adversarial guard) before designing
 anything new. `harness/ROUTE-v0.md` records the routing design and the
-measured fleet. Short version: shepherd, don't replace; every tool has a
-selfcheck; ledgers are the audit trail; gates at operator presence; config
-over code; measure before features; boring shapes; small blast radius;
-never discard work without measuring it; decisions get briefs; admission
-before load.
+measured fleet.
+
+Short version: shepherd, don't replace; every tool has a selfcheck; ledgers are
+the audit trail; gates at operator presence; config over code; measure before
+features; boring shapes; small blast radius; never discard work without
+measuring it; decisions get briefs; admission before load.
 
 ## Archived v1 generation (Common Lisp kernel — history, not the current boundary)
 

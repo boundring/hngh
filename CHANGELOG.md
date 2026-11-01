@@ -6,90 +6,141 @@ lives under Pre-release / early development until the first release.
 
 ### 2026-10-30/31 — v2: the Omarchy system harness
 
-- **Two generations, one repository**: the v1 iteration (Common Lisp
-  kernel, docs/, scripts/, automation/ — last synced 2026-10-16) is
-  archived on branch `archive/v1` (`cc7aeb70`), with v1 history preserved
-  in main's ancestry. v2, the live Omarchy system harness, was imported
-  under `harness/` (`caba7e3c`): the bin CLI tools and their selfchecks,
-  role manifests, the C pointer sources, the v2 Makefile, and
-  `harness/PRINCIPLES.md`. The canonical working tree stays
-  `~/Projects/hngh`; the repo tracks landings under `harness/`.
-- **The local-first fill funnel and its guards**: `hngh-plan` validates a
-  plan against the local-safe task contract and queues only conformant
-  items; `hngh-fill` runs a local coder against a workdir copy, applies
-  the diff, runs the item's tests, and lands a PROPOSAL in
-  `~/.local/state/hngh/fill/filled/` (with `SPEC.md`, `item.json`,
-  `test_out.log` and the reply attempts) or escalates it. Integration is
-  an explicit-pathspec copy plus commit, never a silent edit. Guards
-  landed with measured causes: the pre-fill snapshot `.prefill` plus a
-  shrink guard (a green whose file fell below 50% of the original is
-  restored and escalated — it caught a 491-line engine gutted to a 35-line
-  toy), the tests-bite guard, the growth-stop guard, the language lint,
-  hunk recount and header-path normalization (models emit diffs against
-  the SPEC's skeleton paths), and unfenced full-file mapping.
-- **First landed local fills**: `manga-artwave-fingerprint` (the manga
-  art_wave batch fingerprint) — green on attempt 1, 504 lines (491 + 13,
-  purely additive), both meta keys, determinism hash matching the
-  independent recomputation; and `v3-core-walk-math` (the cistern-web v3
-  core walk math) — the first TypeScript fill, green after 2 attempts,
-  `node --test` 9/9 in 63 ms, which measured the TS fill path (SPEC →
-  unified diff → native type-stripping import → node --test) as working
-  end to end.
-- **Candidate coders, classified by measurement** (fleet sweep
-  2026-10-30): Nemotron-3.5-Bolt-E4B (12 GB) is the fill coder — the only
-  small model producing correct, applying diffs; LiquidAI/LFM3-1.7B is the
-  router/summarizer (130 tok/s, best summary fidelity, 131k ctx ceiling);
-  StartLux-Decision-v1.1-2B-Instant Q8_0 is the decider, MEASURED PASS at
-  57.5 decisions/s, 100% parse, order-invariant (OneJev-4B fails
-  discrimination: 3/10, order-flippy). Qwen3.8-27B is BANNED on this
-  machine (operator ruling 2026-10-30, any quantization) — it hung the
-  GPU mid-generation. LFM2.5-24B-A2B's reasoning does not terminate on
-  real item contexts at UD-Q2_K_XL: retries with the equipped prompt still
-  returned empty content (22,590 chars of reasoning, `finish: length`),
-  so the blocker is the model, not the turn structure.
-- **`hngh-route` v0 — the duty-routed dispatcher**: ~280 lines of
-  bash+curl, no daemon. `submit <class> <payload-file>` appends to
-  `~/.local/state/hngh/route/queue.jsonl`; `drain` pops queued items and
-  dispatches to the resident model for that duty class, patient
-  semantics (600 s timeout, 30 s backoff ×3, then `failed:busy`), with
-  provenance and a VRAM line. Selfcheck GREEN 6/6; live smoke GREEN
-  (queue → drain → resident LFM3 answered in 12.6 s). Design note:
-  `harness/ROUTE-v0.md` (fleet sweep, SystemOne serving path, license
-  caveats).
-- **VRAM admission gate and admission-aligned studio settings**: the new
-  `hngh-vram-gate` admits a load only when current VRAM + the studio's
-  estimate stays within the budget (17 GB default via
-  `HNGH_VRAM_BUDGET`; `estimate=resident` avoids double-counting), wired
-  into `hngh-fill`'s preload and `hngh-route`'s dispatch, and every load
-  carries an explicit `max_seq_length` (auto-derive off). The studio was
-  aligned to the same policy: multi-model mode `always` (a load that
-  would evict a resident is REFUSED with 409 instead of silently
-  evicting — verified live), `openai-auto-switch.enabled=false` and
-  `media_auto_switch_model=false`, so the studio's own load paths can no
-  longer bypass admission.
-- **Quota meter repaired (a two-day blind spot)**: `hngh-quota-refresh`
-  short-circuited on the xiaomi pause gate before reading any lane, so
-  every quota row froze at 2026-10-29. Fixed — live numbers: **zai:1w
-  83.58%** (50,146/60,000 — NOT the 62.6% we had been reading),
-  minimax:7d 11%, zai:5h 0.28%, xiaomi 100% (paused to 11-12). The lane
-  rotation worked: minimax is barely used while zai carries the week.
-  `hngh-quota-refresh --source omp-usage` is now the meter; ledger and
-  selfcheck green. Quota pacing doctrine: daily allowance = remaining ×
-  0.8 ÷ remaining days, tiered slowdown at 60/80/95%.
-- **Doctrine**: `harness/PRINCIPLES.md` — 11 rules (shepherd, don't
-  replace; every tool has a selfcheck; ledgers are the audit trail; gates
-  at operator presence; config and env over code; measure before
-  features; boring shapes; small blast radius; never discard work without
-  measuring it; decisions get briefs, not binaries; admission before
-  load). `harness/CANON.md` — 12 crystallized principles from the
-  pantheon-annotated classics, each shipping with its own adversarial
-  guard, plus the blast-radius postscript. `harness/ROUTE-v0.md` — the
-  routing design note.
-- **Runbooks minted**: GPU-hang crash recovery, morning portfolio
-  check-in, and the bili compaction runbook. The skill corpus was merged
-  7→4 (39 skills total, zero stale references, frontmatter de-duplicated;
-  the pre-existing `hngh-cli-tooling` / `hngh-fill-items` duplicates were
-  also fixed).
+Two generations, one repository. The v1 iteration (Common Lisp kernel,
+docs/, scripts/, automation/ — last synced 2026-10-16) is archived on branch
+`archive/v1` (`cc7aeb70`), with v1 history preserved in main's ancestry.
+v2, the live Omarchy system harness, was imported under `harness/`
+(`caba7e3c`): the bin CLI tools and their selfchecks, role manifests, the
+C pointer sources, the v2 Makefile, and `harness/PRINCIPLES.md`. The
+canonical working tree stays `~/Projects/hngh`; the repo tracks landings
+under `harness/`.
+
+The local-first fill funnel and its guards. `hngh-plan` validates a plan
+against the local-safe task contract and queues only conformant items.
+`hngh-fill` runs a local coder against a workdir copy, applies the diff,
+runs the item's tests, and lands a PROPOSAL in
+`~/.local/state/hngh/fill/filled/` (with `SPEC.md`, `item.json`,
+`test_out.log` and the reply attempts) or escalates it. Integration is an
+explicit-pathspec copy plus commit, never a silent edit. The guards landed
+with measured causes. The pre-fill snapshot `.prefill` and the shrink
+guard: a green whose file fell below 50% of the original is restored and
+escalated — it caught a 491-line engine gutted to a 35-line toy. Then the
+tests-bite guard, the growth-stop guard, the language lint, hunk recount,
+header-path normalization (models emit diffs against the SPEC's skeleton
+paths), and unfenced full-file mapping.
+
+First landed local fills. `manga-artwave-fingerprint` (the manga art_wave
+batch fingerprint) went green on attempt 1: 504 lines, 491 + 13 and
+purely additive, both meta keys, determinism hash matching the
+independent recomputation. `v3-core-walk-math` (the cistern-web v3 core
+walk math) was the first TypeScript fill, green after 2 attempts, `node
+--test` 9/9 in 63 ms. That run measured the TS fill path — SPEC → unified
+diff → native type-stripping import → node --test — as working end to
+end.
+
+Candidate coders, classified by measurement (fleet sweep 2026-10-30).
+The fill coder is `unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF` (12 GB), the
+only small model producing correct, applying diffs. The router/summarizer
+is `LiquidAI/LFM3-1.7B-GGUF`: 130 tok/s, best summary fidelity, 131k ctx
+ceiling. The decider runs on the studio's native `/v1/systemone`, default
+model `laya-multilingual`; `StartLux-Decision-v1.1-2B-Instant Q8_0` is the
+measured local alternative, MEASURED PASS at 57.5 decisions/s, 100% parse,
+order-invariant. OneJev-4B fails discrimination, 3/10 and order-flippy.
+
+Qwen3.8-27B is BANNED on this machine — operator ruling 2026-10-30, any
+quantization. It hung the GPU mid-generation.
+
+LFM2.5-24B-A2B's reasoning does not terminate on real item contexts at
+UD-Q2_K_XL. Retries with the equipped prompt still returned empty
+content: 22,590 chars of reasoning, `finish: length`. The blocker is the
+model, not the turn structure.
+
+`hngh-route` v0, the duty-routed dispatcher: 391 lines of bash+curl, no
+daemon. `submit <class> <payload-file>` appends to
+`~/.local/state/hngh/route/queue.jsonl`. `drain` pops queued items and
+dispatches to the resident model for that duty class, with patient
+semantics (600 s timeout, 30 s backoff ×3, then `failed:busy`),
+provenance and a VRAM line. Selfcheck GREEN 6/6. Live smoke GREEN: queue
+→ drain → resident LFM3 answered in 12.6 s. The design note is
+`harness/ROUTE-v0.md` (fleet sweep, SystemOne serving path, license
+caveats).
+
+The VRAM admission gate, and the studio settings aligned to it. The new
+`hngh-vram-gate` admits a load only when current VRAM plus the studio's
+estimate stays within the budget — 17 GB default via `HNGH_VRAM_BUDGET`,
+and `estimate=resident` avoids double-counting. It is wired into
+`hngh-fill`'s preload and `hngh-route`'s dispatch, and every load carries
+an explicit `max_seq_length`, auto-derive off. The studio was aligned to
+the same policy: multi-model mode `always`, so a load that would evict a
+resident is REFUSED with 409 instead of silently evicting (verified
+live); `openai-auto-switch.enabled=false`; `media_auto_switch_model=false`.
+The studio's own load paths can no longer bypass admission.
+
+The quota meter was repaired after a two-day blind spot.
+`hngh-quota-refresh` short-circuited on the xiaomi pause gate before
+reading any lane, so every quota row froze at 2026-10-29. Fixed. Live
+numbers: zai:1w 83.58% (50,146/60,000 — NOT the 62.6% we had been
+reading), minimax:7d 11%, zai:5h 0.28%, xiaomi 100% (paused to 11-12).
+The lane rotation worked; minimax is barely used while zai carries the
+week. `hngh-quota-refresh --source omp-usage` is now the meter, ledger and
+selfcheck green. Quota pacing doctrine: daily allowance = remaining × 0.8
+÷ remaining days, tiered slowdown at 60/80/95%.
+
+Doctrine. `harness/PRINCIPLES.md` holds 11 rules: Shepherd, don't
+replace; Every tool has a selfcheck; Ledgers are the audit trail; Gates
+at operator presence; Config and env over code; Measure before features;
+Boring shapes; Small blast radius; Never discard work without measuring
+it; Decisions get briefs, not binaries; Admission before load.
+`harness/CANON.md` holds 12 crystallized principles from the
+pantheon-annotated classics, each shipping with its own adversarial
+guard, plus the blast-radius postscript. `harness/ROUTE-v0.md` is the
+routing design note.
+
+Runbooks minted: GPU-hang crash recovery, morning portfolio check-in, and
+the bili compaction runbook. The skill corpus was merged 7→4 — 39 skills
+total, zero stale references, frontmatter de-duplicated, and the
+pre-existing `hngh-cli-tooling` / `hngh-fill-items` duplicates fixed as
+well.
+
+### 2026-11-01 — the escalation coder and the path-2 item shape
+
+The fill funnel learned to climb. `hngh-fill` now runs a ladder: the
+requested coder takes its attempts first, and an item that stays red after
+them goes to `unsloth/Qwen-AgentWorld-35B-A3B-GGUF` (UD-Q2_K_XL, weights
+12,251,290,880 B). The 35B needs a bigger budget than the default coder —
+it reasons for roughly 4k tokens before it answers, so a 12,288-token
+completion ceiling came back empty. Its rung runs at context 98304 and
+30,000 completion tokens, which the studio priced at 14.75 GB against a
+19.98 GiB card. Rungs carry their own context, token ceiling and timeout,
+so one rung's budget never leaks into the next. The escalate note records
+the whole ladder: `still red after 4 attempt(s) [ladder:
+unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF=red
+unsloth/Qwen-AgentWorld-35B-A3B-GGUF=red]`.
+
+Three harness gaps blocked items whose workdir is the item directory
+itself. The diff extractor mapped a language-labelled fence only when the
+workdir held exactly one file, so a path-2 item's fenced full-file reply
+was read as no diff at all. The header normalizer rewrote `--- hngh-artifact`
+into `--- a/hngh-artifact`, which `patch` could not resolve, and the error
+the operator saw came from the last fallback rather than from the one that
+explained the failure. The payload builder also listed patch leftovers and
+reply files as files to patch. The extractor now filters on an owned-file
+predicate, the normalizer keeps the bare basename, and every fallback's
+output is collected instead of only the last.
+
+The reply trail was losing evidence. For a path-2 item the pre-fill
+snapshot covers the item directory, so a restore wiped the reply the same
+attempt had just written and put back the previous run's replies. The
+restore now moves the replies aside and puts them back, and the pre-fill
+snapshot drops stale reply files when it is taken.
+
+Thirteen selfchecks landed in `harness/bin/`: the cockpit, dashboard-feed,
+job-note, digest-note, digest-refresh, observe, quota-note, quota-refresh,
+sense, session-note, state, status and tail tools. With them the mirror
+carries 39 of the 44 tools' selfchecks. The quota-refresh selfcheck
+caught a real blind spot — the xiaomi pause gate short-circuited the
+refresh before any lane was read, so every quota row froze at 2026-10-29.
+The gate now only holds the browser-relay path.
 
 ### 2026-10-06
 
