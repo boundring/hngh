@@ -607,6 +607,18 @@ def emit_fullfile():
         if len(body) < 2:
             continue
         target = os.path.join(workdir, path)
+        if not os.path.isfile(target):
+            # the reply names the REPO path (src/core/sim.ts) but the workdir
+            # holds the flat basename (sim.ts): resolve it by basename, or the
+            # diff is synthesized against an empty file and the patch becomes
+            # an add-file diff that garbles the module
+            # (measured 2026-11-01 on v3-core-town-state).
+            base = os.path.basename(path)
+            for f in sorted(os.listdir(workdir)):
+                if f == base and os.path.isfile(os.path.join(workdir, f)):
+                    target = os.path.join(workdir, f)
+                    path = base
+                    break
         old = open(target).read() if os.path.isfile(target) else ""
         sys.stdout.write(unified(old, "\n".join(body) + "\n", path))
         sys.exit(0)
@@ -653,6 +665,25 @@ def emit_fullfile():
             old = open(target).read() if os.path.isfile(target) else ""
             sys.stdout.write(unified(old, "\n".join(lines) + "\n", path))
             sys.exit(0)
+    # A reply that opens with the path of the file it rewrites and then the
+    # bare source, with no fence and no diff (measured 2026-11-01 on
+    # v3-core-job-executor: Nemotron answers "src/core/job-executor.ts" and
+    # then the module). The path line names the file, the rest is the body.
+    idx = next((i for i, l in enumerate(lines) if l.strip()), None)
+    if idx is not None and len(lines) > idx + 1:
+        m = re.match(r"^([\w./-]+\.[A-Za-z0-9]+)$", lines[idx].strip())
+        if m:
+            base = os.path.basename(m.group(1))
+            hits = [f for f in cand if f == base]
+            rest = lines[idx + 1:]
+            first_body = next((l for l in rest if l.strip()), "")
+            if len(hits) == 1 and not any(l.startswith("@@") for l in rest) and \
+               re.match(r"^(?:/\*|\*|//|#!|\"\"\"|import |export |from |def |class |function |package )", first_body):
+                path = hits[0]
+                target = os.path.join(workdir, path)
+                old = open(target).read() if os.path.isfile(target) else ""
+                sys.stdout.write(unified(old, "\n".join(rest) + "\n", path))
+                sys.exit(0)
 text = sys.stdin.read()
 workdir = sys.argv[1]
 lines = text.splitlines()

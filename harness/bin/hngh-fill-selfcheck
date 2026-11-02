@@ -178,6 +178,13 @@ PATHBAD) emit '--- hngh-artifact
 @@ -1,1 +1,2 @@
 -NOTTHERE
 +ALSO_NOPE' ;;
+PATHLABEL) emit '```src/core/hello.txt
+original
+FIXED
+```' ;;
+PATHHEAD) emit 'src/core/hello.txt
+#!/bin/bash
+echo FIXED' ;;
 *) emit 'no diff' ;;
 esac
 STUB
@@ -452,6 +459,37 @@ check "path-2: a diff that does not apply escalates" $?
 grep -q NOTTHERE "$HNGH_FILL_DIR/escalate/path2-bad-item/reply-attempt-1.txt" 2>/dev/null &&
 	! grep -q STALE-EVIDENCE "$HNGH_FILL_DIR/escalate/path2-bad-item/reply-attempt-1.txt" 2>/dev/null
 check "path-2: the live reply survives the restore instead of the earlier run's" $?
+
+# ---- 13. reply shapes the extractor must map onto the owned file --------
+# Two shapes killed real fills on 2026-11-01: a fence labelled with the REPO
+# path (```src/core/sim.ts) when the workdir holds the flat basename, and a
+# reply that opens with the path and then the bare source with no fence and
+# no diff at all.
+export HNGH_FILL_DIR="$sandbox/queue_shapes"
+mkdir -p "$HNGH_FILL_DIR"
+d="$HNGH_FILL_DIR/queued/shape-label-item"
+mkdir -p "$d/tests" "$d/workdir"
+printf '# spec for shape-label-item\nFIXTURE:PATHLABEL\n' > "$d/SPEC.md"
+printf 'original\n' > "$d/workdir/hello.txt"
+printf '#!/bin/bash\ngrep -q FIXED hello.txt && echo PASS || { echo "expected FIXED"; exit 1; }\n' > "$d/workdir/test.sh"
+printf '{"id":"shape-label-item","test_cmd":"bash test.sh","workdir_rel":"workdir"}\n' > "$d/item.json"
+
+d="$HNGH_FILL_DIR/queued/shape-head-item"
+mkdir -p "$d/tests" "$d/workdir"
+printf '# spec for shape-head-item\nFIXTURE:PATHHEAD\n' > "$d/SPEC.md"
+printf 'original\n' > "$d/workdir/hello.txt"
+printf '#!/bin/bash\ngrep -q FIXED hello.txt && echo PASS || { echo "expected FIXED"; exit 1; }\n' > "$d/workdir/test.sh"
+printf '{"id":"shape-head-item","test_cmd":"bash test.sh","workdir_rel":"workdir"}\n' > "$d/item.json"
+
+bash "$fill" drain --attempts 2 >/dev/null 2>&1
+
+[ -d "$HNGH_FILL_DIR/filled/shape-label-item" ] &&
+	grep -q FIXED "$HNGH_FILL_DIR/filled/shape-label-item/workdir/hello.txt"
+check "extractor: a fence labelled with the repo path maps to the flat basename" $?
+
+[ -d "$HNGH_FILL_DIR/filled/shape-head-item" ] &&
+	grep -q FIXED "$HNGH_FILL_DIR/filled/shape-head-item/workdir/hello.txt"
+check "extractor: a reply that opens with the path and then the source maps to that file" $?
 
 export HNGH_FILL_DIR="$sandbox/queue"
 
